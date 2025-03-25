@@ -32,6 +32,12 @@ def run_simulation(N=20, generations=100, loci=10, l=0.75, mutation_std=0.05, be
     mean_a_list = []
     mean_z_list = []
     
+    neighbor_M = np.zeros((N, neighbor_size), dtype=int) # Initialize neighbor matrix for fixed size
+    for i in range(N):
+        nbs=[j for j in range(N) if i!=j]
+        neighbors = np.random.choice(nbs, size=neighbor_size, replace=False) # Randomly select neighbors for interaction
+        neighbor_M[i, :] = neighbors # Store neighbors for each individual
+    
     # Simulation over generations
     for gen in range(generations):
         # Draw environmental effects (mean 0, variance env_std^2)
@@ -39,7 +45,7 @@ def run_simulation(N=20, generations=100, loci=10, l=0.75, mutation_std=0.05, be
         
         for i in range(N):
             nbs=[j for j in range(N) if i!=j] # List of individuals
-            neighbors = np.random.choice(nbs, size=neighbor_size) # Randomly select neighbors for interaction
+            neighbors = neighbor_M[i,:] 
             for j in neighbors:
                 ind1_a = sum(a[i,:])
                 ind2_a = sum(a[j,:])
@@ -96,12 +102,12 @@ def run_replicates(N, generations, loci, l, mutation_std, beta, env_std, seed, r
 if __name__ == "__main__":
     # Simulation parameters
     N = 20           # Population size 
-    generations = 100  # Number of generations
+    generations = 10  # Number of generations
     mutation_std = 0.05  # Mutation standard deviation for a
     beta = 0.1         # Selection gradient on phenotype
     env_std = 1.0      # Standard deviation of environmental noise
     seed = None        # Random seed for reproducibility
-    loci = 300         # Number of loci for each individual
+    loci = 100         # Number of loci for each individual
     replicates = 10    # Number of replicates to run
     neighbor_size = 10 # Fixed neighbor size for all simulations
 
