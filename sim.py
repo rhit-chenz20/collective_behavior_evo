@@ -33,7 +33,7 @@ def run_simulation(N=20, generations=100, loci=10, l=0.75, mutation_std=0.05, be
     mean_z_list = []
     
     # Simulation over generations
-    for gen in range(generations):
+    for gen in range(1,generations):
         # Draw environmental effects (mean 0, variance env_std^2)
         e = np.random.normal(0, env_std, size=N)
         
@@ -45,7 +45,9 @@ def run_simulation(N=20, generations=100, loci=10, l=0.75, mutation_std=0.05, be
                 ind2_a = sum(a[j,:])
                 ind1_e = e[i]
                 ind2_e = e[j]
+                z1p = z[gen-1, j]
                 z1 = (ind1_a + ind1_e + l * (ind2_a + ind2_e)) / (1 - l**2)
+                # z1 = ind1_a + ind1_e + l * z1p
                 z[gen, i] += z1
             z[gen, i] /= len(neighbors)  # Average over all other individuals
         
@@ -69,82 +71,32 @@ def run_simulation(N=20, generations=100, loci=10, l=0.75, mutation_std=0.05, be
         mean_z_list.append(mean_z)
         
         # Optionally print progress
-        # print(f"Generation {gen:3d}: Mean a = {mean_a:.3f}, Mean z = {mean_z:.3f}")
+        print(f"Generation {gen:3d}: Mean a = {mean_a:.3f}, Mean z = {mean_z:.3f}")
     
     return mean_a_list, mean_z_list
 
-def run_replicates(N, generations, loci, l, mutation_std, beta, env_std, seed, replicates, neighbor_size):
-    """
-    Run multiple replicates of the simulation for the same parameter set.
-    
-    Parameters:
-      replicates : Number of replicates to run.
-    
-    Returns:
-      all_mean_a : List of lists containing mean additive genetic values for all replicates.
-      all_mean_z : List of lists containing mean phenotypes for all replicates.
-    """
-    all_mean_a = []
-    all_mean_z = []
-    for rep in range(replicates):
-        print(f"Running replicate {rep + 1}/{replicates}...")
-        mean_a, mean_z = run_simulation(N, generations, loci, l, mutation_std, beta=beta, env_std=env_std, seed=seed, neighbor_size=neighbor_size)
-        all_mean_a.append(mean_a)
-        all_mean_z.append(mean_z)
-    return all_mean_a, all_mean_z
-
 if __name__ == "__main__":
     # Simulation parameters
-    N = 20           # Population size 
+    N = 20           # Population size (must be even)
     generations = 100  # Number of generations
+    l = 0.75           # Interaction effect coefficient (e.g., 0.75 amplifies the response)
     mutation_std = 0.05  # Mutation standard deviation for a
     beta = 0.1         # Selection gradient on phenotype
     env_std = 1.0      # Standard deviation of environmental noise
-    seed = None        # Random seed for reproducibility
-    loci = 300         # Number of loci for each individual
-    replicates = 10    # Number of replicates to run
-    neighbor_size = 10 # Fixed neighbor size for all simulations
+    # seed = 42          # Random seed for reproducibility
+    seed = None
+    loci = 20          # Number of loci for each individual
+    
+    # Run the simulation
+    mean_a, mean_z = run_simulation(N, generations, loci, l, mutation_std, beta, env_std, seed)
 
-    # Values of l to test
-    l_values = [-0.75, -0.5, 0, 0.5, 0.75]
-
-    # Dictionary to store results for each l value
-    results = {}
-
-    # Run simulations for each l value
-    for l in l_values:
-        print(f"Running simulations for l = {l}...")
-        all_mean_a, all_mean_z = run_replicates(N, generations, loci, l, mutation_std, beta, env_std, seed, replicates, neighbor_size)
-        results[l] = (all_mean_a, all_mean_z)
-
-    # Define a color map for different l values
-    colors = {
-        -0.75: "blue",
-        -0.5: "green",
-        0: "black",
-        0.5: "orange",
-        0.75: "red"
-    }
-
-    # Plot the evolution of the mean additive genetic value and mean phenotype grouped by l values
-    plt.figure(figsize=(12, 8))
-
-    for l, (all_mean_a, all_mean_z) in results.items():
-        color = colors[l]  # Get the color for the current l value
-        # Plot individual replicates
-        for rep in range(replicates):
-            plt.plot(all_mean_a[rep], color=color, alpha=0.1, linestyle="--", label="_nolegend_")
-            plt.plot(all_mean_z[rep], color=color, alpha=0.1, label="_nolegend_")
-        # Plot mean across replicates
-        mean_a = np.mean(all_mean_a, axis=0)
-        mean_z = np.mean(all_mean_z, axis=0)
-        plt.plot(mean_a, color=color, linestyle="--", label=f"Mean a (Psi={l})", linewidth=2)
-        plt.plot(mean_z, color=color, label=f"Mean z (Psi={l})", linewidth=2)
-
-    # Finalize plot
+    # Plot the evolution of the mean additive genetic value and mean phenotype
+    plt.figure(figsize=(8, 5))
+    plt.plot(mean_a, label="Mean genetic value (a)")
+    plt.plot(mean_z, label="Mean phenotype (z)")
     plt.xlabel("Generation")
     plt.ylabel("Mean value")
-    plt.title("Evolution of Interacting Phenotypes (Grouped by Psi values)")
+    plt.title("Evolution of Interacting Phenotypes")
     plt.legend()
     plt.tight_layout()
     plt.show()
