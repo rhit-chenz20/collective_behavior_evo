@@ -4,15 +4,20 @@ initialize() {
 
 	setwd("CURRENT_WORKDIR");
 	
+	defineConstant("this_seed", INITIAL_SEED); 
+	defineConstant("fre_output", "FREQUENCY_OUTPUT_FILE");
+	defineConstant("C", NUM_OF_QTLS);
+	defineConstant("W", BUFFER_SIZE);
+	defineConstant("pop_size", POP_SIZE);
+	defineConstant("neighbor_size", NEIGHBOR_SIZE);
+	defineConstant("psi11", PSI11);
+	defineGlobal("optimum", OPTIMUM1);
+	
+	
+	setSeed(this_seed);
+	cat("Initial random seed set to " + getSeed());
+	
 	initializeMutationRate(1e-6);
-	
-	defineConstant("id", "1");
-	defineConstant("pop_size", 500);
-	defineConstant("neighbor_size", 5);
-	defineConstant("psi11", 0.0);
-	defineGlobal("optimum", 5);
-	
-	defineConstant("fre_output", "frequency_fn"+id+".tsv");
 	
 	// neutral mutations in non-coding regions
 	initializeMutationType("m1", 0.5, "f", 0.0);
@@ -26,8 +31,6 @@ initialize() {
 	m2.mutationStackPolicy = "l";
 	
 	// set up our chromosome: 10 QTLs, surrounded by neutral regions
-	defineConstant("C", 10);    // number of QTLs
-	defineConstant("W", 1000);  // size of neutral buffer on each side
 	pos = 0;
 	q = NULL;
 	
@@ -54,8 +57,8 @@ initialize() {
 1 late() {
 	sim.addSubpop("p1", pop_size);
 	
-	// replicate the s1 event to output in tick 2 also
-	community.registerEarlyEvent("s2", s1.source, 2, 2);
+//	// replicate the s1 event to output in tick 2 also
+//	community.registerEarlyEvent("s2", s1.source, 2, 2);
 	
 	// optional: give m2 mutations to everyone, as standing variation
 	g = sim.subpopulations.genomes;
@@ -84,7 +87,7 @@ initialize() {
 
 mutationEffect(m2) { return 1.0; }
 
-1: late() {
+1:LAST_GENERATION late() {
 	e1 = rnorm(pop_size, mean=0, sd=1);
 	
 	// evaluate and save the additive effects of QTLs
@@ -117,7 +120,7 @@ mutationEffect(m2) { return 1.0; }
 }
 
 2: early(){
-	if(sim.cycle % 10 == 0){
+	if(sim.cycle % LOG_INTERVAL == 0){
 		muts = sim.mutationsOfType(m2);
 		plus = muts[muts.selectionCoeff == 1.0];
 		minus = muts[muts.selectionCoeff == -1.0];
@@ -133,32 +136,34 @@ mutationEffect(m2) { return 1.0; }
 	}
 }
 
-s1 3000 early() {
-	cat("-------------------------------\n");
-	cat("Output for end of cycle " + (sim.cycle - 1) + ":\n\n");
-	
-	// Output population fitness values
-	cat("p1 mean fitness = " + mean(p1.cachedFitness(NULL)) + "\n");
-	
-	// Output population additive QTL-based phenotypes
-	cat("p1 mean phenotype under selection = " + mean(p1.individuals.tagF) + "\n");
-	
-	z1m = p1.getValue("z1m");
-	cat("p1 mean z1 = " + mean(z1m[(size(z1m)-pop_size):(size(z1m)-1)]) + "\n");
-	
-	// Output frequencies of +1/-1 alleles at the QTLs
-	muts = sim.mutationsOfType(m2);
-	plus = muts[muts.selectionCoeff == 1.0];
-	minus = muts[muts.selectionCoeff == -1.0];
-	
-	cat("\nOverall frequencies:\n\n");
-	for (q in Q)
-	{
-		qPlus = plus[plus.position == q];
-		qMinus = minus[minus.position == q];
-		pf = sum(sim.mutationFrequencies(NULL, qPlus));
-		mf = sum(sim.mutationFrequencies(NULL, qMinus));
-		
-		cat("   QTL1 " + q + ": f(+) == " + pf + ", f(-) == " + mf + "\n");
-	}
-}
+
+//
+//s1 LAST_GENERATION early() {
+//	cat("-------------------------------\n");
+//	cat("Output for end of cycle " + (sim.cycle - 1) + ":\n\n");
+//	
+//	// Output population fitness values
+//	cat("p1 mean fitness = " + mean(p1.cachedFitness(NULL)) + "\n");
+//	
+//	// Output population additive QTL-based phenotypes
+//	cat("p1 mean phenotype under selection = " + mean(p1.individuals.tagF) + "\n");
+//	
+//	z1m = p1.getValue("z1m");
+//	cat("p1 mean z1 = " + mean(z1m[(size(z1m)-pop_size):(size(z1m)-1)]) + "\n");
+//	
+//	// Output frequencies of +1/-1 alleles at the QTLs
+//	muts = sim.mutationsOfType(m2);
+//	plus = muts[muts.selectionCoeff == 1.0];
+//	minus = muts[muts.selectionCoeff == -1.0];
+//	
+//	cat("\nOverall frequencies:\n\n");
+//	for (q in Q)
+//	{
+//		qPlus = plus[plus.position == q];
+//		qMinus = minus[minus.position == q];
+//		pf = sum(sim.mutationFrequencies(NULL, qPlus));
+//		mf = sum(sim.mutationFrequencies(NULL, qMinus));
+//		
+//		cat("   QTL1 " + q + ": f(+) == " + pf + ", f(-) == " + mf + "\n");
+//	}
+//}
