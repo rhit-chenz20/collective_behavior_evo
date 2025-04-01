@@ -1,18 +1,16 @@
 // Keywords: migration, dispersal, QTL, quantitative trait loci
 
 initialize() {
-
-	setwd("CURRENT_WORKDIR");
 	
 	initializeMutationRate(1e-6);
 	
-	defineConstant("id", "1");
+//	defineConstant("ID", "5");
 	defineConstant("pop_size", 500);
-	defineConstant("neighbor_size", 5);
-	defineConstant("psi11", 0.0);
-	defineGlobal("optimum", 5);
+	defineConstant("neighbor_size", 250);
+	defineConstant("psi11", 0.7);
+	defineGlobal("optimum", 10.0);
 	
-	defineConstant("fre_output", "frequency_fn"+id+".tsv");
+	defineConstant("fre_output", "tsv_output/psi11_"+psi11+"_neisize_"+neighbor_size+"_opt_"+optimum+"_"+ID+".tsv");
 	
 	// neutral mutations in non-coding regions
 	initializeMutationType("m1", 0.5, "f", 0.0);
@@ -110,14 +108,13 @@ mutationEffect(m2) { return 1.0; }
 	oldz1m = p1.getValue("z1m");
 	p1.setValue("z1m", c(oldz1m, phenotype));
 	
-	optimum = 0.0;
-	inds.fitnessScaling = 1.0 + dnorm(optimum - phenotype, optimum, 5.0);
+	inds.fitnessScaling = 1.0 + dnorm(optimum - phenotype, 0.0, 1.0);
 	inds.tagF = phenotype;
 
 }
 
 2: early(){
-	if(sim.cycle % 10 == 0){
+	if(sim.cycle == 2 | sim.cycle % 10 == 0){
 		muts = sim.mutationsOfType(m2);
 		plus = muts[muts.selectionCoeff == 1.0];
 		minus = muts[muts.selectionCoeff == -1.0];
