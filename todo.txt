@@ -1,3 +1,0 @@
-1. frequency dependent collective behavior traits
-    how the trait value would evolve
-    will the bad allele reaches an equilibrium

@@ -20,12 +20,8 @@ def number_or_string(x):
             raise err
     return result
 
-
 def instantiate_parameter(key, value):
-    if isinstance(value, Mapping):
-        instantiated = draw_from_distribution(value)
-    else:
-        instantiated = value
+    instantiated = value
     try:
         json_friendly_value = number_or_string(instantiated)
     except Exception as err:
@@ -37,9 +33,18 @@ def instantiate_parameter(key, value):
 params = snakemake.config["simulation-parameters"]
 
 results = dict()
+keyword = 'psi'
+count = 0
 for key, value in params.items():
     instantiated = instantiate_parameter(key, value)
     results[key] = instantiated
+    if keyword in key:
+        count += 1
+
+if count == 1:
+    results["model"] = "1_trait"
+else:
+    ValueError("More than one trait specified in the parameters.")
 
 # We always want to start every parameter set with a seed.
 # If not given explicitly in the desired parameters, we make one right here.

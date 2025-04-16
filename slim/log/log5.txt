@@ -1,43 +1,163 @@
 // Initial random seed:
-2631264672324471463
+1871973641883990213
 
 // RunInitializeCallbacks():
-initializeMutationRate(1e-06);
+initializeMutationRate(0);
 initializeMutationType(1, 0.5, "f", 0);
 initializeGenomicElementType(1, m1, 1);
 initializeMutationType(2, 0.5, "s", "if (runif(1) < 0.5) -1; else 1;");
 initializeGenomicElementType(2, m2, 1);
-initializeGenomicElement(g1, 0, 999);
-initializeGenomicElement(g2, 1000, 1000);
-initializeGenomicElement(g1, 1001, 2000);
-initializeGenomicElement(g1, 2001, 3000);
-initializeGenomicElement(g2, 3001, 3001);
-initializeGenomicElement(g1, 3002, 4001);
-initializeGenomicElement(g1, 4002, 5001);
-initializeGenomicElement(g2, 5002, 5002);
-initializeGenomicElement(g1, 5003, 6002);
-initializeGenomicElement(g1, 6003, 7002);
-initializeGenomicElement(g2, 7003, 7003);
-initializeGenomicElement(g1, 7004, 8003);
-initializeGenomicElement(g1, 8004, 9003);
-initializeGenomicElement(g2, 9004, 9004);
-initializeGenomicElement(g1, 9005, 10004);
-initializeGenomicElement(g1, 10005, 11004);
-initializeGenomicElement(g2, 11005, 11005);
-initializeGenomicElement(g1, 11006, 12005);
-initializeGenomicElement(g1, 12006, 13005);
-initializeGenomicElement(g2, 13006, 13006);
-initializeGenomicElement(g1, 13007, 14006);
-initializeGenomicElement(g1, 14007, 15006);
-initializeGenomicElement(g2, 15007, 15007);
-initializeGenomicElement(g1, 15008, 16007);
-initializeGenomicElement(g1, 16008, 17007);
-initializeGenomicElement(g2, 17008, 17008);
-initializeGenomicElement(g1, 17009, 18008);
-initializeGenomicElement(g1, 18009, 19008);
-initializeGenomicElement(g2, 19009, 19009);
-initializeGenomicElement(g1, 19010, 20009);
-initializeRecombinationRate(c(1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08), c(2000, 2001, 4001, 4002, 6002, 6003, 8003, 8004, 10004, 10005, 12005, 12006, 14006, 14007, 16007, 16008, 18008, 18009, 20009));
+initializeGenomicElement(g1, 0, 0);
+initializeGenomicElement(g2, 1, 1);
+initializeGenomicElement(g1, 2, 2);
+initializeGenomicElement(g1, 3, 3);
+initializeGenomicElement(g2, 4, 4);
+initializeGenomicElement(g1, 5, 5);
+initializeGenomicElement(g1, 6, 6);
+initializeGenomicElement(g2, 7, 7);
+initializeGenomicElement(g1, 8, 8);
+initializeGenomicElement(g1, 9, 9);
+initializeGenomicElement(g2, 10, 10);
+initializeGenomicElement(g1, 11, 11);
+initializeGenomicElement(g1, 12, 12);
+initializeGenomicElement(g2, 13, 13);
+initializeGenomicElement(g1, 14, 14);
+initializeGenomicElement(g1, 15, 15);
+initializeGenomicElement(g2, 16, 16);
+initializeGenomicElement(g1, 17, 17);
+initializeGenomicElement(g1, 18, 18);
+initializeGenomicElement(g2, 19, 19);
+initializeGenomicElement(g1, 20, 20);
+initializeGenomicElement(g1, 21, 21);
+initializeGenomicElement(g2, 22, 22);
+initializeGenomicElement(g1, 23, 23);
+initializeGenomicElement(g1, 24, 24);
+initializeGenomicElement(g2, 25, 25);
+initializeGenomicElement(g1, 26, 26);
+initializeGenomicElement(g1, 27, 27);
+initializeGenomicElement(g2, 28, 28);
+initializeGenomicElement(g1, 29, 29);
+initializeGenomicElement(g1, 30, 30);
+initializeGenomicElement(g2, 31, 31);
+initializeGenomicElement(g1, 32, 32);
+initializeGenomicElement(g1, 33, 33);
+initializeGenomicElement(g2, 34, 34);
+initializeGenomicElement(g1, 35, 35);
+initializeGenomicElement(g1, 36, 36);
+initializeGenomicElement(g2, 37, 37);
+initializeGenomicElement(g1, 38, 38);
+initializeGenomicElement(g1, 39, 39);
+initializeGenomicElement(g2, 40, 40);
+initializeGenomicElement(g1, 41, 41);
+initializeGenomicElement(g1, 42, 42);
+initializeGenomicElement(g2, 43, 43);
+initializeGenomicElement(g1, 44, 44);
+initializeGenomicElement(g1, 45, 45);
+initializeGenomicElement(g2, 46, 46);
+initializeGenomicElement(g1, 47, 47);
+initializeGenomicElement(g1, 48, 48);
+initializeGenomicElement(g2, 49, 49);
+initializeGenomicElement(g1, 50, 50);
+initializeGenomicElement(g1, 51, 51);
+initializeGenomicElement(g2, 52, 52);
+initializeGenomicElement(g1, 53, 53);
+initializeGenomicElement(g1, 54, 54);
+initializeGenomicElement(g2, 55, 55);
+initializeGenomicElement(g1, 56, 56);
+initializeGenomicElement(g1, 57, 57);
+initializeGenomicElement(g2, 58, 58);
+initializeGenomicElement(g1, 59, 59);
+initializeGenomicElement(g1, 60, 60);
+initializeGenomicElement(g2, 61, 61);
+initializeGenomicElement(g1, 62, 62);
+initializeGenomicElement(g1, 63, 63);
+initializeGenomicElement(g2, 64, 64);
+initializeGenomicElement(g1, 65, 65);
+initializeGenomicElement(g1, 66, 66);
+initializeGenomicElement(g2, 67, 67);
+initializeGenomicElement(g1, 68, 68);
+initializeGenomicElement(g1, 69, 69);
+initializeGenomicElement(g2, 70, 70);
+initializeGenomicElement(g1, 71, 71);
+initializeGenomicElement(g1, 72, 72);
+initializeGenomicElement(g2, 73, 73);
+initializeGenomicElement(g1, 74, 74);
+initializeGenomicElement(g1, 75, 75);
+initializeGenomicElement(g2, 76, 76);
+initializeGenomicElement(g1, 77, 77);
+initializeGenomicElement(g1, 78, 78);
+initializeGenomicElement(g2, 79, 79);
+initializeGenomicElement(g1, 80, 80);
+initializeGenomicElement(g1, 81, 81);
+initializeGenomicElement(g2, 82, 82);
+initializeGenomicElement(g1, 83, 83);
+initializeGenomicElement(g1, 84, 84);
+initializeGenomicElement(g2, 85, 85);
+initializeGenomicElement(g1, 86, 86);
+initializeGenomicElement(g1, 87, 87);
+initializeGenomicElement(g2, 88, 88);
+initializeGenomicElement(g1, 89, 89);
+initializeGenomicElement(g1, 90, 90);
+initializeGenomicElement(g2, 91, 91);
+initializeGenomicElement(g1, 92, 92);
+initializeGenomicElement(g1, 93, 93);
+initializeGenomicElement(g2, 94, 94);
+initializeGenomicElement(g1, 95, 95);
+initializeGenomicElement(g1, 96, 96);
+initializeGenomicElement(g2, 97, 97);
+initializeGenomicElement(g1, 98, 98);
+initializeGenomicElement(g1, 99, 99);
+initializeGenomicElement(g2, 100, 100);
+initializeGenomicElement(g1, 101, 101);
+initializeGenomicElement(g1, 102, 102);
+initializeGenomicElement(g2, 103, 103);
+initializeGenomicElement(g1, 104, 104);
+initializeGenomicElement(g1, 105, 105);
+initializeGenomicElement(g2, 106, 106);
+initializeGenomicElement(g1, 107, 107);
+initializeGenomicElement(g1, 108, 108);
+initializeGenomicElement(g2, 109, 109);
+initializeGenomicElement(g1, 110, 110);
+initializeGenomicElement(g1, 111, 111);
+initializeGenomicElement(g2, 112, 112);
+initializeGenomicElement(g1, 113, 113);
+initializeGenomicElement(g1, 114, 114);
+initializeGenomicElement(g2, 115, 115);
+initializeGenomicElement(g1, 116, 116);
+initializeGenomicElement(g1, 117, 117);
+initializeGenomicElement(g2, 118, 118);
+initializeGenomicElement(g1, 119, 119);
+initializeGenomicElement(g1, 120, 120);
+initializeGenomicElement(g2, 121, 121);
+initializeGenomicElement(g1, 122, 122);
+initializeGenomicElement(g1, 123, 123);
+initializeGenomicElement(g2, 124, 124);
+initializeGenomicElement(g1, 125, 125);
+initializeGenomicElement(g1, 126, 126);
+initializeGenomicElement(g2, 127, 127);
+initializeGenomicElement(g1, 128, 128);
+initializeGenomicElement(g1, 129, 129);
+initializeGenomicElement(g2, 130, 130);
+initializeGenomicElement(g1, 131, 131);
+initializeGenomicElement(g1, 132, 132);
+initializeGenomicElement(g2, 133, 133);
+initializeGenomicElement(g1, 134, 134);
+initializeGenomicElement(g1, 135, 135);
+initializeGenomicElement(g2, 136, 136);
+initializeGenomicElement(g1, 137, 137);
+initializeGenomicElement(g1, 138, 138);
+initializeGenomicElement(g2, 139, 139);
+initializeGenomicElement(g1, 140, 140);
+initializeGenomicElement(g1, 141, 141);
+initializeGenomicElement(g2, 142, 142);
+initializeGenomicElement(g1, 143, 143);
+initializeGenomicElement(g1, 144, 144);
+initializeGenomicElement(g2, 145, 145);
+initializeGenomicElement(g1, 146, 146);
+initializeGenomicElement(g1, 147, 147);
+initializeGenomicElement(g2, 148, 148);
+initializeGenomicElement(g1, 149, 149);
+initializeRecombinationRate(c(1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, ...), c(2, 3, 5, 6, 8, 9, 11, 12, 14, 15, 17, 18, 20, 21, 23, 24, 26, 27, 29, 30, 32, 33, 35, 36, 38, 39, 41, 42, 44, 45, 47, 48, 50, 51, 53, 54, 56, 57, 59, 60, 62, 63, 65, 66, 68, 69, 71, 72, 74, 75, ...));
 
 // Starting run at tick <start>:
 1 
@@ -45,38 +165,178 @@ initializeRecombinationRate(c(1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e-08, 0.5, 1e
 -------------------------------
 Output for end of cycle 1:
 
-p1 mean fitness = 1.02424
-p1 mean phenotype under selection = -2.15172
-p1 mean z1 = -2.15172
+p1 mean fitness = 1.00756
+p1 mean phenotype under selection = -0.0524432
+p1 mean z1 = -0.0524432
 
 Overall frequencies:
 
-   QTL1 1000: f(+) == 0.505, f(-) == 0.495
-   QTL1 3001: f(+) == 0.486, f(-) == 0.514
-   QTL1 5002: f(+) == 0.5, f(-) == 0.5
-   QTL1 7003: f(+) == 0.457, f(-) == 0.543
-   QTL1 9004: f(+) == 0.502, f(-) == 0.498
-   QTL1 11005: f(+) == 0.505, f(-) == 0.495
-   QTL1 13006: f(+) == 0.49, f(-) == 0.51
-   QTL1 15007: f(+) == 0.51, f(-) == 0.49
-   QTL1 17008: f(+) == 0.52, f(-) == 0.48
-   QTL1 19009: f(+) == 0.503, f(-) == 0.497
+   QTL1 1: f(+) == 0.4996, f(-) == 0.5004
+   QTL1 4: f(+) == 0.4971, f(-) == 0.5029
+   QTL1 7: f(+) == 0.50235, f(-) == 0.49765
+   QTL1 10: f(+) == 0.49935, f(-) == 0.50065
+   QTL1 13: f(+) == 0.50405, f(-) == 0.49595
+   QTL1 16: f(+) == 0.49835, f(-) == 0.50165
+   QTL1 19: f(+) == 0.50265, f(-) == 0.49735
+   QTL1 22: f(+) == 0.49605, f(-) == 0.50395
+   QTL1 25: f(+) == 0.5042, f(-) == 0.4958
+   QTL1 28: f(+) == 0.4989, f(-) == 0.5011
+   QTL1 31: f(+) == 0.5056, f(-) == 0.4944
+   QTL1 34: f(+) == 0.49465, f(-) == 0.50535
+   QTL1 37: f(+) == 0.50275, f(-) == 0.49725
+   QTL1 40: f(+) == 0.4983, f(-) == 0.5017
+   QTL1 43: f(+) == 0.5051, f(-) == 0.4949
+   QTL1 46: f(+) == 0.4981, f(-) == 0.5019
+   QTL1 49: f(+) == 0.4986, f(-) == 0.5014
+   QTL1 52: f(+) == 0.4938, f(-) == 0.5062
+   QTL1 55: f(+) == 0.50635, f(-) == 0.49365
+   QTL1 58: f(+) == 0.50065, f(-) == 0.49935
+   QTL1 61: f(+) == 0.4937, f(-) == 0.5063
+   QTL1 64: f(+) == 0.4955, f(-) == 0.5045
+   QTL1 67: f(+) == 0.49845, f(-) == 0.50155
+   QTL1 70: f(+) == 0.49585, f(-) == 0.50415
+   QTL1 73: f(+) == 0.50055, f(-) == 0.49945
+   QTL1 76: f(+) == 0.4951, f(-) == 0.5049
+   QTL1 79: f(+) == 0.49935, f(-) == 0.50065
+   QTL1 82: f(+) == 0.5069, f(-) == 0.4931
+   QTL1 85: f(+) == 0.49955, f(-) == 0.50045
+   QTL1 88: f(+) == 0.4891, f(-) == 0.5109
+   QTL1 91: f(+) == 0.4925, f(-) == 0.5075
+   QTL1 94: f(+) == 0.5, f(-) == 0.5
+   QTL1 97: f(+) == 0.50635, f(-) == 0.49365
+   QTL1 100: f(+) == 0.4963, f(-) == 0.5037
+   QTL1 103: f(+) == 0.49985, f(-) == 0.50015
+   QTL1 106: f(+) == 0.49735, f(-) == 0.50265
+   QTL1 109: f(+) == 0.4986, f(-) == 0.5014
+   QTL1 112: f(+) == 0.5073, f(-) == 0.4927
+   QTL1 115: f(+) == 0.5011, f(-) == 0.4989
+   QTL1 118: f(+) == 0.4991, f(-) == 0.5009
+   QTL1 121: f(+) == 0.5038, f(-) == 0.4962
+   QTL1 124: f(+) == 0.5016, f(-) == 0.4984
+   QTL1 127: f(+) == 0.49945, f(-) == 0.50055
+   QTL1 130: f(+) == 0.5015, f(-) == 0.4985
+   QTL1 133: f(+) == 0.4962, f(-) == 0.5038
+   QTL1 136: f(+) == 0.5018, f(-) == 0.4982
+   QTL1 139: f(+) == 0.5029, f(-) == 0.4971
+   QTL1 142: f(+) == 0.4924, f(-) == 0.5076
+   QTL1 145: f(+) == 0.5038, f(-) == 0.4962
+   QTL1 148: f(+) == 0.49835, f(-) == 0.50165
+"new op is 86.4842"
 -------------------------------
-Output for end of cycle 2999:
+Output for end of cycle 9:
 
-p1 mean fitness = 1.03711
-p1 mean phenotype under selection = 12.5461
-p1 mean z1 = 12.5461
+p1 mean fitness = 1.00716
+p1 mean phenotype under selection = -0.26638
+p1 mean z1 = -0.26638
 
 Overall frequencies:
 
-   QTL1 1000: f(+) == 0.0, f(-) == 1.0
-   QTL1 3001: f(+) == 1.0, f(-) == 0.0
-   QTL1 5002: f(+) == 0.0, f(-) == 1.0
-   QTL1 7003: f(+) == 1.0, f(-) == 0.0
-   QTL1 9004: f(+) == 0.0, f(-) == 1.0
-   QTL1 11005: f(+) == 1.0, f(-) == 0.0
-   QTL1 13006: f(+) == 0.0, f(-) == 1.0
-   QTL1 15007: f(+) == 1.0, f(-) == 0.0
-   QTL1 17008: f(+) == 1.0, f(-) == 0.0
-   QTL1 19009: f(+) == 1.0, f(-) == 0.0
+   QTL1 1: f(+) == 0.47825, f(-) == 0.52175
+   QTL1 4: f(+) == 0.4925, f(-) == 0.5075
+   QTL1 7: f(+) == 0.50135, f(-) == 0.49865
+   QTL1 10: f(+) == 0.5028, f(-) == 0.4972
+   QTL1 13: f(+) == 0.50245, f(-) == 0.49755
+   QTL1 16: f(+) == 0.4811, f(-) == 0.5189
+   QTL1 19: f(+) == 0.51315, f(-) == 0.48685
+   QTL1 22: f(+) == 0.5011, f(-) == 0.4989
+   QTL1 25: f(+) == 0.4879, f(-) == 0.5121
+   QTL1 28: f(+) == 0.476, f(-) == 0.524
+   QTL1 31: f(+) == 0.50545, f(-) == 0.49455
+   QTL1 34: f(+) == 0.4949, f(-) == 0.5051
+   QTL1 37: f(+) == 0.5201, f(-) == 0.4799
+   QTL1 40: f(+) == 0.4796, f(-) == 0.5204
+   QTL1 43: f(+) == 0.49055, f(-) == 0.50945
+   QTL1 46: f(+) == 0.49715, f(-) == 0.50285
+   QTL1 49: f(+) == 0.5005, f(-) == 0.4995
+   QTL1 52: f(+) == 0.47795, f(-) == 0.52205
+   QTL1 55: f(+) == 0.50405, f(-) == 0.49595
+   QTL1 58: f(+) == 0.48285, f(-) == 0.51715
+   QTL1 61: f(+) == 0.48245, f(-) == 0.51755
+   QTL1 64: f(+) == 0.5023, f(-) == 0.4977
+   QTL1 67: f(+) == 0.49615, f(-) == 0.50385
+   QTL1 70: f(+) == 0.4819, f(-) == 0.5181
+   QTL1 73: f(+) == 0.4968, f(-) == 0.5032
+   QTL1 76: f(+) == 0.50115, f(-) == 0.49885
+   QTL1 79: f(+) == 0.5007, f(-) == 0.4993
+   QTL1 82: f(+) == 0.5088, f(-) == 0.4912
+   QTL1 85: f(+) == 0.48805, f(-) == 0.51195
+   QTL1 88: f(+) == 0.50395, f(-) == 0.49605
+   QTL1 91: f(+) == 0.4917, f(-) == 0.5083
+   QTL1 94: f(+) == 0.51405, f(-) == 0.48595
+   QTL1 97: f(+) == 0.5212, f(-) == 0.4788
+   QTL1 100: f(+) == 0.4959, f(-) == 0.5041
+   QTL1 103: f(+) == 0.49475, f(-) == 0.50525
+   QTL1 106: f(+) == 0.4903, f(-) == 0.5097
+   QTL1 109: f(+) == 0.50535, f(-) == 0.49465
+   QTL1 112: f(+) == 0.51065, f(-) == 0.48935
+   QTL1 115: f(+) == 0.5226, f(-) == 0.4774
+   QTL1 118: f(+) == 0.4998, f(-) == 0.5002
+   QTL1 121: f(+) == 0.51035, f(-) == 0.48965
+   QTL1 124: f(+) == 0.47435, f(-) == 0.52565
+   QTL1 127: f(+) == 0.5019, f(-) == 0.4981
+   QTL1 130: f(+) == 0.4994, f(-) == 0.5006
+   QTL1 133: f(+) == 0.4806, f(-) == 0.5194
+   QTL1 136: f(+) == 0.51025, f(-) == 0.48975
+   QTL1 139: f(+) == 0.50845, f(-) == 0.49155
+   QTL1 142: f(+) == 0.5022, f(-) == 0.4978
+   QTL1 145: f(+) == 0.48755, f(-) == 0.51245
+   QTL1 148: f(+) == 0.5084, f(-) == 0.4916
+-------------------------------
+Output for end of cycle 49:
+
+p1 mean fitness = 1.00805
+p1 mean phenotype under selection = -0.370169
+p1 mean z1 = -0.370169
+
+Overall frequencies:
+
+   QTL1 1: f(+) == 0.4639, f(-) == 0.5361
+   QTL1 4: f(+) == 0.509, f(-) == 0.491
+   QTL1 7: f(+) == 0.489, f(-) == 0.511
+   QTL1 10: f(+) == 0.4791, f(-) == 0.5209
+   QTL1 13: f(+) == 0.50245, f(-) == 0.49755
+   QTL1 16: f(+) == 0.4595, f(-) == 0.5405
+   QTL1 19: f(+) == 0.5074, f(-) == 0.4926
+   QTL1 22: f(+) == 0.48705, f(-) == 0.51295
+   QTL1 25: f(+) == 0.50785, f(-) == 0.49215
+   QTL1 28: f(+) == 0.4514, f(-) == 0.5486
+   QTL1 31: f(+) == 0.5075, f(-) == 0.4925
+   QTL1 34: f(+) == 0.48255, f(-) == 0.51745
+   QTL1 37: f(+) == 0.5069, f(-) == 0.4931
+   QTL1 40: f(+) == 0.49935, f(-) == 0.50065
+   QTL1 43: f(+) == 0.51055, f(-) == 0.48945
+   QTL1 46: f(+) == 0.49925, f(-) == 0.50075
+   QTL1 49: f(+) == 0.54015, f(-) == 0.45985
+   QTL1 52: f(+) == 0.4819, f(-) == 0.5181
+   QTL1 55: f(+) == 0.5454, f(-) == 0.4546
+   QTL1 58: f(+) == 0.4501, f(-) == 0.5499
+   QTL1 61: f(+) == 0.5086, f(-) == 0.4914
+   QTL1 64: f(+) == 0.4728, f(-) == 0.5272
+   QTL1 67: f(+) == 0.49645, f(-) == 0.50355
+   QTL1 70: f(+) == 0.4971, f(-) == 0.5029
+   QTL1 73: f(+) == 0.4682, f(-) == 0.5318
+   QTL1 76: f(+) == 0.49805, f(-) == 0.50195
+   QTL1 79: f(+) == 0.49295, f(-) == 0.50705
+   QTL1 82: f(+) == 0.46345, f(-) == 0.53655
+   QTL1 85: f(+) == 0.4992, f(-) == 0.5008
+   QTL1 88: f(+) == 0.49745, f(-) == 0.50255
+   QTL1 91: f(+) == 0.4914, f(-) == 0.5086
+   QTL1 94: f(+) == 0.5038, f(-) == 0.4962
+   QTL1 97: f(+) == 0.49595, f(-) == 0.50405
+   QTL1 100: f(+) == 0.50905, f(-) == 0.49095
+   QTL1 103: f(+) == 0.48255, f(-) == 0.51745
+   QTL1 106: f(+) == 0.4902, f(-) == 0.5098
+   QTL1 109: f(+) == 0.52415, f(-) == 0.47585
+   QTL1 112: f(+) == 0.51405, f(-) == 0.48595
+   QTL1 115: f(+) == 0.5305, f(-) == 0.4695
+   QTL1 118: f(+) == 0.49045, f(-) == 0.50955
+   QTL1 121: f(+) == 0.5084, f(-) == 0.4916
+   QTL1 124: f(+) == 0.47545, f(-) == 0.52455
+   QTL1 127: f(+) == 0.48405, f(-) == 0.51595
+   QTL1 130: f(+) == 0.50265, f(-) == 0.49735
+   QTL1 133: f(+) == 0.49165, f(-) == 0.50835
+   QTL1 136: f(+) == 0.5265, f(-) == 0.4735
+   QTL1 139: f(+) == 0.50545, f(-) == 0.49455
+   QTL1 142: f(+) == 0.50975, f(-) == 0.49025
+   QTL1 145: f(+) == 0.49125, f(-) == 0.50875
+   QTL1 148: f(+) == 0.5504, f(-) == 0.4496

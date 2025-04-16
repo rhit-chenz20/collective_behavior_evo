@@ -1,0 +1,8 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.snakemake
+.vscode
+slim/tsv_output/*
+slim/log

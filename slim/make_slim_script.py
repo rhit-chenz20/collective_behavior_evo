@@ -23,14 +23,17 @@ replacements = {
     "POP_SIZE": int(params["pop_size"]),
     "NEIGHBOR_SIZE": int(params["neighbor_size"]),
     "PSI11": float(params["psi11"]),
-    "OPTIMUM1": float(params["optimum1"]),
-    "OPTIMUM2": float(params["optimum2"]),
+    "OPTIMUM1": float(params["optimum"]),
     "SELECTION_GENERATION": int(params["selection_generation"]),
     # Files
     "CURRENT_WORKDIR": Path(".").resolve(),
     "FREQUENCY_OUTPUT_FILE": str(
         Path(snakemake.params["outdir"])
         / (snakemake.wildcards["sim_id"] + "_slim.tsv")
+    ),
+    "METRICS_OUTPUT_FILE": str(
+        Path(snakemake.params["outdir"])
+        / (snakemake.wildcards["sim_id"] + "_metrics.txt")
     ),
 }
 
@@ -55,7 +58,7 @@ def load_template(template_file, replacements):
     return text
 
 
-template = find_template(params["template"])
+template = find_template(params["model"])
 script_text = load_template(template, replacements)
 with open(snakemake.output["slim_script"], "w") as f:
     f.write(script_text)

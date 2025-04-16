@@ -1,12 +1,9 @@
-num_of_qtl = 10
-
 default_simulation_parameters = {
     # Biology
-    "num_of_qtl": num_of_qtl,
-    "buffer-size": 1000,
+    "pop_size": 100000,
+    "buffer_size": 1,
     "optimum1": 0.0,
-    "selection_generation": 2000,
+    "neighbor_size": 100,
     # SLiM options
-    "last_generation": 3000,
-    "log_interval": 10,
+    "log_interval": 1,
 }
