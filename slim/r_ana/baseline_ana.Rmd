@@ -1,0 +1,174 @@
+---
+title: "baseline"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+## prep
+```{r file_reading}
+# Set your folder path
+folder_path <- "../tsv_output/1t/base"
+
+# 2. List files, make sure they are sorted
+files <- sort(list.files(path = folder_path, pattern = "\\.tsv$", full.names = TRUE))
+
+# 3. Read each file into a data frame, and add a replicate column
+data_list <- lapply(seq_along(files), function(i) {
+  file <- files[i]
+  df <- read.table(file, header = TRUE, sep = "\t")
+  return(df)
+})
+
+# Combine all into one big matrix (stacked row-wise)
+df <- as.data.frame(do.call(rbind, data_list))
+```
+
+```{r compute_columns}
+# Make sure the columns you need are numeric
+df$z1_mean <- as.numeric(df$z1_mean)
+df$R <- df$s * df$h2
+# Calculate predicted z1_mean
+df$z1_mean_predict <- df$z1_mean + df$R
+df = df[df$cycle >=3,]
+```
+
+## prediction vs actual
+
+```{r pressure}
+sub_df1 = df[df$cut_threshold == 95,]
+# For each replicate, plot (current, next) points
+unique_reps <- unique(df$rep)
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df1$R), ylim=range(sub_df1$dz1),
+     xlab="prediction delta z",
+     ylab="simulated delta z",
+     main = "continuous guassian distribution with 99% optimum")
+
+# Loop over each replicate
+for (r in unique_reps) {
+  sub_df <- df[df$rep == r,]
+  
+  # x = sub_df$R[-length(sub_df$R)]
+  # y = sub_df$dz1[-1]
+  
+  x = sub_df$R
+  y = sub_df$dz1
+  # Add to plot
+  points(x, y, pch=20)
+}
+abline(0, 1, col="red", lty=1)
+
+```
+
+
+
+```{r}
+# First distribution
+mu1 <- mean(df$optimum)
+sigma1 <- mean(df$opt_sd)
+curve(dnorm(x, mean = mu1, sd = sigma1), from = -40, to = 70,
+      xlab = "phenotype z", ylab = "Density", col = "blue", lwd = 2,
+      main = "fitness function before vs after selection")
+
+# Second distribution
+mu2 <- 0
+sigma2 <- sqrt(200)
+curve(dnorm(x, mean = mu2, sd = sigma2), add = TRUE, col = "red", lwd = 2)
+
+# Second distribution
+mu3 <- 32
+sigma3 <- sqrt(200)
+curve(dnorm(x, mean = mu3, sd = sigma3), add = TRUE, col = "green", lwd = 2)
+
+
+# Add legend
+legend("topright", legend = c("before","95%",  "99%"),
+       col = c("red", "blue", "green"), lty = 1, lwd = 2)
+
+```
+
+```{r pressure}
+sub_df1 = df[df$cut_threshold == 80 & df$cycle == 3,]
+# For each replicate, plot (current, next) points
+unique_reps <- unique(df$rep)
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df1$R), ylim=range(sub_df1$dz1),
+     xlab="prediction delta z",
+     ylab="simulated delta z",
+     main = "hard cutoff at 80%, first generation under selection")
+
+# Loop over each replicate
+for (r in unique_reps) {
+  sub_df <- df[df$rep == r,]
+  
+  # x = sub_df$R[-length(sub_df$R)]
+  # y = sub_df$dz1[-1]
+  
+  x = sub_df$R
+  y = sub_df$dz1
+  # Add to plot
+  points(x, y, pch=20)
+}
+abline(0, 1, col="red", lty=1)
+
+```
+
+```{r}
+sub_df1 = df[df$cut_threshold == 80,]
+# For each replicate, plot (current, next) points
+unique_reps <- unique(df$rep)
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df1$cycle), ylim=range(sub_df1$Vg),
+     xlab="generation",
+     ylab="genetic diversity",
+     main = "hard cutoff at 80%, first generation under selection")
+
+# Loop over each replicate
+for (r in unique_reps) {
+  sub_df <- df[df$rep == r,]
+  
+  # x = sub_df$R[-length(sub_df$R)]
+  # y = sub_df$dz1[-1]
+  
+  x = sub_df$cycle
+  y = sub_df$Vg
+  # Add to plot
+  points(x, y, pch=20)
+}
+abline(0, 1, col="red", lty=1)
+
+```
+
+```{r}
+sub_df1 = df[df$cut_threshold == 95,]
+# For each replicate, plot (current, next) points
+unique_reps <- unique(df$rep)
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df1$cycle), ylim=range(sub_df1$Vg),
+     xlab="prediction delta z",
+     ylab="simulated delta z",
+     main = "hard cutoff at 80%, first generation under selection")
+
+# Loop over each replicate
+for (r in unique_reps) {
+  sub_df <- df[df$rep == r,]
+  
+  # x = sub_df$R[-length(sub_df$R)]
+  # y = sub_df$dz1[-1]
+  
+  x = sub_df$cycle
+  y = sub_df$Vg
+  # Add to plot
+  points(x, y, pch=20)
+}
+abline(0, 1, col="red", lty=1)
+
+```
+
+
+

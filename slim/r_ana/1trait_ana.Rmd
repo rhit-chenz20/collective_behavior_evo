@@ -1,0 +1,137 @@
+---
+title: "1_trait"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+## prep
+```{r file_reading}
+# Set your folder path
+folder_path <- "../tsv_output/1t"
+
+# 2. List files, make sure they are sorted
+files <- sort(list.files(path = folder_path, pattern = "\\.tsv$", full.names = TRUE))
+
+# 3. Read each file into a data frame, and add a replicate column
+data_list <- lapply(seq_along(files), function(i) {
+  file <- files[i]
+  df <- read.table(file, header = TRUE, sep = "\t")
+  df$replicate <- i  # Add replicate ID
+  return(df)
+})
+
+# Combine all into one big matrix (stacked row-wise)
+df <- as.data.frame(do.call(rbind, data_list))
+```
+
+```{r compute_columns}
+# Make sure the columns you need are numeric
+df$z1_mean <- as.numeric(df$z1_mean)
+# Calculate predicted z1_mean
+df$z1_mean_predict <- df$z1_mean + df$R
+df$s_pred <- (1/(1-df$psi11^2))*(1/(1-df$psi11))*df$R
+```
+
+## prediction vs actual
+change the plots to be delta z
+plot the reciprocal and non reciprocal against baseline 
+winner takes all
+
+```{r pressure}
+# For each replicate, plot (current, next) points
+unique_reps <- unique(df$replicate)
+
+# Set up an empty plot
+plot(NULL, xlim=range(df$dz1), ylim=range(df$s_pred),
+     xlab="Predicted z1_mean (current cycle)",
+     ylab="Predicted z1_mean (next cycle)",
+     main="z1_mean_predict transition (per replicate)")
+
+# Loop over each replicate
+for (rep in unique_reps) {
+  sub_df <- df[df$replicate == rep, ]
+  
+  # Order by cycle just in case
+  sub_df <- sub_df[order(sub_df$cycle), ]
+  
+  # Get current and next values
+  current <- sub_df$s_pred[-nrow(sub_df)]  # drop last
+  nextval <- sub_df$s_pred[-1]             # drop first
+  
+  # Add to plot
+  points(current, nextval, pch=20)
+}
+abline(0, 1, col="red", lty=1)
+
+```
+```{r pressure}
+# For each replicate, plot (current, next) points
+unique_reps <- unique(df$replicate)
+
+# Set up an empty plot
+plot(NULL, xlim=range(df$dz1), ylim=c(-10, 5),
+     xlab="Predicted z1_mean (current cycle)",
+     ylab="Predicted z1_mean (next cycle)",
+     main="z1_mean_predict transition (per replicate)")
+
+# Loop over each replicate
+for (rep in unique_reps) {
+  sub_df <- df[df$replicate == rep, ]
+  
+  # Order by cycle just in case
+  sub_df <- sub_df[order(sub_df$cycle), ]
+  
+  # Get current and next values
+  current <- sub_df$z1_mean_predict[-nrow(sub_df)]  # drop last
+  nextval <- sub_df$z1_mean_predict[-1]             # drop first
+  
+  # Add to plot
+  points(current, nextval, pch=20)
+}
+abline(0, 1, col="red", lty=1)
+
+```
+
+
+
+
+```{r}
+plot(df$psi11,df$h2)
+```
+
+
+```{r pressure}
+# For each replicate, plot (current, next) points
+unique_reps <- unique(df$replicate)
+
+# Set up an empty plot
+plot(NULL, xlim=range(df$s_pred), ylim=range(df$s_pred),
+     xlab="Predicted z1_mean (current cycle)",
+     ylab="Predicted z1_mean (next cycle)",
+     main="s_pred transition (per replicate)")
+
+# Loop over each replicate
+for (rep in unique_reps) {
+  sub_df <- df[df$replicate == rep, ]
+  
+  # Order by cycle just in case
+  sub_df <- sub_df[order(sub_df$cycle), ]
+  
+  # Get current and next values
+  current <- sub_df$s_pred[-nrow(sub_df)]  # drop last
+  nextval <- sub_df$s_pred[-1]             # drop first
+  
+  # Add to plot
+  points(current, nextval, pch=20)
+}
+abline(0, 1, col="red", lty=1)
+
+```
+
+```{r}
+plot(df$psi11,df$s)
+```
+
+
+

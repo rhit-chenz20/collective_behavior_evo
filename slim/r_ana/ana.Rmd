@@ -1,0 +1,987 @@
+---
+title: "analysis for 1 trait model"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+## 30 generation
+
+```{r}
+load_data <- function(path, pattern, sep){
+  # Get all matching files
+  files <- list.files(path = path, pattern = pattern, full.names = TRUE)
+  
+  # Initialize list to store data by y
+  data_by_qtl <- list()
+  
+  for (file in files) {
+    # Parse filename
+    fname <- basename(file)
+    parts <- strsplit(gsub("psi11_|\\.tsv", "", fname), sep)[[1]]
+    psi11_val <- as.numeric(parts[1])
+    qtl_and_i <- strsplit(parts[2], "_")[[1]]
+    qtl_count <- as.integer(qtl_and_i[1])
+    
+    # Read file
+    df <- read.table(file, header = TRUE, sep = "\t")
+    
+    # Add psi11 and qtl_count columns
+    df$psi11 <- psi11_val
+    df$qtl_count <- qtl_count
+    
+    # Store in list grouped by qtl_count
+    qtl_key <- as.character(qtl_count)
+    if (!is.null(data_by_qtl[[qtl_key]])) {
+      data_by_qtl[[qtl_key]] <- rbind(data_by_qtl[[qtl_key]], df)
+    } else {
+      data_by_qtl[[qtl_key]] <- df
+    }
+  }
+  return(data_by_qtl)
+}
+```
+
+```{r plot_allele_frequency}
+plot_pf_trajectories <- function(df_group, pf_prefix = "pf_", transparency = 0.1, ylim = c(0.45, 0.65)) {
+  pf_cols <- grep(pf_prefix, names(df_group), value = TRUE)
+  psi_vals <- sort(unique(df_group$psi11))
+  color_palette <- rainbow(length(psi_vals))
+
+  # Adjust plot margins and allow drawing outside
+  old_par <- par(no.readonly = TRUE)
+  on.exit(par(old_par))
+  par(mar = c(5, 4, 4, 8))  # Extra space on the right
+
+  plot(NULL, xlim = range(df_group$cycle), ylim = ylim,
+       xlab = "Cycle", ylab = "Allele frequency",
+       main = paste("Allele Frequency Trajectories (QTL =", unique(df_group$qtl_count), ")"))
+
+  for (i in seq_along(psi_vals)) {
+    psi <- psi_vals[i]
+    sub_df <- df_group[df_group$psi11 == psi, ]
+
+    # Generate trial ID (assumes equal-length replicates)
+    cycles_per_trial <- length(unique(sub_df$cycle))
+    sub_df$trial_id <- rep(1:(nrow(sub_df) / cycles_per_trial), each = cycles_per_trial)
+
+    for (pf_col in pf_cols) {
+      # Split by trial
+      trial_list <- split(sub_df[, c("cycle", pf_col)], sub_df$trial_id)
+
+      # OPTIONAL: plot individual trial lines (transparent)
+      # for (trial in trial_list) {
+      #   lines(trial$cycle, trial[[pf_col]],
+      #         col = adjustcolor(color_palette[i], alpha.f = transparency), lwd = 1)
+      # }
+
+      # Compute mean over trials
+      pf_mat <- do.call(cbind, lapply(trial_list, function(x) x[[pf_col]]))
+      if (is.vector(pf_mat)) {
+        pf_mat <- matrix(pf_mat, ncol = 1)
+      }
+      pf_mean <- rowMeans(pf_mat, na.rm = TRUE)
+      lines(unique(sub_df$cycle), pf_mean, col = adjustcolor(color_palette[i], alpha.f = 1), lwd = 2)
+    }
+  }
+
+  legend("topright", inset = c(-0.3, 0), xpd = TRUE,
+         legend = paste("psi11 =", psi_vals),
+         col = color_palette, lwd = 2, bty = "n")
+}
+
+
+```
+
+```{r}
+pattern="^psi11_.*_c_.*_[1-5]\\.tsv$"
+sep="_c_"
+data_by_qtl<-load_data("../tsv_output/50gen", pattern, sep)
+```
+
+```{r}
+for (data in data_by_qtl){
+  plot_pf_trajectories(data, transparency=0.5)
+}
+
+```
+
+```{r}
+plot_avg_pf_across_loci <- function(df_group, pf_prefix = "pf_", transparency = 0.2) {
+  pf_cols <- grep(pf_prefix, names(df_group), value = TRUE)
+  psi_vals <- sort(unique(df_group$psi11))
+  color_palette <- rainbow(length(psi_vals))
+
+  # Save original plot settings and adjust right margin
+  old_par <- par(no.readonly = TRUE)
+  on.exit(par(old_par))
+  par(mar = c(5, 4, 4, 8))  # Add space for legend
+
+  plot(NULL, xlim = range(df_group$cycle), ylim = c(0.45, 0.6),
+       xlab = "Cycle", ylab = "Mean allele frequency (across loci)",
+       main = paste("Average Allele Frequency Trajectories (QTL =", unique(df_group$qtl_count), ")"))
+
+  for (i in seq_along(psi_vals)) {
+    psi <- psi_vals[i]
+    sub_df <- df_group[df_group$psi11 == psi, ]
+
+    # Generate trial ID (assumes equal-length replicates)
+    cycles_per_trial <- length(unique(sub_df$cycle))
+    sub_df$trial_id <- rep(1:(nrow(sub_df) / cycles_per_trial), each = cycles_per_trial)
+
+    # Compute per-trial average across loci at each cycle
+    trial_list <- split(sub_df, sub_df$trial_id)
+    trial_means <- lapply(trial_list, function(trial) {
+      data.frame(
+        cycle = trial$cycle,
+        mean_pf = rowMeans(trial[, pf_cols], na.rm = TRUE)
+      )
+    })
+
+    # Plot individual trials (transparent)
+    for (trial_df in trial_means) {
+      lines(trial_df$cycle, trial_df$mean_pf,
+            col = adjustcolor(color_palette[i], alpha.f = transparency), lwd = 1)
+    }
+
+    # Compute mean over trials
+    mean_matrix <- do.call(cbind, lapply(trial_means, function(x) x$mean_pf))
+    mean_over_trials <- rowMeans(mean_matrix, na.rm = TRUE)
+
+    # Plot bold mean line
+    lines(trial_means[[1]]$cycle, mean_over_trials, col = color_palette[i], lwd = 2)
+  }
+
+  legend("topright", inset = c(-0.3, 0), xpd = TRUE,
+         legend = paste("psi11 =", psi_vals),
+         col = color_palette, lwd = 2, bty = "n")
+}
+
+
+```
+
+```{r}
+for (data in data_by_qtl){
+  plot_avg_pf_across_loci(data, transparency=0.1)
+}
+```
+
+```{r}
+plot_trait_over_time <- function(df_group, column, varname, transparency = 0.2, cycle_range = NULL, ylimr=NULL) {
+  if (!column %in% names(df_group)) {
+    stop(paste("Column", column, "not found in data"))
+  }
+
+  psi_vals <- sort(unique(df_group$psi11))
+  color_palette <- rainbow(length(psi_vals))
+
+  # Save current plot settings and expand right margin
+  old_par <- par(no.readonly = TRUE)
+  on.exit(par(old_par))  # Restore original settings
+  par(mar = c(5, 4, 4, 8))  # Extend right margin for legend
+
+  # Prepare for ylim calculation
+  all_values <- c()
+
+  for (psi in psi_vals) {
+    sub_df <- df_group[df_group$psi11 == psi, ]
+    cycles_per_trial <- length(unique(sub_df$cycle))
+    n_trials <- nrow(sub_df) / cycles_per_trial
+
+    if (n_trials != floor(n_trials)) {
+      stop("Data doesn't divide evenly into trials.")
+    }
+
+    sub_df$trial_id <- rep(1:n_trials, each = cycles_per_trial)
+    trial_list <- split(sub_df, sub_df$trial_id)
+
+    for (trial in trial_list) {
+      if (!is.null(cycle_range)) {
+        trial <- trial[trial$cycle >= cycle_range[1] & trial$cycle <= cycle_range[2], ]
+      }
+      all_values <- c(all_values, trial[[column]])
+    }
+  }
+
+  # Define x and y limits
+  xlim_range <- if (is.null(cycle_range)) range(df_group$cycle) else cycle_range
+  ylim_range <- if (is.null(ylimr)) range(all_values, na.rm = TRUE) else ylimr
+
+  # Create empty plot
+  plot(NULL, xlim = xlim_range, ylim = ylim_range,
+       xlab = "Cycle", ylab = column,
+       main = paste(column, "Trajectory (", varname, " =", unique(df_group$qtl_count), ")"))
+
+  # Plot lines
+  for (i in seq_along(psi_vals)) {
+    psi <- psi_vals[i]
+    sub_df <- df_group[df_group$psi11 == psi, ]
+    cycles_per_trial <- length(unique(sub_df$cycle))
+    n_trials <- nrow(sub_df) / cycles_per_trial
+    sub_df$trial_id <- rep(1:n_trials, each = cycles_per_trial)
+    trial_list <- split(sub_df, sub_df$trial_id)
+
+    for (trial in trial_list) {
+      if (!is.null(cycle_range)) {
+        trial <- trial[trial$cycle >= cycle_range[1] & trial$cycle <= cycle_range[2], ]
+      }
+      lines(trial$cycle, trial[[column]],
+            col = adjustcolor(color_palette[i], alpha.f = transparency), lwd = 1)
+    }
+
+    # Compute mean over filtered trials
+    trial_matrix <- sapply(trial_list, function(df) {
+      df_filtered <- if (!is.null(cycle_range)) {
+        df[df$cycle >= cycle_range[1] & df$cycle <= cycle_range[2], ]
+      } else df
+      df_filtered[[column]]
+    })
+
+    if (is.vector(trial_matrix)) {
+      trial_matrix <- matrix(trial_matrix, ncol = 1)
+    }
+
+    trait_mean <- rowMeans(trial_matrix, na.rm = TRUE)
+
+    # Get cycle values from any trial, filtered
+    ref_cycle <- trial_list[[1]]$cycle
+    if (!is.null(cycle_range)) {
+      ref_cycle <- ref_cycle[ref_cycle >= cycle_range[1] & ref_cycle <= cycle_range[2]]
+    }
+
+    lines(ref_cycle, trait_mean, col = color_palette[i], lwd = 2)
+  }
+
+  legend("topright", inset = c(-0.3, 0), xpd = TRUE,
+         legend = paste("psi11 =", psi_vals),
+         col = color_palette, lwd = 2, bty = "n")
+}
+
+```
+
+```{r}
+varname="QTL"
+for (data in data_by_qtl){
+  plot_trait_over_time(data, "z1_mean", varname)
+}
+```
+
+```{r}
+for (data in data_by_qtl){
+  plot_trait_over_time(data, "z1_sd", varname)
+}
+```
+
+```{r}
+for (data in data_by_qtl){
+  plot_trait_over_time(data, "a1_mean", varname)
+}
+```
+
+```{r}
+for (data in data_by_qtl){
+  plot_trait_over_time(data, "a1_sd", varname)
+}
+```
+
+## 50 generation
+
+```{r}
+data_50gen <-load_data("../tsv_output/50gen")
+varname="QTL"
+```
+
+```{r}
+for (data in data_50gen){
+  df_pos <- subset(data, psi11 >= 0)
+  plot_pf_trajectories(df_pos, transparency=0.5, ylim=c(0.45, 0.7))
+}
+
+```
+
+```{r}
+for (data in data_50gen){
+  df_pos <- subset(data, psi11 <= 0)
+  plot_pf_trajectories(df_pos, transparency=0.5, ylim=c(0.45, 0.7))
+}
+
+```
+
+```{r}
+for (data in data_50gen){
+  df_pos <- subset(data, psi11 >= 0)
+  plot_avg_pf_across_loci(df_pos, transparency=0.1)
+}
+```
+
+```{r}
+for (data in data_50gen){
+  df_pos <- subset(data, psi11 <= 0)
+  plot_avg_pf_across_loci(df_pos, transparency=0.1)
+}
+```
+
+```{r}
+for (data in data_50gen){
+  df_pos <- subset(data, psi11 >= 0)
+  plot_trait_over_time(df_pos, "z1_mean", varname)
+}
+```
+
+```{r}
+for (data in data_50gen){
+  df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(df_pos, "z1_mean", varname)
+}
+```
+
+```{r}
+for (data in data_50gen){
+  plot_trait_over_time(data, "z1_sd", varname)
+}
+```
+
+```{r}
+for (data in data_50gen){
+  df_pos <- subset(data, psi11 >= 0)
+  plot_trait_over_time(df_pos, "a1_sd", varname)
+}
+```
+
+```{r}
+for (data in data_50gen){
+  df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(df_pos, "a1_sd", varname)
+}
+```
+
+```{r}
+for (data in data_50gen){
+  df_pos <- subset(data, psi11 >= 0)
+  plot_trait_over_time(df_pos, "a1_mean", varname)
+}
+```
+
+```{r}
+for (data in data_50gen){
+  df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(df_pos, "a1_mean", varname)
+}
+```
+
+```{r}
+for (data in data_50gen){
+  df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(df_pos, "fitness_sd", varname)
+}
+```
+
+```{r}
+for (data in data_50gen){
+  df_pos <- subset(data, psi11 >= 0)
+  plot_trait_over_time(df_pos, "fitness_sd", varname)
+}
+```
+
+```{r}
+sample = data_50gen$`10`
+df_selected <- subset(sample, psi11 %in% c(0.0, 0.6, -0.6))
+plot_trait_over_time(df_selected, "z1_mean", varname)
+```
+
+## prediction of delta z1
+
+```{r}
+pattern="^psi11_.*_rec_.*_[1-5]\\.tsv$"
+sep="_rec_"
+data_pdz1 <-load_data("../tsv_output/pdz1", pattern, sep)
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "z1_mean", var_name)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "Vg", var_name)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "dz1", var_name)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "pdz1", var_name)
+}
+```
+
+```{r}
+plot_two_traits_over_time <- function(df_group, columns, varname, transparency = 0.2, show_trials = FALSE) {
+  column = columns[1]
+  column2 = columns[2]
+  if (!column %in% names(df_group)) {
+    stop(paste("Column", column, "not found in data"))
+  }
+
+  psi_vals <- sort(unique(df_group$psi11))
+  color_palette <- rainbow(2*length(psi_vals))
+
+  # Save current plot settings and expand right margin
+  old_par <- par(no.readonly = TRUE)
+  on.exit(par(old_par))  # Ensure original settings restored on exit
+  par(mar = c(5, 4, 4, 10))  # Extend right margin for legend
+
+  plot(NULL, xlim = range(df_group$cycle), ylim = range(c(df_group[[column]], df_group[[column2]]), na.rm = TRUE),
+       xlab = "Cycle", ylab = column,
+       main = paste(column, ",", column2, "Trajectory (", varname, " =", unique(df_group$qtl_count), ")"))
+  
+  color_i = 1
+  for (i in seq_along(psi_vals)) {
+    psi <- psi_vals[i]
+    sub_df <- df_group[df_group$psi11 == psi, ]
+
+    # Determine number of cycles per trial
+    cycles_per_trial <- length(unique(sub_df$cycle))
+    n_trials <- nrow(sub_df) / cycles_per_trial
+
+    if (n_trials != floor(n_trials)) {
+      stop("Data doesn't divide evenly into trials. Check if trials are complete or ordered correctly.")
+    }
+
+    sub_df$trial_id <- rep(1:n_trials, each = cycles_per_trial)
+
+    trial_list <- split(sub_df, sub_df$trial_id)
+
+    for (trial in trial_list) {
+      lines(trial$cycle, trial[[column]],
+            col = adjustcolor(color_palette[color_i], alpha.f = transparency), lwd = 1)
+      lines(trial$cycle, trial[[column2]],
+            col = adjustcolor(color_palette[color_i+1], alpha.f = transparency), lwd = 1)
+    }
+    
+    trait_matrix <- sapply(trial_list, function(df) df[[column]])
+    trait_matrix2 <- sapply(trial_list, function(df) df[[column2]])
+    if (is.vector(trait_matrix)) {
+      trait_matrix <- matrix(trait_matrix, ncol = 1)
+    }
+    if (is.vector(trait_matrix2)) {
+      trait_matrix2 <- matrix(trait_matrix2, ncol = 1)
+    }
+
+    trait_mean <- rowMeans(trait_matrix, na.rm = TRUE)
+    trait_mean2 <- rowMeans(trait_matrix2, na.rm = TRUE)
+    lines(trial_list[[1]]$cycle, trait_mean, col = color_palette[color_i], lwd = 2)
+    lines(trial_list[[1]]$cycle, trait_mean2, col = color_palette[color_i+1], lwd = 2)
+    color_i = color_i+2
+  }
+
+  legend("topright", inset = c(-0.4, 0), xpd = TRUE,
+         legend = c(rbind(paste("psi11 =", psi_vals, "pdz1"), paste("psi11 =", psi_vals, "dz1"))),
+         col = color_palette, lwd = 2, bty = "n")
+}
+
+```
+
+```{r}
+
+var_name="rec"
+
+for (data in data_pdz1){
+  df_pos <- subset(data, psi11 >= 0.9)
+  
+  plot_two_traits_over_time(df_pos, c("pdz1", "dz1"), var_name)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "z1_mean", var_name, cycle_range = c(2,3), transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "z1_mean", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "pdz1", var_name, transparency = 0.1, cycle_range = c(2,3))
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "b1", var_name, transparency = 0.1)
+}
+```
+
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "dz1", var_name, transparency = 0.1, cycle_range = c(2,3))
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "z1_sd", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "Vg", var_name, cycle_range = c(2,3), transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "fitness_mean", var_name, cycle_range = c(2,3), transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "fitness_mean", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "fitness_sd", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "pq_1", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "pdz1", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "dz1", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "Vg", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "optimum", var_name, transparency = 0.1, cycle_range = c(2,3))
+}
+```
+
+## one-neighbor
+```{r}
+plot_dz1_ratio <- function(df_list) {
+  # Check if the input is a list of two dataframes
+  if (length(df_list) != 2) {
+    stop("Input must be a list with two dataframes.")
+  }
+  
+  # Step 1: Calculate mean dz1 across replicates
+  mean_df1 <- aggregate(dz1 ~ cycle + psi11, data = df_list[[2]], FUN = mean)
+  mean_df2 <- aggregate(dz1 ~ cycle + psi11, data = df_list[[1]], FUN = mean)
+  
+  # Step 2: Merge the two mean dataframes
+  joined_df <- merge(mean_df1, mean_df2, by = c("cycle", "psi11"), suffixes = c("_df1", "_df2"))
+  
+  # Step 3: Calculate the ratio
+  joined_df$ratio <- joined_df$dz1_df1 / joined_df$dz1_df2
+  valid_ratios <- joined_df$ratio[is.finite(joined_df$ratio) & joined_df$ratio != 0]
+  ylim_r <- range(valid_ratios, na.rm = TRUE)
+  
+  # Step 4: Prepare for plotting
+  psi_vals <- sort(unique(joined_df$psi11))
+  colors <- rainbow(length(psi_vals))
+  
+  xlimr = range(joined_df$cycle)
+  xlimr = c(1.5, 2.5)
+  ylim_r = c(-10, 10)
+  # Set up an empty plot
+  plot(NULL, xlim = xlimr, ylim = ylim_r,
+       xlab = "Cycle", ylab = "Ratio of mean dz1 (df1 / df2)",
+       main = "Ratio of Mean dz1 Over Time")
+  
+  # Step 5: Add lines for each psi11
+  for (i in seq_along(psi_vals)) {
+    psi_val <- psi_vals[i]
+    sub_df <- joined_df[joined_df$psi11 == psi_val, ]
+    points(sub_df$cycle, sub_df$ratio, col = colors[i], lwd = 2)
+  }
+  
+  # # Step 6: Add a legend
+  legend("topright", legend = psi_vals, col = colors, lty = 1, lwd = 2, title = "psi11")
+}
+plot_dz1_ratio(data_1n)
+```
+
+
+```{r}
+pattern="^psi11_.*_rec_.*_[1-5]\\.tsv$"
+sep="_rec_"
+data_1n <-load_data("../tsv_output/1_neighbor", pattern, sep)
+```
+
+```{r}
+var_name="rec"
+for (data in data_1n){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "fitness_mean", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_1n){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "fitness_sd", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_1n){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "z1_mean", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_1n){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "z1_sd", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_1n){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "fitness_mean", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_1n){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "Vg", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_1n){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "Vg", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+plot_dz1_ratio_by_psi <- function(df_list) {
+  # Check input
+  if (length(df_list) != 2) {
+    stop("Input must be a list with two dataframes.")
+  }
+  
+  # Step 1: Calculate mean dz1 across replicates
+  mean_df1 <- aggregate(dz1 ~ cycle + psi11, data = df_list[[1]], FUN = mean)
+  mean_df2 <- aggregate(dz1 ~ cycle + psi11, data = df_list[[2]], FUN = mean)
+  
+  # Step 2: Merge the two mean dataframes
+  joined_df <- merge(mean_df1, mean_df2, by = c("cycle", "psi11"), suffixes = c("_df1", "_df2"))
+  
+  # Step 3: Calculate the ratio
+  joined_df$ratio <- joined_df$dz1_df1 / joined_df$dz1_df2
+  
+  # Step 4: Keep only valid points (finite, nonzero ratios)
+  valid <- is.finite(joined_df$ratio) & joined_df$ratio != 0
+  joined_df <- joined_df[valid, ]
+  
+  # Step 5: Set up color shading based on cycle
+  cycle_vals <- joined_df$cycle
+  cycle_min <- min(cycle_vals)
+  cycle_max <- max(cycle_vals)
+  
+  # Normalize cycle values to [0,1]
+  cycle_norm <- (cycle_vals - cycle_min) / (cycle_max - cycle_min)
+  
+  # Use same hue, vary brightness
+  base_col <- grDevices::hsv(h = 0.6, s = 1, v = 1 - cycle_norm * 0.8)  # hue=0.6 is blue
+  
+  # Step 6: Plot
+  plot(joined_df$psi11, joined_df$ratio,
+       ylim=c(-10, 10),
+       col = base_col, pch = 16,
+       xlab = "psi11", ylab = "Ratio of mean dz1 (df1 / df2)",
+       main = "Ratio vs psi11 (shade by cycle)")
+  
+  # Step 7: Add a color legend manually
+  # Create 5 reference points for cycle
+  legend_cycles <- seq(cycle_min, cycle_max, length.out = 5)
+  legend_colors <- grDevices::hsv(h = 0.6, s = 1, v = 1 - (legend_cycles - cycle_min) / (cycle_max - cycle_min) * 0.8)
+  
+  legend("topright", legend = round(legend_cycles, 1), col = legend_colors, pch = 16, title = "Cycle")
+}
+
+plot_dz1_ratio_by_psi(data_1n)
+```
+
+```{r}
+plot_trait_ratio_over_time <- function(df_group, numerator_col, denominator_col, varname,
+                                       transparency = 0.2, cycle_range = NULL, ylimr = NULL) {
+  if (!numerator_col %in% names(df_group)) {
+    stop(paste("Column", numerator_col, "not found in data"))
+  }
+  if (!denominator_col %in% names(df_group)) {
+    stop(paste("Column", denominator_col, "not found in data"))
+  }
+
+  psi_vals <- sort(unique(df_group$psi11))
+  color_palette <- rainbow(length(psi_vals))
+
+  # Save current plot settings and expand right margin
+  old_par <- par(no.readonly = TRUE)
+  on.exit(par(old_par))
+  par(mar = c(5, 4, 4, 8))  # Extend right margin for legend
+
+  # Prepare for ylim calculation
+  all_values <- c()
+
+  for (psi in psi_vals) {
+    sub_df <- df_group[df_group$psi11 == psi, ]
+    cycles_per_trial <- length(unique(sub_df$cycle))
+    n_trials <- nrow(sub_df) / cycles_per_trial
+
+    if (n_trials != floor(n_trials)) {
+      stop("Data doesn't divide evenly into trials.")
+    }
+
+    sub_df$trial_id <- rep(1:n_trials, each = cycles_per_trial)
+    trial_list <- split(sub_df, sub_df$trial_id)
+
+    for (trial in trial_list) {
+      if (!is.null(cycle_range)) {
+        trial <- trial[trial$cycle >= cycle_range[1] & trial$cycle <= cycle_range[2], ]
+      }
+      ratio <- trial[[numerator_col]] / trial[[denominator_col]]
+      all_values <- c(all_values, ratio)
+    }
+  }
+
+  # Define x and y limits
+  xlim_range <- if (is.null(cycle_range)) range(df_group$cycle) else cycle_range
+  ylim_range <- if (is.null(ylimr)) range(all_values, na.rm = TRUE) else ylimr
+
+  # Create empty plot
+  plot(NULL, xlim = xlim_range, ylim = ylim_range,
+       xlab = "Cycle", ylab = paste(numerator_col, "/", denominator_col),
+       main = paste("Ratio Trajectory (", varname, " =", unique(df_group$qtl_count), ")"))
+
+  # Plot lines
+  for (i in seq_along(psi_vals)) {
+    psi <- psi_vals[i]
+    sub_df <- df_group[df_group$psi11 == psi, ]
+    cycles_per_trial <- length(unique(sub_df$cycle))
+    n_trials <- nrow(sub_df) / cycles_per_trial
+    sub_df$trial_id <- rep(1:n_trials, each = cycles_per_trial)
+    trial_list <- split(sub_df, sub_df$trial_id)
+
+    for (trial in trial_list) {
+      if (!is.null(cycle_range)) {
+        trial <- trial[trial$cycle >= cycle_range[1] & trial$cycle <= cycle_range[2], ]
+      }
+      ratio <- trial[[numerator_col]] / trial[[denominator_col]]
+      lines(trial$cycle, ratio,
+            col = adjustcolor(color_palette[i], alpha.f = transparency), lwd = 1)
+    }
+
+    # Compute mean over filtered trials
+    trial_matrix <- sapply(trial_list, function(df) {
+      df_filtered <- if (!is.null(cycle_range)) {
+        df[df$cycle >= cycle_range[1] & df$cycle <= cycle_range[2], ]
+      } else df
+      df_filtered[[numerator_col]] / df_filtered[[denominator_col]]
+    })
+
+    if (is.vector(trial_matrix)) {
+      trial_matrix <- matrix(trial_matrix, ncol = 1)
+    }
+
+    trait_mean <- rowMeans(trial_matrix, na.rm = TRUE)
+
+    # Get cycle values from any trial, filtered
+    ref_cycle <- trial_list[[1]]$cycle
+    if (!is.null(cycle_range)) {
+      ref_cycle <- ref_cycle[ref_cycle >= cycle_range[1] & ref_cycle <= cycle_range[2]]
+    }
+
+    lines(ref_cycle, trait_mean, col = color_palette[i], lwd = 2)
+  }
+
+  legend("topright", inset = c(-0.3, 0), xpd = TRUE,
+         legend = paste("psi11 =", psi_vals),
+         col = color_palette, lwd = 2, bty = "n")
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_1n){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_ratio_over_time(data, "z1_mean", "optimum", var_name, transparency = 0.1, ylimr=c(0,1.5))
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_pdz1){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_ratio_over_time(data, "z1_mean", "optimum", var_name, transparency = 0.1, ylimr=c(0,1.5))
+}
+```
+
+## distribution with same sigma
+```{r}
+pattern="^psi11_.*_rec_.*_[1-5]\\.tsv$"
+sep="_rec_"
+data_sd <-load_data("../tsv_output/sel_distribution", pattern, sep)
+```
+
+```{r}
+var_name="rec"
+for (data in data_sd){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_ratio_over_time(data, "z1_mean", "optimum", var_name, transparency = 0.1, ylimr=c(0,0.5))
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_sd){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "Vg", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_sd){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "z1_mean", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_sd){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "z1_sd", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_sd){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "dz1", var_name, transparency = 0.1, cycle_range = c(2,3), ylimr = c(-0.4, 0.6))
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_sd){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_over_time(data, "z1_mean", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+var_name="rec"
+for (data in data_sd){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_ratio_over_time(data, "dz1", "pdz1", var_name, transparency = 0.1)
+}
+```
+
+```{r}
+## assume your list is called dfs
+## each element has a column named "z1_sd"
+
+data_sd <- lapply(data_sd, function(df) {
+  # if it’s a matrix, turn it into a data-frame (needed to mix numeric + names)
+  df <- as.data.frame(df)
+
+  df$Va <- df$a1_sd^2   # square and add as new column
+  df                   # return the modified data-frame
+})
+
+
+var_name="rec"
+for (data in data_sd){
+  # df_pos <- subset(data, psi11 <= 0)
+  plot_trait_ratio_over_time(data, "Va", "Vp", var_name, transparency = 0.1)
+}
+```
+
+
+

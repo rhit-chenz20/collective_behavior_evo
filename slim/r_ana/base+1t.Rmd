@@ -1,0 +1,800 @@
+---
+title: "base+1t"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+## prep
+```{r compute_columns}
+# Set your folder path
+folder_path <- c("../tsv_output/1t/cut_qtl_100", "../tsv_output/1t/qtl")
+data_list = c()
+for (folder in folder_path){
+  # 2. List files, make sure they are sorted
+  files <- sort(list.files(path = folder, pattern = "\\.tsv$", full.names = TRUE))
+  
+  # 3. Read each file into a data frame, and add a replicate column
+  temp <- lapply(seq_along(files), function(i) {
+    file <- files[i]
+    df <- read.table(file, header = TRUE, sep = "\t")
+    # Make sure the columns you need are numeric
+    df <- df[ , !grepl("^pq_", names(df))]
+    df$z1_mean <- as.numeric(df$z1_mean)
+    df$R <- df$s * df$h2
+    df$R_extended <- ifelse(df$psi11 > -1 & df$psi11 < 1,
+                          (1 / (1 - df$psi11^2)) * (1 / (1 - df$psi11)) * df$R,
+                          NaN)
+
+    # df$qtl_c <- 100
+    # write.table(df, file, sep = "\t", row.names = FALSE, quote = FALSE)
+    return(df)
+  })
+  
+  data_list = c(data_list, temp)
+}
+
+# Combine all into one big matrix (stacked row-wise)
+df <- as.data.frame(do.call(rbind, data_list))
+```
+
+
+
+
+```{r compute_columns}
+# Make sure the columns you need are numeric
+df = df[df$cycle >=3,]
+df_base = df[df$psi11 == -2,]
+df_1t = df[df$psi11 != -2,]
+```
+
+## base analysis
+```{r with_cutoff}
+sub_df = df_base
+sub_df_cut = sub_df[sub_df$cutoff == 1, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$R), ylim=range(sub_df_cut$dz1),
+     xlab="prediction delta z",
+     ylab="simulated delta z",
+     main = "new optimum at 95% with cutoff at 80% (base model)")
+
+# Loop over each replicate
+for (r in unique_reps) {
+  sub_df <- sub_df_cut[sub_df_cut$rep == r,]
+  
+  x = sub_df[sub_df$cycle == 3, ]$R
+  y = sub_df[sub_df$cycle == 3, ]$dz1
+  # Add to plot
+  points(x, y, pch=20, col="blue")
+  
+  x = sub_df[sub_df$cycle == 4, ]$R
+  y = sub_df[sub_df$cycle == 4, ]$dz1
+  # Add to plot
+  points(x, y, pch=20, col="green")
+  
+  x = sub_df[sub_df$cycle == 5, ]$R
+  y = sub_df[sub_df$cycle == 5, ]$dz1
+  # Add to plot
+  points(x, y, pch=20, col="black")
+}
+abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("bottomright", legend = c("gen 1","gen 2",  "gen 3"),
+       col = c("blue", "green", "black"), lty = 1, lwd = 2)
+
+```
+
+```{r without_cutoff}
+sub_df = df_base
+sub_df_cut = sub_df[sub_df$cutoff == 0, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$R), ylim=range(sub_df_cut$dz1),
+     xlab="prediction delta z",
+     ylab="simulated delta z",
+     main = "new optimum at 95% with cutoff at 80% (base model)")
+
+# Loop over each replicate
+for (r in unique_reps) {
+  sub_df <- sub_df_cut[sub_df_cut$rep == r,]
+  
+  x = sub_df[sub_df$cycle == 3, ]$R
+  y = sub_df[sub_df$cycle == 3, ]$dz1
+  # Add to plot
+  points(x, y, pch=20, col="blue")
+  
+  x = sub_df[sub_df$cycle == 4, ]$R
+  y = sub_df[sub_df$cycle == 4, ]$dz1
+  # Add to plot
+  points(x, y, pch=20, col="green")
+  
+  x = sub_df[sub_df$cycle == 5, ]$R
+  y = sub_df[sub_df$cycle == 5, ]$dz1
+  # Add to plot
+  points(x, y, pch=20, col="black")
+}
+abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("bottomright", legend = c("gen 1","gen 2",  "gen 3"),
+       col = c("blue", "green", "black"), lty = 1, lwd = 2)
+
+```
+
+
+
+```{r with_cutoff}
+sub_df = df_base
+sub_df_cut = sub_df[sub_df$cutoff == 0, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$R), ylim=range(sub_df_cut$dz1),
+     xlab="prediction delta z",
+     ylab="simulated delta z",
+     main = "continuous fitness distribution with 99% optimum (base model)")
+
+# Loop over each replicate
+for (r in unique_reps) {
+  sub_df <- sub_df_cut[sub_df_cut$rep == r,]
+  
+  x = sub_df[sub_df$cycle == 3, ]$R
+  y = sub_df[sub_df$cycle == 3, ]$dz1
+  # Add to plot
+  points(x, y, pch=20, col="blue")
+  
+  x = sub_df[sub_df$cycle == 4, ]$R
+  y = sub_df[sub_df$cycle == 4, ]$dz1
+  # Add to plot
+  points(x, y, pch=20, col="green")
+  
+  x = sub_df[sub_df$cycle == 5, ]$R
+  y = sub_df[sub_df$cycle == 5, ]$dz1
+  # Add to plot
+  points(x, y, pch=20, col="black")
+}
+abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("bottomright", legend = c("gen 1","gen 2",  "gen 3"),
+       col = c("blue", "green", "black"), lty = 1, lwd = 2)
+
+```
+
+```{r with_cutoff}
+sub_df = df_base
+sub_df_cut = sub_df[sub_df$cutoff == 0, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$cycle), ylim=range(sub_df_cut$Vg),
+     xlab="prediction delta z",
+     ylab="simulated delta z",
+     main = "continuous fitness distribution with 99% optimum (base model)")
+
+# Loop over each replicate
+for (r in unique_reps) {
+  sub_df <- sub_df_cut[sub_df_cut$rep == r,]
+  x = sub_df$cycle
+  y = sub_df$Vg
+  # Add to plot
+  points(x, y, pch=20)
+}
+
+# Add legend
+legend("bottomright", legend = c("gen 1","gen 2",  "gen 3"),
+       col = c("blue", "green", "black"), lty = 1, lwd = 2)
+
+```
+
+## 1t
+```{r one_psi_3_gen}
+sub_df = df_1t[df_1t$psi11 == 0.0 & df_1t$rec == 1,]
+sub_df_cut = sub_df[sub_df$cutoff == 1, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$R), ylim=range(sub_df_cut$dz1),
+     xlab="prediction delta z",
+     ylab="simulated delta z",
+     main = "new optimum at 95% with cutoff at 80% (social model, psi=0)")
+
+# Loop over each replicate
+for (r in unique_reps) {
+  # for (p in unique_psi){
+    sub_df <- sub_df_cut[sub_df_cut$rep == r,]
+    
+    x = sub_df[sub_df$cycle == 3, ]$R
+    y = sub_df[sub_df$cycle == 3, ]$dz1
+    # Add to plot
+    points(x, y, pch=20, col="blue")
+    
+    x = sub_df[sub_df$cycle == 4, ]$R
+    y = sub_df[sub_df$cycle == 4, ]$dz1
+    # Add to plot
+    points(x, y, pch=20, col="green")
+    
+    x = sub_df[sub_df$cycle == 5, ]$R
+    y = sub_df[sub_df$cycle == 5, ]$dz1
+    # Add to plot
+    points(x, y, pch=20, col="black")
+    
+}
+abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("bottomright", legend = c("gen 1","gen 2",  "gen 3"),
+       col = c("blue", "green", "black"), lty = 1, lwd = 2)
+```
+
+```{r 1_gen_multi_psi}
+sub_df = df_1t[order(df_1t$psi11)& df_1t$rec == 1,]
+sub_df_cut = sub_df[sub_df$cutoff == 1, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+par(mar = c(5, 4, 4, 8))
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$R), ylim=range(sub_df_cut$dz1),
+     xlab="prediction delta z",
+     ylab="simulated delta z",
+     main = "new optimum at 95% with cutoff at 80% (social model, gen 1)")
+
+unique_psi = unique(sub_df_cut$psi11)
+# base_color <- "blue"
+# transparencies <- seq(0.2, 1, length.out = length(unique_psi))
+# adjusted_colors <- sapply(transparencies, function(a) adjustcolor(base_color, alpha.f = a))
+colors = rainbow(length(unique_psi))
+adjusted_colors = colors
+
+
+# Loop over each replicate
+for (r in unique_reps) {
+  i=1
+  for (p in unique_psi){
+      sub_df <- sub_df_cut[sub_df_cut$rep == r & sub_df_cut$psi11 == p,]
+      
+      x = sub_df[sub_df$cycle == 3, ]$R
+      y = sub_df[sub_df$cycle == 3, ]$dz1
+      # Add to plot
+      points(x, y, pch=20, col=adjusted_colors[i])
+      i=i+1
+  }
+}
+abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("topright", legend = unique_psi,inset = c(-0.2, 0),
+       col = adjusted_colors, lty = 1, lwd = 2, xpd = TRUE)
+```
+
+```{r 1_gen_multi_psi}
+sub_df = df_1t[order(df_1t$psi11)& df_1t$rec == 1,]
+sub_df_cut = sub_df[sub_df$cutoff == 1, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+par(mar = c(5, 4, 4, 8))
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$R_extended), ylim=range(sub_df_cut$dz1),
+     xlab="prediction delta z",
+     ylab="simulated delta z",
+     main = "new optimum at 95% with cutoff at 80% (social model, gen 1)")
+
+unique_psi = unique(sub_df_cut$psi11)
+# base_color <- "blue"
+# transparencies <- seq(0.2, 1, length.out = length(unique_psi))
+# adjusted_colors <- sapply(transparencies, function(a) adjustcolor(base_color, alpha.f = a))
+colors = rainbow(length(unique_psi))
+adjusted_colors = colors
+
+
+# Loop over each replicate
+for (r in unique_reps) {
+  i=1
+  for (p in unique_psi){
+      sub_df <- sub_df_cut[sub_df_cut$rep == r & sub_df_cut$psi11 == p,]
+      
+      x = sub_df[sub_df$cycle == 3, ]$R_extended
+      y = sub_df[sub_df$cycle == 3, ]$dz1
+      # Add to plot
+      points(x, y, pch=20, col=adjusted_colors[i])
+      i=i+1
+  }
+}
+abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("topright", legend = unique_psi,inset = c(-0.2, 0),
+       col = adjusted_colors, lty = 1, lwd = 2, xpd = TRUE)
+```
+
+
+```{r 1_gen_multi_psi}
+sub_df = df_1t[order(df_1t$psi11)& df_1t$rec == 1,]
+sub_df_cut = sub_df[sub_df$cutoff == 1, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+par(mar = c(5, 4, 4, 8))
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$psi11), ylim=range(sub_df_cut$Vg),
+     xlab="psi11",
+     ylab="Vg",
+     main = "new optimum at 95% with cutoff at 80% (social model)")
+
+unique_cycle = unique(sub_df_cut$cycle)
+# base_color <- "blue"
+# transparencies <- seq(0.2, 1, length.out = length(unique_psi))
+# adjusted_colors <- sapply(transparencies, function(a) adjustcolor(base_color, alpha.f = a))
+colors = rainbow(length(unique_cycle))
+adjusted_colors = colors
+
+
+# Loop over each replicate
+for (r in unique_reps) {
+  i=1
+  for (c in unique_cycle){
+      sub_df <- sub_df_cut[sub_df_cut$rep == r & sub_df_cut$cycle == c,]
+      
+      x = sub_df[sub_df$cycle == c, ]$psi11
+      y = sub_df[sub_df$cycle == c, ]$Vg
+      # Add to plot
+      points(x, y, pch=20, col=adjusted_colors[i])
+      i=i+1
+  }
+}
+# abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("topright", legend = paste("gen ",unique_cycle),inset = c(-0.25, 0),
+       col = adjusted_colors, lty = 1, lwd = 2, xpd = TRUE)
+```
+
+```{r 1_gen_multi_psi}
+sub_df = df_1t[order(df_1t$psi11)& df_1t$rec == 1,]
+sub_df_cut = sub_df[sub_df$cutoff == 1, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+par(mar = c(5, 4, 4, 8))
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$psi11), ylim=range(sub_df_cut$s),
+     xlab="psi11",
+     ylab="selection gradient",
+     main = "new optimum at 95% with cutoff at 80% (social model)")
+
+unique_cycle = unique(sub_df_cut$cycle)
+# base_color <- "blue"
+# transparencies <- seq(0.2, 1, length.out = length(unique_psi))
+# adjusted_colors <- sapply(transparencies, function(a) adjustcolor(base_color, alpha.f = a))
+colors = rainbow(length(unique_cycle))
+adjusted_colors = colors
+
+
+# Loop over each replicate
+for (r in unique_reps) {
+  i=1
+  for (c in unique_cycle){
+      sub_df <- sub_df_cut[sub_df_cut$rep == r & sub_df_cut$cycle == c,]
+      
+      x = sub_df[sub_df$cycle == c, ]$psi11
+      y = sub_df[sub_df$cycle == c, ]$s
+      # Add to plot
+      points(x, y, pch=20, col=adjusted_colors[i])
+      i=i+1
+  }
+}
+# abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("topright", legend = paste("gen ",unique_cycle),inset = c(-0.25, 0),
+       col = adjusted_colors, lty = 1, lwd = 2, xpd = TRUE)
+```
+
+
+## 1t non rec
+```{r 1_gen_multi_psi}
+sub_df = df_1t[order(df_1t$psi11)& df_1t$rec == 0,]
+sub_df_cut = sub_df[sub_df$cutoff == 1, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+par(mar = c(5, 4, 4, 8))
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$psi11), ylim=range(sub_df_cut$Vg),
+     xlab="psi11",
+     ylab="Vg",
+     main = "new optimum at 95% with cutoff at 80% (social model)")
+
+unique_cycle = unique(sub_df_cut$cycle)
+# base_color <- "blue"
+# transparencies <- seq(0.2, 1, length.out = length(unique_psi))
+# adjusted_colors <- sapply(transparencies, function(a) adjustcolor(base_color, alpha.f = a))
+colors = rainbow(length(unique_cycle))
+adjusted_colors = colors
+
+
+# Loop over each replicate
+for (r in unique_reps) {
+  i=1
+  for (c in unique_cycle){
+      sub_df <- sub_df_cut[sub_df_cut$rep == r & sub_df_cut$cycle == c,]
+      
+      x = sub_df[sub_df$cycle == c, ]$psi11
+      y = sub_df[sub_df$cycle == c, ]$Vg
+      # Add to plot
+      points(x, y, pch=20, col=adjusted_colors[i])
+      i=i+1
+  }
+}
+# abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("topright", legend = paste("gen ",unique_cycle),inset = c(-0.25, 0),
+       col = adjusted_colors, lty = 1, lwd = 2, xpd = TRUE)
+```
+
+```{r 1_gen_multi_psi}
+sub_df = df_1t[order(df_1t$psi11)& df_1t$rec == 0,]
+sub_df_cut = sub_df[sub_df$cutoff == 1, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+par(mar = c(5, 4, 4, 8))
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$R), ylim=range(sub_df_cut$dz1),
+     xlab="prediction delta z",
+     ylab="simulated delta z",
+     main = "new optimum at 95% with cutoff at 80% (social model, gen 1)")
+
+unique_psi = unique(sub_df_cut$psi11)
+# base_color <- "blue"
+# transparencies <- seq(0.2, 1, length.out = length(unique_psi))
+# adjusted_colors <- sapply(transparencies, function(a) adjustcolor(base_color, alpha.f = a))
+colors = rainbow(length(unique_psi))
+adjusted_colors = colors
+
+
+# Loop over each replicate
+for (r in unique_reps) {
+  i=1
+  for (p in unique_psi){
+      sub_df <- sub_df_cut[sub_df_cut$rep == r & sub_df_cut$psi11 == p,]
+      
+      x = sub_df[sub_df$cycle == 3, ]$R
+      y = sub_df[sub_df$cycle == 3, ]$dz1
+      # Add to plot
+      points(x, y, pch=20, col=adjusted_colors[i])
+      i=i+1
+  }
+}
+abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("topright", legend = unique_psi,inset = c(-0.2, 0),
+       col = adjusted_colors, lty = 1, lwd = 2, xpd = TRUE)
+```
+```{r 1_gen_multi_psi}
+sub_df = df_1t[order(df_1t$psi11)& df_1t$rec == 0,]
+sub_df_cut = sub_df[sub_df$cutoff == 1, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+par(mar = c(5, 4, 4, 8))
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$R_extended), ylim=range(sub_df_cut$dz1),
+     xlab="prediction delta z",
+     ylab="simulated delta z",
+     main = "new optimum at 95% with cutoff at 80% (social model, gen 1)")
+
+unique_psi = unique(sub_df_cut$psi11)
+# base_color <- "blue"
+# transparencies <- seq(0.2, 1, length.out = length(unique_psi))
+# adjusted_colors <- sapply(transparencies, function(a) adjustcolor(base_color, alpha.f = a))
+colors = rainbow(length(unique_psi))
+adjusted_colors = colors
+
+
+# Loop over each replicate
+for (r in unique_reps) {
+  i=1
+  for (p in unique_psi){
+      sub_df <- sub_df_cut[sub_df_cut$rep == r & sub_df_cut$psi11 == p,]
+      
+      x = sub_df[sub_df$cycle == 3, ]$R_extended / 
+      y = sub_df[sub_df$cycle == 3, ]$dz1
+      # Add to plot
+      points(x, y, pch=20, col=adjusted_colors[i])
+      i=i+1
+  }
+}
+abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("topright", legend = unique_psi,inset = c(-0.2, 0),
+       col = adjusted_colors, lty = 1, lwd = 2, xpd = TRUE)
+```
+
+```{r 1_gen_multi_psi}
+sub_df = df_1t[order(df_1t$psi11),]
+sub_df_cut = sub_df[sub_df$cutoff == 1, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+par(mar = c(5, 4, 4, 8))
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$psi11), ylim=range((sub_df_cut[sub_df_cut$rec == 1, ]$dz1 / sub_df_cut[sub_df_cut$rec == 0, ]$dz1)),
+     xlab="psi11",
+     ylab="relative delta z",
+     main = "new optimum at 95% with cutoff at 80% (social model)")
+
+unique_cycle = unique(sub_df_cut$cycle)
+# base_color <- "blue"
+# transparencies <- seq(0.2, 1, length.out = length(unique_psi))
+# adjusted_colors <- sapply(transparencies, function(a) adjustcolor(base_color, alpha.f = a))
+colors = rainbow(length(unique_cycle))
+adjusted_colors = colors
+
+
+# Loop over each replicate
+for (r in unique_reps) {
+  i=1
+  for (c in unique_cycle){
+      sub_df <- sub_df_cut[sub_df_cut$rep == r & sub_df_cut$cycle == c,]
+      
+      x = sub_df[sub_df$cycle == c& sub_df$rec == 1, ]$psi11
+      y = sub_df[sub_df$cycle == c & sub_df$rec == 1, ]$dz1 / sub_df[sub_df$cycle == c& sub_df$rec == 0, ]$dz1
+      # Add to plot
+      points(x, y, pch=20, col=adjusted_colors[i])
+      i=i+1
+  }
+}
+# abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("topright", legend = paste("gen ",unique_cycle),inset = c(-0.25, 0),
+       col = adjusted_colors, lty = 1, lwd = 2, xpd = TRUE)
+```
+
+```{r 1_gen_multi_psi}
+sub_df = df_1t[order(df_1t$psi11)& df_1t$rec == 1,]
+sub_df_cut = sub_df[sub_df$cutoff == 1, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+par(mar = c(5, 4, 4, 8))
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$psi11), ylim=range(sub_df_cut$dz1),
+     xlab="psi11",
+     ylab="simulated delta z",
+     main = "new optimum at 95% with cutoff at 80% (social model, gen 1)")
+
+unique_psi = unique(sub_df_cut$psi11)
+# base_color <- "blue"
+# transparencies <- seq(0.2, 1, length.out = length(unique_psi))
+# adjusted_colors <- sapply(transparencies, function(a) adjustcolor(base_color, alpha.f = a))
+colors = rainbow(length(unique_psi))
+adjusted_colors = colors
+
+
+# Loop over each replicate
+for (r in unique_reps) {
+  i=1
+  for (p in unique_psi){
+      sub_df <- sub_df_cut[sub_df_cut$rep == r & sub_df_cut$psi11 == p,]
+      
+      x = sub_df[sub_df$cycle == 3, ]$psi11
+      y = sub_df[sub_df$cycle == 3, ]$dz1
+      # Add to plot
+      points(x, y, pch=20, col=adjusted_colors[i])
+      i=i+1
+  }
+}
+# abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("topright", legend = paste("psi=",unique_psi),inset = c(-0.25, 0),
+       col = adjusted_colors, lty = 1, lwd = 2, xpd = TRUE)
+```
+
+## different qtl
+```{r 1_gen_multi_psi}
+sub_df = df_1t[order(df_1t$psi11) & df_1t$rec == 1 & df_1t$cutoff == 1& df_1t$cycle == 3,]
+# Columns to aggregate (exclude grouping columns)
+cols_to_avg <- setdiff(names(sub_df), c("rep", "psi11", "qtl_c"))
+
+# Initialize result with the first column
+agg_df <- aggregate(sub_df[[cols_to_avg[1]]], by = list(psi11 = sub_df$psi11, qtl_c = sub_df$qtl_c), FUN = mean)
+names(agg_df)[3] <- cols_to_avg[1]
+
+# Loop through the remaining columns and merge
+for (colname in cols_to_avg[-1]) {
+  temp <- aggregate(sub_df[[colname]], by = list(psi11 = sub_df$psi11, qtl_c = sub_df$qtl_c), FUN = mean)
+  names(temp)[3] <- colname
+  agg_df <- merge(agg_df, temp, by = c("psi11", "qtl_c"))
+}
+```
+
+```{r }
+# Convert to wide format matrix for heatmap
+heatmap_matrix <- with(agg_df, tapply(dz1, list(qtl_c, psi11), mean))
+# Save the summary for future use
+write.csv(heatmap_matrix, "../tsv_output/dz1_mean_by_psi11_qtl.csv", row.names = TRUE)
+
+```
+
+
+```{r 1_gen_multi_psi}
+sub_sub_df = agg_df
+# Convert to matrix form
+z_matrix <- with(sub_sub_df, tapply(dz1, list(qtl_c, psi11), mean))
+
+# Extract sorted unique x and y values
+x_vals <- sort(unique(sub_sub_df$psi11))
+y_vals <- sort(unique(sub_sub_df$qtl_c))
+
+filled.contour(x = y_vals,
+               y = x_vals,
+               z = z_matrix,
+               color.palette = terrain.colors,
+               xlab = "number of QTL",
+               ylab = "psi",
+               main = "genetic diversity (50 rep, gen 1)")
+
+
+```
+
+
+```{r 1_gen_multi_psi}
+sub_sub_df = agg_df
+# Convert to matrix form
+z_matrix <- with(sub_sub_df, tapply(dz1, list(qtl_c, psi11), mean))
+
+# Extract sorted unique x and y values
+x_vals <- sort(unique(sub_sub_df$psi11))
+y_vals <- sort(unique(sub_sub_df$qtl_c))
+
+filled.contour(x = y_vals,
+               y = x_vals,
+               z = z_matrix,
+               color.palette = terrain.colors,
+               xlab = "number of QTL",
+               ylab = "psi",
+               main = "population mean phenotypic change (50 rep, gen 1)")
+
+
+```
+
+```{r 1_gen_multi_psi}
+sub_df = df_1t[order(df_1t$psi11)& df_1t$rec == 1 & df_1t$qtl_c == 100 & df_1t$cycle == 3,]
+sub_df_cut = sub_df[sub_df$cutoff == 1, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+par(mar = c(5, 4, 4, 8))
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$R_extended), ylim=range(sub_df_cut$dz1),
+     xlab="predicted change in mean phenotype",
+     ylab="actual change in mean phenotype",
+     main = "100 qtl (gen 1)")
+
+unique_psi = unique(sub_df_cut$psi11)
+# base_color <- "blue"
+# transparencies <- seq(0.2, 1, length.out = length(unique_psi))
+# adjusted_colors <- sapply(transparencies, function(a) adjustcolor(base_color, alpha.f = a))
+colors = rainbow(length(unique_psi))
+adjusted_colors = colors
+
+
+# Loop over each replicate
+for (r in unique_reps) {
+  i=1
+  for (p in unique_psi){
+      sub_df <- sub_df_cut[sub_df_cut$rep == r & sub_df_cut$psi11 == p,]
+      
+      x = sub_df[sub_df$cycle == 3, ]$R_extended
+      y = sub_df[sub_df$cycle == 3, ]$dz1
+      # Add to plot
+      points(x, y, pch=20, col=adjusted_colors[i])
+      i=i+1
+  }
+}
+abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("topright", legend = unique_psi,inset = c(-0.2, 0),
+       col = adjusted_colors, lty = 1, lwd = 2, xpd = TRUE)
+
+
+
+
+sub_df = df_1t[order(df_1t$psi11)& df_1t$rec == 1 & df_1t$qtl_c == 1& df_1t$cycle == 3,]
+sub_df_cut = sub_df[sub_df$cutoff == 1, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+par(mar = c(5, 4, 4, 8))
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$R_extended), ylim=range(sub_df_cut$dz1),
+     xlab="predicted change in mean phenotype",
+     ylab="actual change in mean phenotype",
+     main = "1 qtl (gen 1)")
+
+unique_psi = unique(sub_df_cut$psi11)
+# base_color <- "blue"
+# transparencies <- seq(0.2, 1, length.out = length(unique_psi))
+# adjusted_colors <- sapply(transparencies, function(a) adjustcolor(base_color, alpha.f = a))
+colors = rainbow(length(unique_psi))
+adjusted_colors = colors
+
+
+# Loop over each replicate
+for (r in unique_reps) {
+  i=1
+  for (p in unique_psi){
+      sub_df <- sub_df_cut[sub_df_cut$rep == r & sub_df_cut$psi11 == p,]
+      
+      x = sub_df[sub_df$cycle == 3, ]$R_extended
+      y = sub_df[sub_df$cycle == 3, ]$dz1
+      # Add to plot
+      points(x, y, pch=20, col=adjusted_colors[i])
+      i=i+1
+  }
+}
+abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("topright", legend = unique_psi,inset = c(-0.2, 0),
+       col = adjusted_colors, lty = 1, lwd = 2, xpd = TRUE)
+```
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,292 @@
+---
+title: "social"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+## prep
+```{r file_reading}
+# Set your folder path
+folder_path <- c("../tsv_output/1t/cut_qtl_100","../tsv_output/social")
+data_list = c()
+for (folder in folder_path){
+  # 2. List files, make sure they are sorted
+  files <- sort(list.files(path = folder, pattern = "\\.tsv$", full.names = TRUE))
+  
+  # 3. Read each file into a data frame, and add a replicate column
+  temp <- lapply(seq_along(files), function(i) {
+    file <- files[i]
+    df <- read.table(file, header = TRUE, sep = "\t")
+    # Make sure the columns you need are numeric
+    df <- df[ , !grepl("^pq_", names(df))]
+    df$z1_mean <- as.numeric(df$z1_mean)
+    df$R <- df$s * df$h2
+    df$R_extended <- ifelse(df$psi11 > -1 & df$psi11 < 1,
+                          (1 / (1 - df$psi11^2)) * (1 / (1 - df$psi11)) * df$R,
+                          NaN)
+
+    if (!"K" %in% names(df)) {
+      df$K <- 1
+    }
+    if (!"regime" %in% names(df)) {
+      df$regime <- "none"
+    }
+    if ("qtl_c" %in% names(df)) {
+      df$qtl_c <- NULL
+    }
+    # df$qtl_c <- 100
+    # write.table(df, file, sep = "\t", row.names = FALSE, quote = FALSE)
+    return(df)
+  })
+  
+  data_list = c(data_list, temp)
+}
+
+# Combine all into one big matrix (stacked row-wise)
+df_social <- as.data.frame(do.call(rbind, data_list))
+```
+
+```{r compute_columns}
+# Make sure the columns you need are numeric
+df_social = df_social[df_social$cycle >=3,]
+```
+
+```{r 1_gen_multi_psi}
+sub_df = df_social[order(df_social$psi11)& df_social$rec == 1 & df_social$K == 1 & df_social$cycle == 3 & df_social$regime == "max",]
+sub_df_cut = sub_df[sub_df$cutoff == 1, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+par(mar = c(5, 4, 4, 8))
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$R), ylim=range(sub_df_cut$dz1),
+     xlab="prediction delta z",
+     ylab="simulated delta z",
+     main = "k=1(gen 1)")
+
+unique_psi = unique(sub_df_cut$psi11)
+colors = rainbow(length(unique_psi))
+adjusted_colors = colors
+
+
+# Loop over each replicate
+for (r in unique_reps) {
+  i=1
+  for (p in unique_psi){
+      sub_df <- sub_df_cut[sub_df_cut$rep == r & sub_df_cut$psi11 == p,]
+      
+      x = sub_df[sub_df$cycle == 3, ]$R
+      y = sub_df[sub_df$cycle == 3, ]$dz1
+      # Add to plot
+      points(x, y, pch=20, col=adjusted_colors[i])
+      i=i+1
+  }
+}
+abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("topright", legend = unique_psi,inset = c(-0.2, 0),
+       col = adjusted_colors, lty = 1, lwd = 2, xpd = TRUE)
+```
+```{r 1_gen_multi_psi}
+sub_df = df_social[order(df_social$psi11)& df_social$rec == 1 & df_social$K == 1 & df_social$cycle == 3 & df_social$regime == "none",]
+sub_df_cut = sub_df[sub_df$cutoff == 1, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+par(mar = c(5, 4, 4, 8))
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$R), ylim=range(sub_df_cut$dz1),
+     xlab="prediction delta z",
+     ylab="simulated delta z",
+     main = "k=1(gen 1)")
+
+unique_psi = unique(sub_df_cut$psi11)
+colors = rainbow(length(unique_psi))
+adjusted_colors = colors
+
+
+# Loop over each replicate
+for (r in unique_reps) {
+  i=1
+  for (p in unique_psi){
+      sub_df <- sub_df_cut[sub_df_cut$rep == r & sub_df_cut$psi11 == p,]
+      
+      x = sub_df[sub_df$cycle == 3, ]$R
+      y = sub_df[sub_df$cycle == 3, ]$dz1
+      # Add to plot
+      points(x, y, pch=20, col=adjusted_colors[i])
+      i=i+1
+  }
+}
+abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("topright", legend = unique_psi,inset = c(-0.2, 0),
+       col = adjusted_colors, lty = 1, lwd = 2, xpd = TRUE)
+```
+
+
+
+
+
+
+```{r 1_gen_multi_psi}
+sub_df = df_social[order(df_social$psi11)& df_social$rec == 1 & df_social$K == 11 & df_social$cycle == 3 ,]
+sub_df_cut = sub_df[sub_df$cutoff == 1, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+par(mar = c(5, 4, 4, 8))
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$R), ylim=range(sub_df_cut$dz1),
+     xlab="prediction delta z",
+     ylab="simulated delta z",
+     main = "new optimum at 95% with cutoff at 80% (social model, gen 1)")
+
+unique_psi = unique(sub_df_cut$psi11)
+# base_color <- "blue"
+# transparencies <- seq(0.2, 1, length.out = length(unique_psi))
+# adjusted_colors <- sapply(transparencies, function(a) adjustcolor(base_color, alpha.f = a))
+colors = rainbow(length(unique_psi))
+adjusted_colors = colors
+
+
+# Loop over each replicate
+for (r in unique_reps) {
+  i=1
+  for (p in unique_psi){
+      sub_df <- sub_df_cut[sub_df_cut$rep == r & sub_df_cut$psi11 == p,]
+      
+      x = sub_df[sub_df$cycle == 3, ]$R
+      y = sub_df[sub_df$cycle == 3, ]$dz1
+      # Add to plot
+      points(x, y, pch=20, col=adjusted_colors[i])
+      i=i+1
+  }
+}
+abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("topright", legend = unique_psi,inset = c(-0.2, 0),
+       col = adjusted_colors, lty = 1, lwd = 2, xpd = TRUE)
+```
+
+```{r 1_gen_multi_psi}
+sub_df = df_social[order(df_social$psi11)& df_social$rec == 1 & df_social$K == 1 & df_social$cycle == 3 & df_social$regime == "max",]
+sub_df_cut = sub_df[sub_df$cutoff == 1, ]
+
+# For each replicate, plot (current, next) points
+unique_reps <- unique(sub_df_cut$rep)
+
+par(mar = c(5, 4, 4, 8))
+
+# Set up an empty plot
+plot(NULL, xlim=range(sub_df_cut$R_extended), ylim=range(sub_df_cut$dz1),
+     xlab="predicted delta z (extended)",
+     ylab="simulated delta z",
+     main = "k=1 (gen 1)")
+
+unique_psi = unique(sub_df_cut$psi11)
+# base_color <- "blue"
+# transparencies <- seq(0.2, 1, length.out = length(unique_psi))
+# adjusted_colors <- sapply(transparencies, function(a) adjustcolor(base_color, alpha.f = a))
+colors = rainbow(length(unique_psi))
+adjusted_colors = colors
+
+
+# Loop over each replicate
+for (r in unique_reps) {
+  i=1
+  for (p in unique_psi){
+      sub_df <- sub_df_cut[sub_df_cut$rep == r & sub_df_cut$psi11 == p,]
+      
+      x = sub_df[sub_df$cycle == 3, ]$R_extended
+      y = sub_df[sub_df$cycle == 3, ]$dz1
+      # Add to plot
+      points(x, y, pch=20, col=adjusted_colors[i])
+      i=i+1
+  }
+}
+abline(0, 1, col="red", lty=1)
+
+# Add legend
+legend("topright", legend = unique_psi,inset = c(-0.2, 0),
+       col = adjusted_colors, lty = 1, lwd = 2, xpd = TRUE)
+```
+
+
+```{r 1_gen_multi_psi}
+sub_df = df_social[order(df_social$psi11) & df_social$rec == 1 & df_social$cutoff == 1& df_social$cycle == 3 &df_social$regime == "max",]
+# Columns to aggregate (exclude grouping columns)
+cols_to_avg <- setdiff(names(sub_df), c("rep", "psi11", "K", "regime"))
+
+# Initialize result with the first column
+agg_df <- aggregate(sub_df[[cols_to_avg[1]]], by = list(psi11 = sub_df$psi11, K = sub_df$K), FUN = mean)
+names(agg_df)[3] <- cols_to_avg[1]
+
+# Loop through the remaining columns and merge
+for (colname in cols_to_avg[-1]) {
+  temp <- aggregate(sub_df[[colname]], by = list(psi11 = sub_df$psi11, K = sub_df$K), FUN = mean)
+  names(temp)[3] <- colname
+  agg_df <- merge(agg_df, temp, by = c("psi11", "K"))
+}
+```
+
+
+```{r 1_gen_multi_psi}
+sub_sub_df = agg_df
+# Convert to matrix form
+z_matrix <- with(sub_sub_df, tapply(dz1, list(K, psi11), mean))
+
+# Extract sorted unique x and y values
+x_vals <- sort(unique(sub_sub_df$psi11))
+y_vals <- sort(unique(sub_sub_df$K))
+
+filled.contour(x = y_vals,
+               y = x_vals,
+               z = z_matrix,
+               color.palette = terrain.colors,
+               xlab = "k",
+               ylab = "psi",
+               main = "delta z (max genotype of k neighbors) (40 rep, gen 1)")
+
+
+```
+
+```{r 1_gen_multi_psi}
+sub_sub_df = agg_df
+# Convert to matrix form
+z_matrix <- with(sub_sub_df, tapply(dz1, list(K, psi11), mean))
+
+# Extract sorted unique x and y values
+x_vals <- sort(unique(sub_sub_df$psi11))
+y_vals <- sort(unique(sub_sub_df$K))
+
+filled.contour(x = y_vals,
+               y = x_vals,
+               z = z_matrix,
+               color.palette = terrain.colors,
+               xlab = "k",
+               ylab = "psi",
+               main = "delta z (max genotype of k neighbors) (40 rep, gen 1)")
+
+
+```
+
+
+
+
+
+
+
+
+
+

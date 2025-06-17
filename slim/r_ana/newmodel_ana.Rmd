@@ -1,0 +1,81 @@
+---
+title: "newModel"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## prep
+```{r}
+# Set your folder path
+folder_path <- c("../tsv_output/newM")
+data_list = c()
+for (folder in folder_path){
+  # 2. List files, make sure they are sorted
+  files <- sort(list.files(path = folder, pattern = "\\.tsv$", full.names = TRUE))
+  
+  # 3. Read each file into a data frame, and add a replicate column
+  temp <- lapply(seq_along(files), function(i) {
+    file <- files[i]
+    df <- read.table(file, header = TRUE, sep=",")
+    df$rep <- i
+    # write.table(df, file, sep = "\t", row.names = FALSE, quote = FALSE)
+    return(df)
+  })
+  
+  data_list = c(data_list, temp)
+}
+
+# Combine all into one big matrix (stacked row-wise)
+df <- as.data.frame(do.call(rbind, data_list))
+```
+
+## Hayward 2022 figure 2b
+
+```{r one-rep}
+# Example: x = all_data$cycle, y = all_data$z1_mean
+filtered_df <- df[df$X >= 0 & df$dis_norm > 0, ]
+plot(
+  filtered_df$X,              # x-axis
+  filtered_df$dis_norm,
+  type = "l",
+  log = "y",                   # apply log scale to y-axis
+  xlab = "generation after shift",
+  ylab = "normalized distance from pop mean to optimum",
+  xlim = c(0,180),
+  ylim = c(0.05, 4),
+  xaxt = "s", yaxt = "n",      # suppress y-axis ticks
+  pch = 16                     # solid circles
+)
+# Add custom y-axis ticks
+ticks <- c(0.10, 0.32, 1.00, 4.00)
+axis(2, at = ticks, labels = format(ticks, digits = 2))
+```
+
+```{r}
+sub_df = df[df$gen_postsel >= 0 & df$dist_norm > 0, ]
+avg_df <- aggregate(dist_norm ~ gen_postsel, data = sub_df, FUN = mean)
+plot(
+  avg_df$gen_postsel,              # x-axis
+  avg_df$dist_norm,
+  type = "l",
+  log = "y",                   # apply log scale to y-axis
+  xlab = "generation after shift",
+  ylab = "normalized distance from pop mean to optimum",
+  xlim = c(0,100),
+  ylim = c(0.05, 4),
+  xaxt = "s", yaxt = "n",      # suppress y-axis ticks
+  # pch = 16                     # solid circles
+)
+# Add custom y-axis ticks
+ticks <- c(0.10, 0.32, 1.00, 4.00)
+axis(2, at = ticks, labels = format(ticks, digits = 2))
+```
+
+
+
+

@@ -1,0 +1,181 @@
+// Keywords: migration, dispersal, QTL, quantitative trait loci
+
+initialize()
+{
+	initializeSLiMOptions(keepPedigrees=T);
+	initializeMutationRate(0);
+	
+//	defineConstant("ID", "-4");
+//	defineConstant("folder", "tsv_output/1t/temp");
+//	defineConstant("psi11", 0.1);
+	
+	defineConstant("C", 100);
+	defineConstant("end_gen", 5);
+	defineConstant("pop_size", 10000);
+	defineGlobal("optimum", 0.0);
+	defineGlobal("last_gen_z", c(0));
+	defineGlobal("opt_sd", sqrt(2*C));
+	defineConstant("cutoff_percentile", 0.80);
+	
+	defineConstant("fre_output",folder+ "/"+ "1t_cut_psi_"+psi11+"_" +ID+".tsv");
+	
+	// neutral mutations in non-coding regions
+	initializeMutationType("m1", 0.5, "f", 0.0);
+	initializeGenomicElementType("g1", m1, 1.0);
+	
+	// mutations representing alleles in QTLs
+	scriptForQTLs = "if (runif(1) < 0.5) -1; else 1;";
+	initializeMutationType("m2", 0.5, "s", scriptForQTLs);
+	initializeGenomicElementType("g2", m2, 1.0);
+	m2.convertToSubstitution = F;
+	m2.mutationStackPolicy = "l";
+	
+	// set up our chromosome: 10 QTLs, surrounded by neutral regions
+	defineConstant("W", 1);  // size of neutral buffer on each side
+	pos = 0;
+	q = NULL;
+	
+	for (i in 1:C)
+	{
+		initializeGenomicElement(g1, pos, pos + W-1);
+		pos = pos + W;
+		
+		initializeGenomicElement(g2, pos, pos);
+		q = c(q, pos);
+		pos = pos + 1;
+		
+		initializeGenomicElement(g1, pos, pos + W-1);
+		pos = pos + W;
+	}
+	
+	defineConstant("Q", q);     // remember our QTL positions
+	
+	// we want the QTLs to be unlinked; build a recombination map for that
+	rates = c(rep(c(1e-8, 0.5), C-1), 1e-8);
+	ends = (repEach(Q + W, 2) + rep(c(0,1), C))[0:(C*2 - 2)];
+	initializeRecombinationRate(rates, ends);
+}
+
+1 late() {
+	sim.addSubpop("p1", pop_size);
+	
+	// replicate the s1 event to output in tick 2 also
+	community.registerEarlyEvent("s3", s1.source, end_gen, end_gen);
+	
+	// optional: give m2 mutations to everyone, as standing variation
+	g = sim.subpopulations.genomes;
+	
+	for (q in Q)
+	{
+		isPlus = asLogical(rbinom(size(g), 1, 0.5));
+		g[isPlus].addNewMutation(m2, 1.0, q);
+		g[!isPlus].addNewMutation(m2, -1.0, q);
+	}
+	
+	log = community.createLogFile(fre_output, sep="\t");
+	log.addCycle();
+	
+	for (q in Q)
+	{
+		log.addSuppliedColumn("pq_"+q);
+	}
+	
+	log.addSuppliedColumn("Vg");
+	
+	log.addMeanSDColumns("z1", "p1.individuals.tagF;");
+	log.addMeanSDColumns("a1", "p1.individuals.sumOfMutationsOfType(m2);");
+	log.addMeanSDColumns("rel_opt_fit", "p1.cachedFitness(NULL)/dnorm(optimum, optimum, opt_sd);");
+	log.addMeanSDColumns("rel_mean_fit", "p1.cachedFitness(NULL)/mean(p1.cachedFitness(NULL));");
+	log.addCustomColumn("optimum", "optimum;");
+	log.addCustomColumn("opt_sd", "opt_sd;");
+	log.addCustomColumn("dz1", " mean(p1.individuals.tagF) - mean(last_gen_z);");
+	log.addCustomColumn("par_gen_meanz", "mean(last_gen_z);");
+	log.addCustomColumn("par_mean", "mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]);");
+	log.addCustomColumn("h2", "var(last_gen_g)/var(last_gen_z);");
+	log.addCustomColumn("s", "parent_mean=mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]); parent_mean-mean(last_gen_z);");
+	log.addCustomColumn("rep", "ID;");
+	log.addCustomColumn("cutoff", "1;");
+	log.addCustomColumn("cut_threshold", "cutoff_percentile*100;");
+	log.addCustomColumn("psi11", "psi11;");
+	log.addCustomColumn("rec", "1;");
+	
+	defineGlobal("fq_log", log);
+	
+	calculate_phenotype(p1);
+	
+	new_op = quantile(p1.individuals.tagF, c(0.95));
+	defineGlobal("optimum", new_op);
+	print("new op is "+ new_op);
+	defineGlobal("opt_sd", sd(p1.individuals.tagF));
+	defineGlobal("last_gen_z", p1.individuals.tagF);
+	defineGlobal("last_gen_g", p1.individuals.sumOfMutationsOfType(m2));
+}
+
+mutationEffect(m2) { return 1.0; }
+
+2: late()
+{
+	calculate_phenotype(p1);
+}
+
+3: early(){
+	fit=p1.cachedFitness(NULL);
+	muts = sim.mutationsOfType(m2);
+	plus = muts[muts.selectionCoeff == 1.0];
+	minus = muts[muts.selectionCoeff == -1.0];
+	a1=0;
+	for (q in Q)
+	{
+		qPlus = plus[plus.position == q];
+		qMinus = minus[minus.position == q];
+		pf = sum(sim.mutationFrequencies(NULL, qPlus));
+		mf = sum(sim.mutationFrequencies(NULL, qMinus));
+		fq_log.setSuppliedValue("pq_"+q, pf*mf);
+		a1=a1+pf*mf;
+	}
+	a1 = a1/C;
+	fq_log.setSuppliedValue("Vg", 2*a1);
+	fq_log.logRow();
+	defineGlobal("last_gen_z", p1.individuals.tagF);
+	defineGlobal("last_gen_g", p1.individuals.sumOfMutationsOfType(m2));
+}
+
+
+s1 2 early()
+{
+	cat("-------------------------------\n");
+}
+
+function (void) calculate_phenotype(o<Subpopulation>$ p){
+	e = rnorm(pop_size, mean=0, sd=0);
+	
+	// evaluate and save the additive effects of QTLs
+	inds = p.individuals;
+	
+	a = inds.sumOfMutationsOfType(m2);
+	
+	shuffled = sample(inds, pop_size, replace=F);
+	phenotype = float(pop_size);
+	
+	for (i in seq(0, pop_size-2, by=2)) {
+		ind1 = shuffled[i];
+		ind2 = shuffled[i+1];
+		
+		a1 = a[ind1.index];
+		e1 = e[ind1.index];
+		
+		a2 = a[ind2.index];
+		e2 = e[ind2.index];
+		
+		z1 = (a1 + e1 + psi11 * (a2 + e2))/(1-psi11^2);
+		z2 = (a2 + e2 + psi11 * (a1 + e1))/(1-psi11^2);
+		
+		phenotype[ind1.index] = z1;
+		phenotype[ind2.index] = z2;
+	}
+	
+	inds.fitnessScaling = 1.0 + dnorm(phenotype, optimum, opt_sd);
+	cutoff = quantile(inds.fitnessScaling, c(cutoff_percentile));
+	inds[inds.fitnessScaling < cutoff].fitnessScaling = 0.0;
+	inds.tagF = phenotype;
+}
