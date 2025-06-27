@@ -1,0 +1,144 @@
+---
+title: "social_newM"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## prep
+```{r}
+# Set your folder path
+folder_path <- "../tsv_output/social_new/data/abs_fitness"  # <-- change this
+file_list <- list.files(folder_path, pattern = "\\.tsv$", full.names = TRUE)
+
+# Read and combine
+all_df <- do.call(rbind, lapply(file_list, function(file) {
+  df <- read.table(file, header = TRUE, sep = "\t")
+  df$file_id <- basename(file)  # optional: track source file
+  return(df)
+}))
+
+```
+
+
+```{r}
+# Filter for gen_postsel == 1
+df_gen1 <- all_df[all_df$gen_postsel == 2, ]
+
+# Split by rec
+rec0 <- df_gen1[df_gen1$rec == 0, ]
+rec1 <- df_gen1[df_gen1$rec == 1, ]
+
+# Merge on psi11 and rep (assuming same rep exists in both)
+merged <- merge(rec1, rec0, by = c("psi11", "rep"), suffixes = c("_rec1", "_rec0"))
+
+# Calculate dz1 ratio for each rep
+merged$dz1_ratio <- merged$dz1_rec1 / merged$dz1_rec0
+
+# Compute average ratio per psi11
+agg <- aggregate(dz1_ratio ~ psi11, data = merged, FUN = mean)
+
+# Plot mean dz1 ratio vs psi11
+plot(agg$psi11, agg$dz1_ratio,
+     xlab = "psi11", ylab = "Mean dz1 ratio (rec = 1 / rec = 0)",
+     main = "Average dz1 Ratio at gen_postsel = 1",
+     pch = 19, type = "b")
+
+
+
+```
+
+```{r}
+sub_df <- all_df[all_df$gen_postsel == 2 & all_df$rec == 1, ]
+
+# Define colors based on gen_postsel
+colors <- ifelse(sub_df$gen_postsel < 0, "grey",
+                 ifelse(sub_df$gen_postsel == 0, "red", "blue"))
+
+# Base R scatter plot
+plot(sub_df$dz1_pred, sub_df$dz1,
+     col = colors, pch = 19,
+     xlab = "dz1_pred", ylab = "dz1",
+     main = "delta_z and prediction (first gen)")
+abline(a = 0, b = 1, lty = 2, col = "black")
+```
+
+```{r}
+sub_df <- all_df[all_df$gen_postsel == 1 & all_df$rec == 1, ]
+
+# Create a vector of unique psi11 values
+psi_vals <- sort(unique(sub_df$psi11))
+
+# Generate a color palette
+colors_by_psi <- rainbow(length(psi_vals))
+
+# Map each psi11 to a color
+color_map <- setNames(colors_by_psi, psi_vals)
+point_colors <- color_map[as.character(sub_df$psi11)]
+
+# Plot
+plot(sub_df$dz1_pred, sub_df$dz1,
+     col = point_colors, pch = 19,
+     xlab = "dz1_pred", ylab = "dz1",
+     main = "delta_z and prediction (first gen)")
+
+# Add y = x line
+abline(a = 0, b = 1, lty = 2, col = "black")
+
+# Optional: add legend (if few psi11 values)
+if (length(psi_vals) <= 10) {
+  legend("topleft", legend = psi_vals,
+         col = colors_by_psi, pch = 19, title = "psi11", bty = "n")
+}
+
+```
+
+```{r}
+# Filter for gen_postsel between 0 and 100
+df_subset <- all_df[all_df$gen_postsel >= 0 & all_df$gen_postsel <= 100 & all_df$rec==1, ]
+
+# Unique psi11 values and colors
+psi_vals <- sort(unique(df_subset$psi11))
+colors <- rainbow(length(psi_vals))
+psi_color_map <- setNames(colors, psi_vals)
+
+par(mar = c(5, 4, 4, 8))
+# Set up empty plot
+plot(NA, xlim = c(0, 100), ylim = c(0.05, 4),
+     xlab = "generation after shift", ylab = "normalized distance from z_mean to optimum",
+     main = "distance from optimum with psi", log = "y",
+     xaxt = "s", yaxt = "n")
+
+# Loop over psi11 values
+for (psi in psi_vals) {
+  df_psi <- df_subset[df_subset$psi11 == psi, ]
+  reps <- unique(df_psi$rep)
+  col <- psi_color_map[as.character(psi)]
+  
+  # Plot each rep as a line
+  for (r in reps) {
+    df_rep <- df_psi[df_psi$rep == r, ]
+    lines(df_rep$gen_postsel, df_rep$dist_norm, col = adjustcolor(col, alpha.f = 0.2))
+  }
+  
+  
+  # Compute mean dist_norm per generation
+  mean_by_gen <- tapply(df_psi$dist_norm, df_psi$gen_postsel, mean, na.rm = TRUE)
+  
+  # Plot line
+  lines(as.numeric(names(mean_by_gen)), mean_by_gen,
+        col = psi_color_map[as.character(psi)], lwd = 2)
+}
+
+ticks <- c(0.10, 0.32, 1.00, 4.00)
+axis(2, at = ticks, labels = format(ticks, digits = 2))
+legend("topright", legend = psi_vals,inset = c(-0.2, 0),
+       col = colors, lty = 1, lwd = 2, xpd = TRUE)
+```
+
+
+

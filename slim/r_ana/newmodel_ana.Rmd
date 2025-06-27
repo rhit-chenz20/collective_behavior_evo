@@ -38,7 +38,7 @@ df <- as.data.frame(do.call(rbind, data_list))
 
 ```{r one-rep}
 # Example: x = all_data$cycle, y = all_data$z1_mean
-filtered_df <- df[df$X >= 0 & df$dis_norm > 0, ]
+# filtered_df <- df[df$X >= 0 & df$dis_norm > 0, ]
 plot(
   filtered_df$X,              # x-axis
   filtered_df$dis_norm,
@@ -46,7 +46,7 @@ plot(
   log = "y",                   # apply log scale to y-axis
   xlab = "generation after shift",
   ylab = "normalized distance from pop mean to optimum",
-  xlim = c(0,180),
+  xlim = c(0,100),
   ylim = c(0.05, 4),
   xaxt = "s", yaxt = "n",      # suppress y-axis ticks
   pch = 16                     # solid circles
