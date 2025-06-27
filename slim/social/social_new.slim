@@ -3,13 +3,13 @@
 initialize() {
 //	setSeed(8301386815623071564);
 	initializeSLiMOptions(keepPedigrees=T);
-	defineConstant("maxL", 5000);
+	defineConstant("maxL", 50000);
 	defineConstant("U", 0.03);
-	defineConstant("N", 5000);
+	defineConstant("N", 1000);
 	defineConstant("Vs", 2*N);
 	defineConstant("shift_time", 10*N);
-	defineConstant("end_time", shift_time+N);
-	defineGlobal("L", 50);
+	defineConstant("end_time", shift_time+100);
+	defineGlobal("L", 500);
 	defineGlobal("mutated_sites", rep(F, maxL));
 	
 	defineGlobal("Va0_sqrt", -1);	
@@ -19,7 +19,7 @@ initialize() {
 //	defineConstant("ID", "-2");
 //	defineConstant("folder", "tsv_output/social_new/temp");
 //	defineConstant("psi11", 0.1);
-	defineConstant("fre_output",folder+ "/"+ "psi11_"+psi11+"_"+ID+".tsv");	
+	defineConstant("fre_output",folder+ "/"+ "rec_psi11_"+psi11+"_"+ID+".tsv");	
 	
 	
 	// m2 models a biallelic locus; an m2 mutation is "A",
@@ -74,30 +74,26 @@ late() {
 				haplosomes[i].addNewDrawnMutation(m2, availableSites[i]);
 			}
 		}else{
-			print("max L has reached with current L="+L+" and "+mutToAdd+" new mut");
+			print(community.tick+": max L has reached with current L="+L+" and "+mutToAdd+" new mut");
 			sim.simulationFinished();
 		}
 		defineGlobal("mutToAdd", 0);
 	}
 	
-//	phenotype = p1.individuals.sumOfMutationsOfType(m2);
-//	abs_fitness = dnorm(phenotype, optimum, sqrt(Vs));
-//	p1.individuals.fitnessScaling = abs_fitness / mean(abs_fitness);
-//	p1.individuals.tagF = phenotype;
-
 calculate_phenotype(p1);
 }
 
-shift_time-100 early(){
+shift_time-50 early(){
 	defineGlobal("last_gen_z", p1.individuals.tagF);
-	defineGlobal("last_gen_g", p1.individuals.sumOfMutationsOfType(m2));
+	defineGlobal("last_gen_g", p1.individuals.sumOfMutationsOfType(m2)+sum(sim.substitutions.selectionCoeff));
 }
 
-shift_time-100 late(){
+shift_time-50 late(){
 	// log results
 	log = community.createLogFile(fre_output,  sep="\t", logInterval=1);
 	log.addTick();
 	log.addCustomColumn("gen_postsel", "community.tick-shift_time;");
+	log.addCustomColumn("N", "N;");
 	log.addMeanSDColumns("z", "p1.individuals.tagF;");
 	log.addCustomColumn("seg_site", "length(unique(p1.haplosomes.mutations));");
 	log.addCustomColumn("dif_z_opt", "optimum-mean(p1.individuals.tagF);");
@@ -118,9 +114,9 @@ shift_time-100 late(){
 	log.addCustomColumn("rec", "1;");
 }
 
-shift_time-99: early(){
+shift_time-49: early(){
 	defineGlobal("last_gen_z", p1.individuals.tagF);
-	defineGlobal("last_gen_g", p1.individuals.sumOfMutationsOfType(m2));
+	defineGlobal("last_gen_g", p1.individuals.sumOfMutationsOfType(m2)+sum(sim.substitutions.selectionCoeff));
 }
 
 shift_time late(){
@@ -161,6 +157,6 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 	}
 	
 	abs_fitness = dnorm(phenotype, optimum, sqrt(Vs));
-	inds.fitnessScaling = abs_fitness / mean(abs_fitness);
+	inds.fitnessScaling = abs_fitness;
 	inds.tagF = phenotype;
 }

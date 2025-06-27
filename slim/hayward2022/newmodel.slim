@@ -1,16 +1,14 @@
 // Keywords: identity by state, uniquing, unique down, back mutation, two alleles
 
 initialize() {
-//	setSeed(8301386815623071564);
-	defineConstant("maxL", 10000);
+	defineConstant("maxL", 20000);
 	defineConstant("U", 0.03);
 	defineConstant("N", 10000);
 	defineConstant("Vs", 2*N);
 	defineConstant("shift_time", 10*N);
-	defineConstant("end_time", shift_time+200);
+	defineConstant("end_time", 10*N+500);
 	defineGlobal("L", 1000);
 	defineGlobal("mutated_sites", rep(F, maxL));
-	
 	
 	defineGlobal("Va0_sqrt", -1);	
 	defineGlobal("mutToAdd", 0);
@@ -82,14 +80,14 @@ late() {
 	
 	phenotype = p1.individuals.sumOfMutationsOfType(m2);
 	abs_fitness = dnorm(phenotype, optimum, sqrt(Vs));
-	p1.individuals.fitnessScaling = abs_fitness / mean(abs_fitness);
+	p1.individuals.fitnessScaling = abs_fitness;
 	p1.individuals.tagF = phenotype;
 }
 
-shift_time-20 late(){
+shift_time-100 late(){
 	// log results
-	log = community.createLogFile(fre_output, logInterval=5, sep="\t");
-//	log.addTick();
+	log = community.createLogFile(fre_output, sep="\t", logInterval=5);
+	log.addTick();
 	log.addCustomColumn("gen_postsel", "community.tick-shift_time;");
 	log.addMeanSDColumns("z", "p1.individuals.tagF;");
 	log.addCustomColumn("seg_site", "length(unique(p1.haplosomes.mutations));");
@@ -97,7 +95,6 @@ shift_time-20 late(){
 	log.addCustomColumn("Va0_sqrt", "Va0_sqrt;");
 	log.addCustomColumn("Vs", "Vs;");
 	log.addCustomColumn("dist_norm", "(optimum-mean(p1.individuals.tagF))/Va0_sqrt;");
-
 }
 
 shift_time late(){

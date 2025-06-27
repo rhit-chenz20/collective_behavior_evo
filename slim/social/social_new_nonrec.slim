@@ -1,0 +1,162 @@
+// Keywords: identity by state, uniquing, unique down, back mutation, two alleles
+
+initialize() {
+//	setSeed(8301386815623071564);
+	initializeSLiMOptions(keepPedigrees=T);
+	defineConstant("maxL", 50000);
+	defineConstant("U", 0.03);
+	defineConstant("N", 1000);
+	defineConstant("Vs", 2*N);
+	defineConstant("shift_time", 10*N);
+	defineConstant("end_time", shift_time+100);
+	defineGlobal("L", 500);
+	defineGlobal("mutated_sites", rep(F, maxL));
+	
+	defineGlobal("Va0_sqrt", -1);	
+	defineGlobal("mutToAdd", 0);
+	defineGlobal("optimum", 0.0);
+	
+//	defineConstant("ID", "-2");
+//	defineConstant("folder", "tsv_output/social_new/temp");
+//	defineConstant("psi11", 0.1);
+	defineConstant("fre_output",folder+ "/"+ "nonrec_psi11_"+psi11+"_"+ID+".tsv");	
+	
+	
+	// m2 models a biallelic locus; an m2 mutation is "A",
+	// absence of an m2 mutation is "a"; "aa" is neutral
+	script = "a=sqrt(rexp(1, 1)); if (runif(1) < 0.5) -a; else a;";
+	initializeMutationType("m2", 0.5, "s", script);
+//	m2.convertToSubstitution = F;
+	m2.color = "red";
+	
+	initializeGenomicElementType("g1", m2, 1.0);
+	initializeGenomicElement(g1, 0, maxL-1);
+	initializeMutationRate(c(U/L, 0), c(L-1,maxL-1));
+	initializeRecombinationRate(c(0.5, 0), c(L-1,maxL-1));
+//	initializeRecombinationRate(0.5);
+}
+1 early() {
+	sim.addSubpop("p1", N);
+}
+
+mutationEffect(m2) { return 1.0; }
+
+mutation(m2) {
+	// mutation exist at mut.position, reject the new mutation
+	if (any(p1.haplosomes.containsMarkerMutation(m2, mut.position))){
+		if (L<(maxL-1)){
+			defineGlobal("mutToAdd", mutToAdd+1);
+		}else{
+			print("max L has reached");
+			sim.simulationFinished();
+		}
+		return F;
+	}
+	return T;
+}
+
+late() {
+	if(mutToAdd!=0){
+		mutatedPos = unique(p1.haplosomes.mutations).position;
+		if (L+mutToAdd<= maxL){
+			// within maxL
+			if (length(mutatedPos)+mutToAdd > L){
+				//extend the region
+				defineGlobal("L", L+mutToAdd-(L-length(mutatedPos)));
+				p1.haplosomes.chromosome.setMutationRate(c(U/L, 0), c(L-1,maxL-1));
+				p1.haplosomes.chromosome.setRecombinationRate(c(0.5, 0), c(L-1,maxL-1));
+			}
+			
+			availableSites = setDifference(0:(L-1), mutatedPos);
+			haplosomes = sample(p1.haplosomes, mutToAdd, replace=T);
+			for (i in 0:(length(availableSites)-1)){
+				if (i==mutToAdd) break;
+				haplosomes[i].addNewDrawnMutation(m2, availableSites[i]);
+			}
+		}else{
+			print(community.tick+": max L has reached with current L="+L+" and "+mutToAdd+" new mut");
+			sim.simulationFinished();
+		}
+		defineGlobal("mutToAdd", 0);
+	}
+	
+calculate_phenotype(p1);
+}
+
+shift_time-50 early(){
+	defineGlobal("last_gen_z", p1.individuals.tagF);
+	defineGlobal("last_gen_g", p1.individuals.sumOfMutationsOfType(m2)+sum(sim.substitutions.selectionCoeff));
+}
+
+shift_time-50 late(){
+	// log results
+	log = community.createLogFile(fre_output,  sep="\t", logInterval=1);
+	log.addTick();
+	log.addCustomColumn("gen_postsel", "community.tick-shift_time;");
+	log.addCustomColumn("N", "N;");
+	log.addMeanSDColumns("z", "p1.individuals.tagF;");
+	log.addCustomColumn("seg_site", "length(unique(p1.haplosomes.mutations));");
+	log.addCustomColumn("dif_z_opt", "optimum-mean(p1.individuals.tagF);");
+	log.addCustomColumn("Va0_sqrt", "Va0_sqrt;");
+	log.addCustomColumn("Vs", "Vs;");
+	log.addCustomColumn("dist_norm", "(optimum-mean(p1.individuals.tagF))/Va0_sqrt;");
+	
+	log.addMeanSDColumns("a", "p1.individuals.sumOfMutationsOfType(m2)+sum(sim.substitutions.selectionCoeff);");
+	log.addCustomColumn("optimum", "optimum;");
+	log.addCustomColumn("dz1", " mean(p1.individuals.tagF) - mean(last_gen_z);");
+	log.addCustomColumn("par_gen_meanz", "mean(last_gen_z);");
+	log.addCustomColumn("par_mean", "mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]);");
+	log.addCustomColumn("h2", "var(last_gen_g)/var(last_gen_z);");
+	log.addCustomColumn("s", "parent_mean=mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]); parent_mean-mean(last_gen_z);");
+	log.addCustomColumn("dz1_pred", "parent_mean=mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]); var(last_gen_g)/var(last_gen_z)*(parent_mean-mean(last_gen_z));");
+	log.addCustomColumn("rep", "ID;");
+	log.addCustomColumn("psi11", "psi11;");
+	log.addCustomColumn("rec", "0;");
+}
+
+shift_time-49: early(){
+	defineGlobal("last_gen_z", p1.individuals.tagF);
+	defineGlobal("last_gen_g", p1.individuals.sumOfMutationsOfType(m2)+sum(sim.substitutions.selectionCoeff));
+}
+
+shift_time late(){
+	shift_size = sqrt(var(p1.individuals.tagF));
+	defineGlobal("optimum", optimum+4*shift_size);
+	print("new opt is " + optimum);
+	defineGlobal("Va0_sqrt", shift_size);	
+}
+
+end_time late() { }
+
+function (void) calculate_phenotype(o<Subpopulation>$ p){
+	e = rnorm(N, mean=0, sd=0);
+	
+	// evaluate and save the additive effects of QTLs
+	inds = p.individuals;
+	
+	a = inds.sumOfMutationsOfType(m2) + sum(sim.substitutions.selectionCoeff);
+	
+	shuffled = sample(inds, N, replace=F);
+	phenotype = float(N);
+	
+	for (i in seq(0, N-2, by=2)) {
+		ind1 = shuffled[i];
+		ind2 = shuffled[i+1];
+		
+		a1 = a[ind1.index];
+		e1 = e[ind1.index];
+		
+		a2 = a[ind2.index];
+		e2 = e[ind2.index];
+		
+		z1 = (a1 + e1 + psi11 * (a2 + e2));
+		z2 = (a2 + e2 + psi11 * (a1 + e1));
+		
+		phenotype[ind1.index] = z1;
+		phenotype[ind2.index] = z2;
+	}
+	
+	abs_fitness = dnorm(phenotype, optimum, sqrt(Vs));
+	inds.fitnessScaling = abs_fitness;
+	inds.tagF = phenotype;
+}
