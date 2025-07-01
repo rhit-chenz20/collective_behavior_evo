@@ -5,7 +5,7 @@ initialize() {
 	initializeSLiMOptions(keepPedigrees=T);
 	defineConstant("maxL", 50000);
 	defineConstant("U", 0.03);
-	defineConstant("N", 1000);
+	defineConstant("N", 3000);
 	defineConstant("Vs", 2*N);
 	defineConstant("shift_time", 10*N);
 	defineConstant("end_time", shift_time+100);
@@ -19,7 +19,7 @@ initialize() {
 //	defineConstant("ID", "-2");
 //	defineConstant("folder", "tsv_output/social_new/temp");
 //	defineConstant("psi11", 0.1);
-	defineConstant("fre_output",folder+ "/"+ "nonrec_psi11_"+psi11+"_"+ID+".tsv");	
+	defineConstant("fre_output",folder+ "/"+ "nonrec_N_3000_psi11_"+psi11+"_"+ID+".tsv");	
 	
 	
 	// m2 models a biallelic locus; an m2 mutation is "A",
@@ -37,6 +37,12 @@ initialize() {
 }
 1 early() {
 	sim.addSubpop("p1", N);
+}
+
+late(){
+	if(community.tick % 500 == 0){
+		print("at tick "+community.tick);
+	}
 }
 
 mutationEffect(m2) { return 1.0; }
@@ -80,10 +86,10 @@ late() {
 		defineGlobal("mutToAdd", 0);
 	}
 	
-calculate_phenotype(p1);
+	calculate_phenotype(p1);
 }
 
-shift_time-50 early(){
+shift_time-50: early(){
 	defineGlobal("last_gen_z", p1.individuals.tagF);
 	defineGlobal("last_gen_g", p1.individuals.sumOfMutationsOfType(m2)+sum(sim.substitutions.selectionCoeff));
 }
@@ -112,11 +118,6 @@ shift_time-50 late(){
 	log.addCustomColumn("rep", "ID;");
 	log.addCustomColumn("psi11", "psi11;");
 	log.addCustomColumn("rec", "0;");
-}
-
-shift_time-49: early(){
-	defineGlobal("last_gen_z", p1.individuals.tagF);
-	defineGlobal("last_gen_g", p1.individuals.sumOfMutationsOfType(m2)+sum(sim.substitutions.selectionCoeff));
 }
 
 shift_time late(){

@@ -5,10 +5,10 @@ initialize() {
 	initializeSLiMOptions(keepPedigrees=T);
 	defineConstant("maxL", 50000);
 	defineConstant("U", 0.03);
-	defineConstant("N", 3000);
+	defineConstant("N", 1000);
 	defineConstant("Vs", 2*N);
 	defineConstant("shift_time", 10*N);
-	defineConstant("end_time", shift_time+100);
+	defineConstant("end_time", shift_time);
 	defineGlobal("L", 500);
 	defineGlobal("mutated_sites", rep(F, maxL));
 	
@@ -19,8 +19,8 @@ initialize() {
 //	defineConstant("ID", "-2");
 //	defineConstant("folder", "tsv_output/social_new/temp");
 //	defineConstant("psi11", 0.1);
-	defineConstant("fre_output",folder+ "/"+ "rec_N_3000_psi11_"+psi11+"_"+ID+".tsv");	
-	
+	defineConstant("fre_output",folder+ "/"+ "nrec_N_"+N+"_psi_"+psi11+"_burnin_"+ID+".tsv");	
+	defineConstant("pop_output",folder+ "/"+ "nrec_N_"+N+"_psi_"+psi11+"_pop_"+ID+".pop");	
 	
 	// m2 models a biallelic locus; an m2 mutation is "A",
 	// absence of an m2 mutation is "a"; "aa" is neutral
@@ -37,12 +37,6 @@ initialize() {
 }
 1 early() {
 	sim.addSubpop("p1", N);
-}
-
-late(){
-	if(community.tick % 500 == 0){
-		print("at tick "+community.tick);
-	}
 }
 
 mutationEffect(m2) { return 1.0; }
@@ -89,6 +83,16 @@ late() {
 	calculate_phenotype(p1);
 }
 
+late(){
+	if(community.tick % 500 == 0){
+		print("at tick "+community.tick);
+	}
+}
+
+shift_time-49: early(){
+	fq_log.logRow();
+}
+
 shift_time-50: early(){
 	defineGlobal("last_gen_z", p1.individuals.tagF);
 	defineGlobal("last_gen_g", p1.individuals.sumOfMutationsOfType(m2)+sum(sim.substitutions.selectionCoeff));
@@ -96,7 +100,7 @@ shift_time-50: early(){
 
 shift_time-50 late(){
 	// log results
-	log = community.createLogFile(fre_output,  sep="\t", logInterval=1);
+	log = community.createLogFile(fre_output,  sep="\t");
 	log.addTick();
 	log.addCustomColumn("gen_postsel", "community.tick-shift_time;");
 	log.addCustomColumn("N", "N;");
@@ -106,6 +110,7 @@ shift_time-50 late(){
 	log.addCustomColumn("Va0_sqrt", "Va0_sqrt;");
 	log.addCustomColumn("Vs", "Vs;");
 	log.addCustomColumn("dist_norm", "(optimum-mean(p1.individuals.tagF))/Va0_sqrt;");
+	log.addMeanSDColumns("rel_fit", "p1.cachedFitness(NULL)/mean(p1.cachedFitness(NULL));");
 	
 	log.addMeanSDColumns("a", "p1.individuals.sumOfMutationsOfType(m2)+sum(sim.substitutions.selectionCoeff);");
 	log.addCustomColumn("optimum", "optimum;");
@@ -118,6 +123,8 @@ shift_time-50 late(){
 	log.addCustomColumn("rep", "ID;");
 	log.addCustomColumn("psi11", "psi11;");
 	log.addCustomColumn("rec", "1;");
+
+	defineGlobal("fq_log", log);
 }
 
 shift_time late(){
@@ -127,7 +134,10 @@ shift_time late(){
 	defineGlobal("Va0_sqrt", shift_size);	
 }
 
-end_time late() { }
+end_time late() { 
+	sim.outputFull(filePath=pop_output, binary=T, pedigreeIDs=T, objectTags=T, substitutions=T); 
+	
+}
 
 function (void) calculate_phenotype(o<Subpopulation>$ p){
 	e = rnorm(N, mean=0, sd=0);
@@ -150,8 +160,8 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 		a2 = a[ind2.index];
 		e2 = e[ind2.index];
 		
-		z1 = (a1 + e1 + psi11 * (a2 + e2))/(1-psi11^2);
-		z2 = (a2 + e2 + psi11 * (a1 + e1))/(1-psi11^2);
+		z1 = (a1 + e1 + psi11 * (a2 + e2));
+		z2 = (a2 + e2 + psi11 * (a1 + e1));
 		
 		phenotype[ind1.index] = z1;
 		phenotype[ind2.index] = z2;
