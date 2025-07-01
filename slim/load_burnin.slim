@@ -1,0 +1,121 @@
+initialize() {
+//	setSeed(8301386815623071564);
+	initializeSLiMOptions(keepPedigrees=T);
+	defineConstant("maxL", 50000);
+	defineConstant("U", 0.03);
+	defineConstant("N", 1000);
+	defineConstant("Vs", 2*N);
+	defineConstant("shift_time", 10*N);
+	defineConstant("end_time", shift_time);
+	defineGlobal("L", 500);
+	defineGlobal("mutated_sites", rep(F, maxL));
+	
+	defineGlobal("Va0_sqrt", -1);	
+	defineGlobal("mutToAdd", 0);
+	defineGlobal("optimum", 0.0);
+	
+	defineGlobal("phenotypeLines", NULL);
+	
+//	defineConstant("ID", "-2");
+//	defineConstant("folder", "tsv_output/social_new/temp");
+	defineConstant("psi11", 0.0);
+//	defineConstant("pheno_output",folder+ "/"+ "rec_N_"+N+"_psi_"+psi11+"_burnin_"+ID+".tsv");	
+	
+	// m2 models a biallelic locus; an m2 mutation is "A",
+	// absence of an m2 mutation is "a"; "aa" is neutral
+	script = "a=sqrt(rexp(1, 1)); if (runif(1) < 0.5) -a; else a;";
+	initializeMutationType("m2", 0.5, "s", script);
+//	m2.convertToSubstitution = F;
+	m2.color = "red";
+	
+	initializeGenomicElementType("g1", m2, 1.0);
+	initializeGenomicElement(g1, 0, maxL-1);
+	initializeMutationRate(c(U/L, 0), c(L-1,maxL-1));
+	initializeRecombinationRate(c(0.5, 0), c(L-1,maxL-1));
+//	initializeRecombinationRate(0.5);
+}
+
+mutationEffect(m2) { return 1.0; }
+
+1 late() {
+  	burnin_fn="tsv_output/social_new/data/sburnin-2702579/pop/rec_N_1000_psi_0.0_pop_2702577.pop";
+	if(!exists("burnin_fn")){ 
+		sim.addSubpop("p1", N);
+	} else{
+    	sim.readFromPopulationFile(burnin_fn);
+	}
+	calculate_phenotype(p1);
+	record_phenotype(p1);
+//	print(psi11);
+	
+//	calculate_phenotype(p1);
+//    catn("ID\tphenotype"); 
+//   
+//    for (ind in p1.individuals) {
+//        p = ind.tagF; // or however you calculate phenotype
+//        catn(paste(ind.index, p, sep = "\t"));
+//    }
+
+//    sim.simulationFinished();
+}
+
+shift_time:(shift_time+10) late(){
+calculate_phenotype(p1);
+	if (sim.cycle != shift_time+10){
+		record_phenotype(p1);
+	}else{
+		record_phenotype(p1, write = T);
+	}
+}
+
+function (logical) record_phenotype(o<Subpopulation>$ p, [logical$ write = F]){
+	if(!exists("phenotype_fn")){ 
+		defineGlobal("phenotype_fn", "phenotypes_allgen.tsv");
+		print("no phenotype_fn supplied. using default filename: " + phenotype_fn);
+	} 
+	if (write) {
+    	header = "generation\tphenotype\n";
+    	return writeFile(phenotype_fn, header + paste(phenotypeLines, sep="\n"), append=F);
+	}else{
+		for (i in p.individuals){
+			line = paste(sim.cycle, i.tagF, sep = "\t");
+        	phenotypeLines = c(phenotypeLines, line);
+		}
+      defineGlobal("phenotypeLines", c(phenotypeLines, line));
+      return T;
+	}
+}
+
+
+function (void) calculate_phenotype(o<Subpopulation>$ p){
+	e = rnorm(N, mean=0, sd=0);
+	
+	// evaluate and save the additive effects of QTLs
+	inds = p.individuals;
+	
+	a = inds.sumOfMutationsOfType(m2) + sum(sim.substitutions.selectionCoeff);
+	
+	shuffled = sample(inds, N, replace=F);
+	phenotype = float(N);
+	
+	for (i in seq(0, N-2, by=2)) {
+		ind1 = shuffled[i];
+		ind2 = shuffled[i+1];
+		
+		a1 = a[ind1.index];
+		e1 = e[ind1.index];
+		
+		a2 = a[ind2.index];
+		e2 = e[ind2.index];
+		
+		z1 = (a1 + e1 + psi11 * (a2 + e2))/(1-psi11^2);
+		z2 = (a2 + e2 + psi11 * (a1 + e1))/(1-psi11^2);
+		
+		phenotype[ind1.index] = z1;
+		phenotype[ind2.index] = z2;
+	}
+	
+	abs_fitness = dnorm(phenotype, optimum, sqrt(Vs));
+	inds.fitnessScaling = abs_fitness;
+	inds.tagF = phenotype;
+}

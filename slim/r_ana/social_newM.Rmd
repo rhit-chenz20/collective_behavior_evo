@@ -140,5 +140,44 @@ legend("topright", legend = psi_vals,inset = c(-0.2, 0),
        col = colors, lty = 1, lwd = 2, xpd = TRUE)
 ```
 
+```{r}
+# Set the path to the folder containing the TSV files
+folder <- "../tsv_output/social_new/data/phenotype"
+
+# Get all TSV file names in the folder
+files <- list.files(folder, pattern = "\\.tsv$", full.names = TRUE)
+
+# Read each file into a list of data frames
+data_list <- lapply(files, function(f) {
+  read.table(f, header = TRUE, sep = "\t")
+})
+
+# Extract just the phenotype vectors
+phenotypes <- lapply(data_list, function(df) df$phenotype)
+```
+
+```{r}
+# Define colors for each replicate
+colors <- rainbow(length(phenotypes))
+
+# Set up the histogram range
+all_values <- unlist(phenotypes)
+hist_range <- range(all_values)
+
+# Plot the first histogram to initialize the plot
+hist(phenotypes[[1]], breaks = 30, col = adjustcolor(colors[1], alpha.f = 0.4),
+     xlim = hist_range, main = "Phenotype distribution after burnin (6 rep)",
+     xlab = "Phenotype", ylab = "Frequency", border = NA)
+
+# Overlay the remaining histograms
+for (i in 2:length(phenotypes)) {
+  hist(phenotypes[[i]], breaks = 30,
+       col = adjustcolor(colors[i], alpha.f = 0.4), border = NA, add = TRUE)
+}
+
+# # Add legend
+# legend("topright", legend = basename(files), fill = adjustcolor(colors, alpha.f = 0.4), border = NA)
+
+```
 
 
