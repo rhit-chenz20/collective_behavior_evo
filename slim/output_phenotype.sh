@@ -1,13 +1,13 @@
 
 for i in {0..5}
 do
-    slim -d ID=$i -d "fn='tsv_output/social_new/data/sburnin-2702579/pop/rec_N_1000_psi_0.0_pop_2702577.pop'" -d psi11=0.0 -d "phenotype_fn='tsv_output/social_new/data/phenotype/rec_N_1000_psi_0.0_pop_270257_${i}.tsv'" after_burnin_rec.slim &
+    slim -d ID=$i -d "burnin_fn='tsv_output/social_new/data/sburnin-2702579/pop/rec_N_1000_psi_0.0_pop_2702577.pop'" -d psi11=0.0 -d "phenotype_fn='tsv_output/social_new/data/phenotype/rec_N_1000_psi_0.0_pop_270257_${i}.tsv'" after_burnin_rec.slim &
 
-    slim -d ID=$i -d "fn='tsv_output/social_new/data/sburnin-2702579/pop/rec_N_1000_psi_0.0_pop_2702581.pop'" -d psi11=0.0 -d "phenotype_fn='tsv_output/social_new/data/phenotype/rec_N_1000_psi_0.0_pop_2702581_${i}.tsv'" after_burnin_rec.slim &
+    slim -d ID=$i -d "burnin_fn='tsv_output/social_new/data/sburnin-2702579/pop/rec_N_1000_psi_0.0_pop_2702581.pop'" -d psi11=0.0 -d "phenotype_fn='tsv_output/social_new/data/phenotype/rec_N_1000_psi_0.0_pop_2702581_${i}.tsv'" after_burnin_rec.slim &
 
-    slim -d ID=$i -d "fn='tsv_output/social_new/data/sburnin-2702579/pop/nrec_N_1000_psi_0.0_pop_2702577.pop'" -d psi11=0.0 -d "phenotype_fn='tsv_output/social_new/data/phenotype/nrec_N_1000_psi_0.0_pop_270257_${i}.tsv'" after_burnin_nonrec.slim &
+    slim -d ID=$i -d "burnin_fn='tsv_output/social_new/data/sburnin-2702579/pop/nrec_N_1000_psi_0.0_pop_2702577.pop'" -d psi11=0.0 -d "phenotype_fn='tsv_output/social_new/data/phenotype/nrec_N_1000_psi_0.0_pop_270257_${i}.tsv'" after_burnin_nonrec.slim &
 
-    slim -d ID=$i -d "fn='tsv_output/social_new/data/sburnin-2702579/pop/nrec_N_1000_psi_0.0_pop_2702581.pop'" -d psi11=0.0 -d "phenotype_fn='tsv_output/social_new/data/phenotype/nrec_N_1000_psi_0.0_pop_2702581_${i}.tsv'" after_burnin_nonrec.slim &
+    slim -d ID=$i -d "burnin_fn='tsv_output/social_new/data/sburnin-2702579/pop/nrec_N_1000_psi_0.0_pop_2702581.pop'" -d psi11=0.0 -d "phenotype_fn='tsv_output/social_new/data/phenotype/nrec_N_1000_psi_0.0_pop_2702581_${i}.tsv'" after_burnin_nonrec.slim &
 
     wait
 done
