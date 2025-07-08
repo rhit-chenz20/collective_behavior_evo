@@ -1,5 +1,5 @@
 // Keywords: identity by state, uniquing, unique down, back mutation, two alleles
-
+// OUTDATED
 initialize() {
 //	setSeed(8301386815623071564);
 	initializeSLiMOptions(keepPedigrees=T);
@@ -20,8 +20,8 @@ initialize() {
 //	defineConstant("ID", "-2");
 //	defineConstant("folder", "tsv_output/social_new/temp");
 //	defineConstant("psi11", 0.1);
-	defineConstant("fre_output",folder+ "/"+ "nonrec_psi11_"+psi11+"_"+ID+".tsv");	
-	defineConstant("phenotype_fn", folder+ "/"+ "pheno_nonrec_psi11_"+psi11+"_"+ID+".tsv");	
+//	defineConstant("fre_output",folder+ "/"+ "nonrec_psi11_"+psi11+"_"+ID+".tsv");	
+//	defineConstant("phenotype_fn", folder+ "/"+ "pheno_nonrec_psi11_"+psi11+"_"+ID+".tsv");	
 	
 	// m2 models a biallelic locus; an m2 mutation is "A",
 	// absence of an m2 mutation is "a"; "aa" is neutral
@@ -130,6 +130,7 @@ shift_time late(){
 	defineGlobal("optimum", optimum+4*shift_size);
 	print("new opt is " + optimum);
 	defineGlobal("Va0_sqrt", shift_size);	
+	calculate_phenotype(p1);
 }
 
 shift_time:(shift_time+10) late(){
