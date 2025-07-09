@@ -12,8 +12,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ## prep
 ```{r}
 # Set your folder path
-folder_path <- "../tsv_output/social_new/data/abs_fitness"  # <-- change this
-file_list <- list.files(folder_path, pattern = "\\.tsv$", full.names = TRUE)
+folder <- "../tsv_output/social_new/data/postburnin-2703248/data"  # <-- change this
+file_list <- list.files(folder, pattern = "\\.tsv$", full.names = TRUE)
 
 # Read and combine
 all_df <- do.call(rbind, lapply(file_list, function(file) {
@@ -45,7 +45,7 @@ agg <- aggregate(dz1_ratio ~ psi11, data = merged, FUN = mean)
 # Plot mean dz1 ratio vs psi11
 plot(agg$psi11, agg$dz1_ratio,
      xlab = "psi11", ylab = "Mean dz1 ratio (rec = 1 / rec = 0)",
-     main = "Average dz1 Ratio at gen_postsel = 1",
+     main = "Average dz1 Ratio at first generation",
      pch = 19, type = "b")
 
 
@@ -53,7 +53,7 @@ plot(agg$psi11, agg$dz1_ratio,
 ```
 
 ```{r}
-sub_df <- all_df[all_df$gen_postsel == 2 & all_df$rec == 1, ]
+sub_df <- all_df[ all_df$rec == 1, ]
 
 # Define colors based on gen_postsel
 colors <- ifelse(sub_df$gen_postsel < 0, "grey",
@@ -63,12 +63,15 @@ colors <- ifelse(sub_df$gen_postsel < 0, "grey",
 plot(sub_df$dz1_pred, sub_df$dz1,
      col = colors, pch = 19,
      xlab = "dz1_pred", ylab = "dz1",
-     main = "delta_z and prediction (first gen)")
+     main = "delta_z and prediction (before and after selection)")
 abline(a = 0, b = 1, lty = 2, col = "black")
+
+testset <- subset(all_df, dz1>5)
+
 ```
 
 ```{r}
-sub_df <- all_df[all_df$gen_postsel == 1 & all_df$rec == 1, ]
+sub_df <- all_df[all_df$gen_postsel == 2 & all_df$rec == 1, ]
 
 # Create a vector of unique psi11 values
 psi_vals <- sort(unique(sub_df$psi11))
@@ -99,7 +102,7 @@ if (length(psi_vals) <= 10) {
 
 ```{r}
 # Filter for gen_postsel between 0 and 100
-df_subset <- all_df[all_df$gen_postsel >= 0 & all_df$gen_postsel <= 100 & all_df$rec==1, ]
+df_subset <- all_df[all_df$gen_postsel >= 1 & all_df$gen_postsel <= 100 & all_df$rec==1 , ]
 
 # Unique psi11 values and colors
 psi_vals <- sort(unique(df_subset$psi11))
@@ -108,9 +111,10 @@ psi_color_map <- setNames(colors, psi_vals)
 
 par(mar = c(5, 4, 4, 8))
 # Set up empty plot
-plot(NA, xlim = c(0, 100), ylim = c(0.05, 4),
+plot(NA, xlim = c(1, 100), ylim = c(0.05, 4),
      xlab = "generation after shift", ylab = "normalized distance from z_mean to optimum",
-     main = "distance from optimum with psi", log = "y",
+     main = "distance from optimum with psi", 
+     log = "y",
      xaxt = "s", yaxt = "n")
 
 # Loop over psi11 values
@@ -139,6 +143,53 @@ axis(2, at = ticks, labels = format(ticks, digits = 2))
 legend("topright", legend = psi_vals,inset = c(-0.2, 0),
        col = colors, lty = 1, lwd = 2, xpd = TRUE)
 ```
+
+```{r}
+# Filter for gen_postsel between 0 and 100
+df_subset <- all_df[all_df$gen_postsel >= 1 & all_df$gen_postsel <= 100 & all_df$rec==1, ]
+df_subset <- df_subset[!grepl("2702577", df_subset$file_id), ]
+
+# Unique psi11 values and colors
+psi_vals <- sort(unique(df_subset$psi11))
+colors <- rainbow(length(psi_vals))
+psi_color_map <- setNames(colors, psi_vals)
+
+par(mar = c(5, 4, 4, 8))
+# Set up empty plot
+plot(NA, xlim = c(1, 100), ylim = c(8, 50),
+     xlab = "generation after shift", ylab = "phenotypic standard deviation",
+     main = "phenotypic standard deviation over time after selection", 
+     # log = "y",
+     # xaxt = "s", yaxt = "n"
+     )
+
+# Loop over psi11 values
+for (psi in psi_vals) {
+  df_psi <- df_subset[df_subset$psi11 == psi, ]
+  reps <- unique(df_psi$rep)
+  col <- psi_color_map[as.character(psi)]
+  
+  # Plot each rep as a line
+  for (r in reps) {
+    df_rep <- df_psi[df_psi$rep == r, ]
+    lines(df_rep$gen_postsel, df_rep$z_sd, col = adjustcolor(col, alpha.f = 0.2))
+  }
+  
+  
+  # Compute mean z_sd per generation
+  mean_by_gen <- tapply(df_psi$z_sd, df_psi$gen_postsel, mean, na.rm = TRUE)
+  
+  # Plot line
+  lines(as.numeric(names(mean_by_gen)), mean_by_gen,
+        col = psi_color_map[as.character(psi)], lwd = 2)
+}
+
+# ticks <- c(0.10, 0.32, 1.00, 4.00)
+# axis(2, at = ticks, labels = format(ticks, digits = 2))
+legend("topright", legend = psi_vals,inset = c(-0.2, 0),
+       col = colors, lty = 1, lwd = 2, xpd = TRUE)
+```
+
 
 ```{r}
 # Set the path to the folder containing the TSV files
@@ -180,4 +231,263 @@ for (i in 2:length(phenotypes)) {
 
 ```
 
+## post burnin phase
+```{r}
+# Set the path to the folder containing the TSV files
+folder <- "../tsv_output/social_new/data/postburnin-2703248/phenotype"
+
+# List all relevant .tsv files
+files <- list.files(folder, pattern = "\\.tsv$", full.names = TRUE)
+
+# Function to read and parse each file
+read_and_annotate <- function(file_path) {
+  # Extract filename
+  fname <- basename(file_path)
+  
+  # Match the filename pattern
+  matches <- regmatches(fname, regexec("^(nrec|rec)_N_1000_psi_([-0-9.]+)_pop_([0-9]{7})_([0-9]{7})\\.tsv$", fname))[[1]]
+  
+  if (length(matches) == 5) {
+    a <- matches[2]
+    b <- as.numeric(matches[3])
+    c <- matches[4]
+    d <- matches[5]
+    
+    # Read file
+    df <- read.table(file_path, header = TRUE, sep = "\t")
+    
+    # Add columns
+    df$rec <- ifelse(a == "rec", 1, 0)
+    df$psi11 <- b
+    df$burnin_id <- c
+    df$rep_id <- d
+    
+    return(df)
+  } else {
+    warning(paste("Filename doesn't match expected pattern:", fname))
+    return(NULL)
+  }
+}
+
+# Read and combine all data
+phenotypes <- do.call(rbind, lapply(files, read_and_annotate))
+```
+
+```{r}
+# Filter the dataset
+df_sub <- subset(phenotypes, rec == 1 & psi11 == 0.1)
+
+# Get unique burnin_ids
+burnin_ids <- unique(df_sub$burnin_id)
+
+# Define a common range of phenotype for fixed breaks
+phen_range <- range(df_sub$phenotype)
+num_breaks <- 30
+common_breaks <- seq(phen_range[1], phen_range[2], length.out = num_breaks + 1)
+
+# Loop over each burnin_id
+for (bid in burnin_ids) {
+  df_bid <- subset(df_sub, burnin_id == bid)
+  
+  generations <- sort(unique(df_bid$generation))
+  n_gen <- length(generations)
+  
+  # Define distinct semi-transparent colors
+  base_colors <- rainbow(n_gen)
+  alpha <- 0.4
+  fill_colors <- sapply(base_colors, function(col) {
+    rgb_val <- col2rgb(col) / 255
+    rgb(rgb_val[1], rgb_val[2], rgb_val[3], alpha = alpha)
+  })
+  color_map <- setNames(fill_colors, generations)
+  
+  # Initialize empty plot
+  mids <- hist(df_bid$phenotype, plot = FALSE, breaks = common_breaks)$mids
+  bar_width <- diff(common_breaks)[1]
+  y_max <- 0
+  
+  # Precompute all averaged histograms to find global max for y-axis
+  histograms_by_gen <- list()
+  for (gen in generations) {
+    df_gen <- subset(df_bid, generation == gen)
+    hist_list <- by(df_gen, df_gen$rep_id, function(df_rep) {
+      hist(df_rep$phenotype, plot = FALSE, breaks = common_breaks)
+    })
+    counts_mat <- do.call(rbind, lapply(hist_list, function(h) h$counts))
+    avg_counts <- colMeans(counts_mat)
+    histograms_by_gen[[as.character(gen)]] <- avg_counts
+    y_max <- max(y_max, avg_counts)
+  }
+  
+  # Set up empty plot space
+  plot(
+    NA, xlim = range(mids), ylim = c(0, 200),
+    xlab = "Phenotype", ylab = "Average Count",
+    main = paste("Phenotype Distribution Over Time\nBurnin ID:", bid)
+  )
+  
+  # Overlay each generation's histogram bars
+  for (i in seq_along(generations)) {
+    gen <- generations[i]
+    avg_counts <- histograms_by_gen[[as.character(gen)]]
+    rect(
+      xleft  = mids - bar_width/2,
+      xright = mids + bar_width/2,
+      ybottom = 0,
+      ytop = avg_counts,
+      col = color_map[as.character(gen)],
+      border = NA
+    )
+  }
+  
+  # Add legend
+  legend("topright", legend = generations, fill = color_map, title = "Generation", cex = 0.6)
+}
+
+```
+
+```{r}
+# Filter the dataset
+df_sub <- subset(phenotypes, rec == 1 & psi11 == 0.0)
+
+# Get unique burnin_ids
+burnin_ids <- unique(df_sub$burnin_id)
+
+# Define a common range of phenotype for fixed breaks
+phen_range <- range(df_sub$phenotype)
+num_breaks <- 30
+common_breaks <- seq(phen_range[1], phen_range[2], length.out = num_breaks + 1)
+
+# Loop over each burnin_id
+for (bid in burnin_ids) {
+  df_bid <- subset(df_sub, burnin_id == bid)
+  
+  generations <- sort(unique(df_bid$generation))
+  n_gen <- length(generations)
+  
+  # Define distinct semi-transparent colors
+  base_colors <- rainbow(n_gen)
+  alpha <- 0.7
+  line_colors <- sapply(base_colors, function(col) {
+    rgb_val <- col2rgb(col) / 255
+    rgb(rgb_val[1], rgb_val[2], rgb_val[3], alpha = alpha)
+  })
+  color_map <- setNames(line_colors, generations)
+  
+  # Initialize mids and placeholder for all avg counts
+  mids <- hist(df_bid$phenotype, plot = FALSE, breaks = common_breaks)$mids
+  y_max <- 0
+  histograms_by_gen <- list()
+  
+  for (gen in generations) {
+    df_gen <- subset(df_bid, generation == gen)
+    
+    hist_list <- by(df_gen, df_gen$rep_id, function(df_rep) {
+      hist(df_rep$phenotype, plot = FALSE, breaks = common_breaks)
+    })
+    
+    counts_mat <- do.call(rbind, lapply(hist_list, function(h) h$counts))
+    avg_counts <- colMeans(counts_mat)
+    histograms_by_gen[[as.character(gen)]] <- avg_counts
+    y_max <- max(y_max, avg_counts)
+  }
+  
+  # Set up plot
+  plot(
+    NA, xlim = range(mids), ylim = c(0, 200),
+    xlab = "Phenotype", ylab = "Average Count",
+    main = paste("Phenotype Distribution Over Time\nBurnin ID:", bid)
+  )
+  
+  # Add lines and points for each generation
+  for (gen in generations) {
+    avg_counts <- histograms_by_gen[[as.character(gen)]]
+    points(mids, avg_counts, col = color_map[as.character(gen)], pch = 16)
+    lines(mids, avg_counts, col = color_map[as.character(gen)], lwd = 2)
+  }
+  
+  # Add legend
+  legend("topright", legend = generations, col = color_map, lwd = 2, pch = 16, title = "Generation", cex = 0.6)
+}
+
+```
+
+
+```{r}
+# Filter for generation 10101 and rec == 1
+df_sub <- subset(phenotypes, rec == 1 & generation == 10101)
+
+# Get burnin_id values
+burnin_ids <- unique(df_sub$burnin_id)
+
+# Set histogram parameters
+num_breaks <- 30
+phen_range <- range(df_sub$phenotype)
+common_breaks <- seq(phen_range[1], phen_range[2], length.out = num_breaks + 1)
+bar_width <- diff(common_breaks)[1]
+mids <- hist(df_sub$phenotype, plot = FALSE, breaks = common_breaks)$mids
+
+# Loop over each burnin_id
+for (bid in burnin_ids) {
+  df_bid <- subset(df_sub, burnin_id == bid)
+  
+  # Unique psi11 values for this burnin_id
+  psi_vals <- sort(unique(df_bid$psi11))
+  n_psi <- length(psi_vals)
+  
+  # Colors for psi11
+  base_colors <- rainbow(n_psi)
+  alpha <- 0.4
+  fill_colors <- sapply(base_colors, function(col) {
+    rgb_val <- col2rgb(col) / 255
+    rgb(rgb_val[1], rgb_val[2], rgb_val[3], alpha = alpha)
+  })
+  color_map <- setNames(fill_colors, psi_vals)
+  
+  # Compute average histograms per psi11
+  histograms_by_psi <- list()
+  y_max <- 0
+  
+  for (psi in psi_vals) {
+    df_psi <- subset(df_bid, psi11 == psi)
+    
+    hist_list <- by(df_psi, df_psi$rep_id, function(df_rep) {
+      hist(df_rep$phenotype, plot = FALSE, breaks = common_breaks)
+    })
+    
+    counts_mat <- do.call(rbind, lapply(hist_list, function(h) h$counts))
+    avg_counts <- colMeans(counts_mat)
+    
+    histograms_by_psi[[as.character(psi)]] <- avg_counts
+    y_max <- max(y_max, avg_counts)
+  }
+  
+  # Plot for this burnin_id
+  plot(
+    NA, xlim = range(mids), ylim = c(0, 400),  # Fixed ylim as you requested earlier
+    xlab = "Phenotype", ylab = "Average Count",
+    main = paste("Phenotype Distribution after burnin\nBurnin ID:", bid)
+  )
+  
+  for (psi in psi_vals) {
+    avg_counts <- histograms_by_psi[[as.character(psi)]]
+    rect(
+      xleft  = mids - bar_width / 2,
+      xright = mids + bar_width / 2,
+      ybottom = 0,
+      ytop = avg_counts,
+      col = color_map[as.character(psi)],
+      border = NA
+    )
+  }
+  
+  legend("topright", legend = psi_vals, fill = color_map, title = "psi11", cex = 0.7)
+}
+
+```
+```{r}
+# testset <- subset(all_df, rep==2702581)
+testset <- all_df[grepl("2702581", all_df$file_id), ]
+testset <- subset(testset, gen_postsel==2 & psi11==-0.9 & rec==1)
+```
 
