@@ -1065,9 +1065,64 @@ dev.off()
 ```
 
 
-
+## data plot
 ```{r}
+# Set folder path
+folder <- "../data/data"
 
+# List all .tsv files recursively
+file_list <- list.files(
+  path = folder,
+  pattern = "\\.tsv$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Function to extract burnin_id from the file name
+extract_burnin_id <- function(path) {
+  matches <- regexec("_pop_(\\d+)_1\\.tsv$", path)
+  parts <- regmatches(path, matches)[[1]]
+  if (length(parts) != 2) return(NA)
+  return(as.integer(parts[2]))
+}
+
+# Read and combine all files with burnin_id
+data_df <- do.call(rbind, lapply(file_list, function(file) {
+  df <- read.table(file, header = TRUE, sep = "\t")
+  df$burnin_id <- extract_burnin_id(file)
+  df$file_id <- basename(file)
+  return(df)
+}))
+
+# Drop rows where burnin_id failed to extract
+data_df <- subset(data_df, !is.na(burnin_id))
+
+# Preview expected structure: seg_site, psi11, rep, burnin_id
+stopifnot(all(c("seg_site", "psi11", "rep") %in% names(data_df)))
+
+# ---- PLOT ----
+# Set up plot
+plot(NULL, xlim = range(data_df$psi11), ylim = range(data_df$seg_site),
+     xlab = "psi11", ylab = "seg_site", main = "seg_site vs psi11 across replicates")
+
+# Use color per burnin_id
+burnin_ids <- sort(unique(data_df$burnin_id))
+colors <- rainbow(length(burnin_ids))
+
+for (i in seq_along(burnin_ids)) {
+  df_b <- subset(data_df, burnin_id == burnin_ids[i])
+  points(df_b$psi11, df_b$seg_site, col = colors[i], pch = 16)
+}
+
+# Output folder
+outdir <- "../r_plots"
+dir.create(outdir, showWarnings = FALSE)
+
+
+legend("topright", legend = paste("burnin_id", burnin_ids), col = colors, pch = 16, cex = 0.8)
+file_name <- sprintf("%s/seg_site_per_psi.png", outdir)
+dev.copy(png, filename = file_name, width = 800, height = 600)
+dev.off()
 
 ```
 ```{r}
