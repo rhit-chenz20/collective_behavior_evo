@@ -6,3 +6,6 @@
 .vscode
 slim/tsv_output/*
 slim/log
+slim/data
+slim/r_remote/workspace.RData
+slim/pop

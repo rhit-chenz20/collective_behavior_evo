@@ -1,0 +1,649 @@
+---
+title: "plot genotype, phenotype and effect size data"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## plot genotype data
+```{r}
+# Set the top-level folder
+folder <- "../data/genotype"
+
+# List all .tsv files recursively
+file_list <- list.files(
+  path = folder,
+  pattern = "\\.tsv$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Function to extract metadata from path
+extract_geno_metadata <- function(path) {
+  # Extract job_id (x), job_rep (i), psi11 (y), burnin_id (z)
+  matches <- regexec("genotype_(\\d+)_([1-3])/rec_N_1000_psi_(-?[0-9.]+)_pop_(\\d+)_1\\.tsv", path)
+  parts <- regmatches(path, matches)[[1]]
+  
+  if (length(parts) != 5) {
+    warning("Could not extract metadata from path: ", path)
+    return(data.frame())
+  }
+
+  data.frame(
+    job_id = as.integer(parts[2]),
+    job_rep = as.integer(parts[3]),
+    psi11 = as.numeric(parts[4]),
+    burnin_id = as.integer(parts[5]),
+    stringsAsFactors = FALSE
+  )
+}
+
+# Read and combine all files
+genotype_df <- do.call(rbind, lapply(file_list, function(file) {
+  df <- read.table(file, header = TRUE, sep = "\t")
+  meta <- extract_geno_metadata(file)
+  if (nrow(meta) == 0) return(NULL)
+
+  # Compute new job_id
+  df$job_id <- meta$job_id + meta$job_rep - 1
+  df$psi11 <- meta$psi11
+  df$burnin_id <- meta$burnin_id
+  df$file_id <- basename(file)
+
+  return(df)
+}))
+
+```
+
+
+```{r}
+# Set up output directory
+output_dir <- "../r_plots"
+if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
+
+# Filter generation 10100
+gen10100_df <- subset(genotype_df, generation == 10100)
+genotype_cols <- 2:1001  # assuming genotype data are in columns 2 to 1001
+
+# Define fixed bins for histogram
+num_bins <- 60
+breaks <- seq(-60, 60, length.out = num_bins + 1)
+bin_mids <- 0.5 * (head(breaks, -1) + tail(breaks, -1))  # bin centers
+
+# Setup color palette: Zissou 1
+psi_vals <- sort(unique(gen10100_df$psi11))
+colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+names(colors) <- as.character(psi_vals)
+
+# Loop over burnin_ids
+burnin_ids <- unique(gen10100_df$burnin_id)
+
+for (bid in burnin_ids) {
+  df_bid <- subset(gen10100_df, burnin_id == bid)
+  psi_in_this_burnin <- sort(unique(df_bid$psi11))
+
+  # Start PNG
+  png(file.path(output_dir, paste0("genotype_hist_avg_burnin_", bid, ".png")),
+      width = 1000, height = 700)
+
+  plot(NULL, xlim = c(-60, 60), ylim = c(0, 0.3),
+       xlab = "Genotype Value", ylab = "Proportion",
+       main = paste("Avg Genotype Histogram | burnin_id =", bid))
+
+  legend_labels <- c()
+
+  for (psi in psi_in_this_burnin) {
+    df_psi <- subset(df_bid, psi11 == psi)
+    reps <- unique(df_psi$job_id)
+    n_reps <- length(reps)
+
+    # Initialize matrix to hold bin counts per replicate
+    counts_mat <- matrix(0, nrow = n_reps, ncol = num_bins)
+
+    for (r in seq_along(reps)) {
+      rep_data <- subset(df_psi, job_id == reps[r])
+      genos <- as.numeric(unlist(rep_data[, genotype_cols]))
+      genos <- genos[!is.na(genos)]
+      h <- hist(genos, breaks = breaks, plot = FALSE)
+      counts_mat[r, ] <- h$counts / sum(h$counts)  # normalize to proportion
+    }
+
+    # Average across replicates
+    avg_counts <- colMeans(counts_mat, na.rm = TRUE)
+
+    # Plot histogram line
+    lines(bin_mids, avg_counts, type = "l", col = colors[as.character(psi)], lwd = 2)
+
+    legend_labels <- c(legend_labels, paste0("psi11=", psi, " (n=", n_reps, ")"))
+  }
+
+  legend("topright", legend = legend_labels,
+         col = colors[as.character(psi_in_this_burnin)], lwd = 2, cex = 0.8, bty = "n")
+
+  dev.off()
+}
+
+```
+
+
+## plot phenotype data
+```{r}
+# Set the top-level folder
+folder <- "../data/phenotype"
+
+# List all .tsv files recursively
+file_list <- list.files(
+  path = folder,
+  pattern = "\\.tsv$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Function to extract metadata from path
+extract_pheno_metadata <- function(path) {
+  # Extract job_id (x), job_rep (i), psi11 (y), burnin_id (z)
+  matches <- regexec("phenotype_(\\d+)_([1-3])/rec_N_1000_psi_(-?[0-9.]+)_pop_(\\d+)_1\\.tsv", path)
+  parts <- regmatches(path, matches)[[1]]
+  
+  if (length(parts) != 5) {
+    warning("Could not extract metadata from path: ", path)
+    return(data.frame())
+  }
+
+  data.frame(
+    job_id = as.integer(parts[2]),
+    job_rep = as.integer(parts[3]),
+    psi11 = as.numeric(parts[4]),
+    burnin_id = as.integer(parts[5]),
+    stringsAsFactors = FALSE
+  )
+}
+
+# Read and combine all files
+phenotype_df <- do.call(rbind, lapply(file_list, function(file) {
+  df <- read.table(file, header = TRUE, sep = "\t")
+  meta <- extract_pheno_metadata(file)
+  if (nrow(meta) == 0) return(NULL)
+
+  # Compute new job_id
+  df$job_id <- meta$job_id + meta$job_rep - 1
+  df$psi11 <- meta$psi11
+  df$burnin_id <- meta$burnin_id
+  df$file_id <- basename(file)
+
+  return(df)
+}))
+
+```
+
+
+```{r}
+# Set up output directory
+output_dir <- "../r_plots"
+if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
+
+# Filter generation 10100
+gen10100_df <- subset(phenotype_df, generation == 10100)
+phenotype_cols <- 2:1001  # assuming genotype data are in columns 2 to 1001
+
+# Define fixed bins for histogram
+num_bins <- 60
+breaks <- seq(-200, 200, length.out = num_bins + 1)
+bin_mids <- 0.5 * (head(breaks, -1) + tail(breaks, -1))  # bin centers
+
+# Setup color palette: Zissou 1
+psi_vals <- sort(unique(gen10100_df$psi11))
+colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+names(colors) <- as.character(psi_vals)
+
+# Loop over burnin_ids
+burnin_ids <- unique(gen10100_df$burnin_id)
+
+for (bid in burnin_ids) {
+  df_bid <- subset(gen10100_df, burnin_id == bid)
+  psi_in_this_burnin <- sort(unique(df_bid$psi11))
+
+  # Start PNG
+  png(file.path(output_dir, paste0("phenotype_hist_avg_burnin_", bid, ".png")),
+      width = 1000, height = 700)
+
+  plot(NULL, xlim = c(-60, 60), ylim = c(0, 0.3),
+       xlab = "Genotype Value", ylab = "Proportion",
+       main = paste("Avg Genotype Histogram | burnin_id =", bid))
+  legend_labels <- c()
+
+  for (psi in psi_in_this_burnin) {
+    df_psi <- subset(df_bid, psi11 == psi)
+    reps <- unique(df_psi$job_id)
+    n_reps <- length(reps)
+
+    # Initialize matrix to hold bin counts per replicate
+    counts_mat <- matrix(0, nrow = n_reps, ncol = num_bins)
+
+    for (r in seq_along(reps)) {
+      rep_data <- subset(df_psi, job_id == reps[r])
+      genos <- as.numeric(unlist(rep_data[, phenotype_cols]))
+      genos <- genos[!is.na(genos)]
+      h <- hist(genos, breaks = breaks, plot = FALSE)
+      counts_mat[r, ] <- h$counts / sum(h$counts)  # normalize to proportion
+    }
+
+    # Average across replicates
+    avg_counts <- colMeans(counts_mat, na.rm = TRUE)
+
+    # Plot histogram line
+    lines(bin_mids, avg_counts, type = "l", col = colors[as.character(psi)], lwd = 2)
+
+    legend_labels <- c(legend_labels, paste0("psi11=", psi, " (n=", n_reps, ")"))
+  }
+
+  legend("topright", legend = legend_labels,
+         col = colors[as.character(psi_in_this_burnin)], lwd = 2, cex = 0.8, bty = "n")
+
+  dev.off()
+}
+
+```
+
+
+
+
+## plot effect size data
+
+```{r}
+# Set the top-level folder
+folder <- "../data/ind"
+
+# List all .tsv files recursively
+file_list <- list.files(
+  path = folder,
+  pattern = "\\.tsv$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Extract metadata from file path
+extract_effect_metadata <- function(path) {
+  matches <- regexec("ind_(\\d+)_([1-3])/rec_N_1000_psi_(-?[0-9.]+)_pop_(\\d+)_1\\.tsv", path)
+  parts <- regmatches(path, matches)[[1]]
+  
+  if (length(parts) != 5) {
+    warning("Could not extract metadata from path: ", path)
+    return(data.frame())
+  }
+
+  data.frame(
+    job_id = as.integer(parts[2]),
+    job_rep = as.integer(parts[3]),
+    psi11 = as.numeric(parts[4]),
+    burnin_id = as.integer(parts[5]),
+    stringsAsFactors = FALSE
+  )
+}
+
+# Read and pad TSV with filtering for generation 10100
+read_variable_tsv_10100 <- function(file_path) {
+  lines <- readLines(file_path)
+
+  # Filter lines for generation 10100 only
+  lines <- lines[grepl("^10100\\t", lines)]
+  if (length(lines) == 0) return(NULL)
+
+  split_lines <- strsplit(lines, "\t")
+  max_len <- max(sapply(split_lines, length))
+  padded <- lapply(split_lines, function(row) {
+    length(row) <- max_len
+    row
+  })
+  df <- as.data.frame(do.call(rbind, padded), stringsAsFactors = FALSE)
+  names(df)[1:2] <- c("generation", "individual_id")
+  df
+}
+
+# Combine filtered and padded data with metadata
+effect_df <- do.call(rbind, lapply(file_list, function(file) {
+  df <- read_variable_tsv_10100(file)
+  if (is.null(df) || nrow(df) == 0) return(NULL)
+
+  meta <- extract_effect_metadata(file)
+  if (nrow(meta) == 0) return(NULL)
+
+  df$job_id <- meta$job_id + meta$job_rep - 1
+  df$psi11 <- meta$psi11
+  df$burnin_id <- meta$burnin_id
+  df$file_id <- basename(file)
+
+  return(df)
+}))
+
+
+```
+
+
+```{r}
+# Set up output directory
+output_dir <- "../r_plots"
+if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
+
+# Filter generation 10100
+gen10100_df <- subset(phenotype_df, generation == 10100)
+phenotype_cols <- 2:1001  # assuming genotype data are in columns 2 to 1001
+
+# Define fixed bins for histogram
+num_bins <- 60
+breaks <- seq(-200, 200, length.out = num_bins + 1)
+bin_mids <- 0.5 * (head(breaks, -1) + tail(breaks, -1))  # bin centers
+
+# Setup color palette: Zissou 1
+psi_vals <- sort(unique(gen10100_df$psi11))
+colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+names(colors) <- as.character(psi_vals)
+
+# Loop over burnin_ids
+burnin_ids <- unique(gen10100_df$burnin_id)
+
+for (bid in burnin_ids) {
+  df_bid <- subset(gen10100_df, burnin_id == bid)
+  psi_in_this_burnin <- sort(unique(df_bid$psi11))
+
+  # Start PNG
+  png(file.path(output_dir, paste0("phenotype_hist_avg_burnin_", bid, ".png")),
+      width = 1000, height = 700)
+
+  plot(NULL, xlim = c(-60, 60), ylim = c(0, 0.3),
+       xlab = "Genotype Value", ylab = "Proportion",
+       main = paste("Avg Genotype Histogram | burnin_id =", bid))
+  legend_labels <- c()
+
+  for (psi in psi_in_this_burnin) {
+    df_psi <- subset(df_bid, psi11 == psi)
+    reps <- unique(df_psi$job_id)
+    n_reps <- length(reps)
+
+    # Initialize matrix to hold bin counts per replicate
+    counts_mat <- matrix(0, nrow = n_reps, ncol = num_bins)
+
+    for (r in seq_along(reps)) {
+      rep_data <- subset(df_psi, job_id == reps[r])
+      genos <- as.numeric(unlist(rep_data[, phenotype_cols]))
+      genos <- genos[!is.na(genos)]
+      h <- hist(genos, breaks = breaks, plot = FALSE)
+      counts_mat[r, ] <- h$counts / sum(h$counts)  # normalize to proportion
+    }
+
+    # Average across replicates
+    avg_counts <- colMeans(counts_mat, na.rm = TRUE)
+
+    # Plot histogram line
+    lines(bin_mids, avg_counts, type = "l", col = colors[as.character(psi)], lwd = 2)
+
+    legend_labels <- c(legend_labels, paste0("psi11=", psi, " (n=", n_reps, ")"))
+  }
+
+  legend("topright", legend = legend_labels,
+         col = colors[as.character(psi_in_this_burnin)], lwd = 2, cex = 0.8, bty = "n")
+
+  dev.off()
+}
+
+```
+
+### temp with wrong ind data
+```{r}
+# ---- CONFIG ----
+library(tools)
+
+folder <- "../data/ind"  # top-level folder
+gen_filter <- "10100"     # generation to keep
+
+# ---- HELPERS ----
+
+# Extract metadata from filename
+extract_effect_metadata <- function(path) {
+  matches <- regexec("ind_(\\d+)_([1-3])/rec_N_1000_psi_(-?[0-9.]+)_pop_(\\d+)_1_gen10100\\.tsv", path)
+  parts <- regmatches(path, matches)[[1]]
+  if (length(parts) != 5) {
+    warning("❗ Could not extract metadata from path: ", path)
+    return(NULL)
+  }
+  list(
+    job_id = as.integer(parts[2]),
+    job_rep = as.integer(parts[3]),
+    psi11 = as.numeric(parts[4]),
+    burnin_id = as.integer(parts[5]),
+    file_id = basename(path)
+  )
+}
+
+# Read variable-length TSV file, pad with NA
+read_variable_tsv <- function(file_path) {
+  lines <- readLines(file_path)
+  if (length(lines) == 0) return(NULL)
+  split_lines <- strsplit(lines, "\t")
+  max_len <- max(sapply(split_lines, length))
+  padded <- lapply(split_lines, function(row) {
+    length(row) <- max_len
+    row
+  })
+  df <- as.data.frame(do.call(rbind, padded), stringsAsFactors = FALSE)
+  names(df)[1:2] <- c("generation", "individual_id")
+  return(df)
+}
+```
+
+```{r}
+# ---- READ FILES ----
+
+# List all generation 10100 files recursively
+file_list <- list.files(
+  path = folder,
+  pattern = "_gen10100\\.tsv$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Read and collect all data frames into a list
+df_list <- list()
+for (file in file_list) {
+  df <- read_variable_tsv(file)
+  if (is.null(df)) next
+  meta <- extract_effect_metadata(file)
+  if (is.null(meta)) next
+  n_cols <- ncol(df)
+
+  # Store as list with metadata appended
+  df$job_id <- meta$job_id + meta$job_rep - 1
+  df$psi11 <- meta$psi11
+  df$burnin_id <- meta$burnin_id
+  df$file_id <- meta$file_id
+
+  df_list[[length(df_list) + 1]] <- df
+}
+```
+
+```{r}
+# ---- PROCESS ----
+
+# Determine max number of mutation columns (exclude 2 main + 4 meta)
+max_mut_cols <- max(sapply(df_list, function(x) ncol(x) - 6))
+
+# Reformat and reorder each df
+reordered_list <- lapply(df_list, function(df) {
+  n <- ncol(df)
+  head_cols <- df[, 1:2]  # generation, individual_id
+  meta_cols <- df[, (n - 3):n]
+  mut_cols <- df[, 3:(n - 4)]
+
+  # Pad mutation columns
+  n_mut <- ncol(mut_cols)
+  if (n_mut < max_mut_cols) {
+    mut_cols <- cbind(mut_cols, matrix(NA, nrow = nrow(mut_cols), ncol = max_mut_cols - n_mut))
+  }
+
+  colnames(head_cols) <- c("generation", "individual_id")
+  colnames(meta_cols) <- c("job_id", "psi11", "burnin_id", "file_id")
+  colnames(mut_cols) <- paste0("mut_", seq_len(ncol(mut_cols)))
+
+  cbind(head_cols, meta_cols, mut_cols)
+})
+
+# Combine into final dataframe
+effect_df <- do.call(rbind, reordered_list)
+
+# ---- OPTIONAL SAVE ----
+# saveRDS(effect_df, file = "../data1/ind/effect_df_gen10100_cleaned.rds")
+
+```
+
+```{r}
+library(viridis)  # for Zissou 1 palette
+library(RColorBrewer)
+
+# Filter for generation 10100 if not done yet
+effect_df <- subset(effect_df, generation == "10100")
+
+# Define bins (you said effect sizes from ±sqrt(exp(1)), so reasonable range is -5 to 5)
+bin_breaks <- seq(-3, 3, by = 0.2)
+bin_centers <- head(bin_breaks, -1) + diff(bin_breaks)/2
+
+# Prepare color palette
+psi_vals <- sort(unique(effect_df$psi11))
+palette <- viridis::viridis(length(psi_vals), option = "C")  # Zissou 1-like
+
+# Output folder
+outdir <- "../r_plots"
+dir.create(outdir, showWarnings = FALSE)
+
+# Function to extract effect sizes from mutation columns
+extract_effects <- function(row) {
+  effects <- unlist(row[3:(ncol(effect_df) - 4)])  # exclude metadata cols
+  effects <- effects[!is.na(effects)]
+  as.numeric(sub(".*:", "", effects))  # extract effect size part
+}
+
+# Loop by burnin_id
+for (bid in unique(effect_df$burnin_id)) {
+  df_bid <- subset(effect_df, burnin_id == bid)
+  
+  plot_matrix <- matrix(0, nrow = length(psi_vals), ncol = length(bin_centers))
+  rep_counts <- integer(length(psi_vals))
+
+  for (i in seq_along(psi_vals)) {
+    psi <- psi_vals[i]
+    df_psi <- subset(df_bid, psi11 == psi)
+
+    # Split by replicate (job_id)
+    job_ids <- unique(df_psi$job_id)
+    rep_counts[i] <- length(job_ids)
+
+    rep_hist <- matrix(0, nrow = length(job_ids), ncol = length(bin_centers))
+    
+    for (j in seq_along(job_ids)) {
+      df_rep <- subset(df_psi, job_id == job_ids[j])
+      all_effects <- unlist(apply(df_rep, 1, extract_effects))
+      all_effects <- all_effects[all_effects >= min(bin_breaks) & all_effects <= max(bin_breaks)]
+      rep_hist[j, ] <- hist(all_effects, breaks = bin_breaks, plot = FALSE)$density
+    }
+
+    # Average across replicates
+    plot_matrix[i, ] <- colMeans(rep_hist)
+  }
+
+  # Plot
+  plot(NULL, xlim = c(-3, 3), ylim = c(0, 0.6), xlab = "Effect Size", ylab = "Density",
+       main = paste("Effect Size Distribution\nBurnin ID", bid))
+
+  for (i in seq_along(psi_vals)) {
+    lines(bin_centers, plot_matrix[i, ], col = palette[i], lwd = 2)
+  }
+
+  legend("topright", legend = paste0("psi11=", psi_vals, " (n=", rep_counts, ")"),
+         col = palette, lwd = 2, cex = 0.8)
+
+  # Save plot
+  file_name <- sprintf("%s/effect_dist_burnin_%d_plot1.png", outdir, bid)
+  dev.copy(png, filename = file_name, width = 800, height = 600)
+  dev.off()
+}
+```
+### burnin combined
+```{r}
+# ---- CONFIG ----
+library(viridis)
+
+bin_breaks <- seq(-3, 3, by = 0.2)
+bin_centers <- head(bin_breaks, -1) + diff(bin_breaks)/2
+psi_vals <- sort(unique(effect_df$psi11))
+palette <- viridis(length(psi_vals), option = "C")
+
+# Output folder
+outdir <- "../r_plots"
+dir.create(outdir, showWarnings = FALSE)
+
+# Helper to extract effect sizes from a row
+extract_effects <- function(row) {
+  vals <- unlist(row[7:ncol(effect_df)])
+  vals <- vals[!is.na(vals)]
+  as.numeric(sub(".*:", "", vals))
+}
+
+# ---- GROUP BY psi11 ----
+plot_matrix <- matrix(0, nrow = length(psi_vals), ncol = length(bin_centers))
+rep_counts <- integer(length(psi_vals))
+
+for (i in seq_along(psi_vals)) {
+  psi <- psi_vals[i]
+  df_psi <- subset(effect_df, psi11 == psi)
+
+  # Unique replicate = job_id + burnin_id combo
+  df_psi$replicate_id <- paste(df_psi$burnin_id, df_psi$job_id, sep = "_")
+  replicate_ids <- unique(df_psi$replicate_id)
+  rep_counts[i] <- length(replicate_ids)
+
+  rep_hist <- matrix(0, nrow = length(replicate_ids), ncol = length(bin_centers))
+
+  for (j in seq_along(replicate_ids)) {
+    df_rep <- subset(df_psi, replicate_id == replicate_ids[j])
+    all_effects <- unlist(apply(df_rep, 1, extract_effects))
+    all_effects <- all_effects[all_effects >= min(bin_breaks) & all_effects <= max(bin_breaks)]
+
+    if (length(all_effects) > 0) {
+      rep_hist[j, ] <- hist(all_effects, breaks = bin_breaks, plot = FALSE, include.lowest = TRUE)$density
+    }
+  }
+
+  plot_matrix[i, ] <- colMeans(rep_hist)
+}
+
+# ---- PLOT ----
+plot(NULL, xlim = c(-3, 3), ylim = c(0, 0.8), xlab = "Effect Size", ylab = "Density",
+     main = "Effect Size Distribution Averaged by psi11\n(Rep = burnin × job_id)")
+
+for (i in seq_along(psi_vals)) {
+  lines(bin_centers, plot_matrix[i, ], col = palette[i], lwd = 2)
+}
+
+legend("topright", legend = paste0("psi11 = ", psi_vals, " (n=", rep_counts, ")"),
+       col = palette, lwd = 2, cex = 0.8)
+
+# Save plot
+file_name <- sprintf("%s/effect_dist_by_psi11_combined.png", outdir)
+dev.copy(png, filename = file_name, width = 800, height = 600)
+dev.off()
+
+
+```
+
+```{r}
+
+
+```
+
+```{r}
+
+
+```
