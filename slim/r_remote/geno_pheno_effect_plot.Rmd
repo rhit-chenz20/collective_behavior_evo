@@ -1103,7 +1103,7 @@ stopifnot(all(c("seg_site", "psi11", "rep") %in% names(data_df)))
 # ---- PLOT ----
 # Set up plot
 plot(NULL, xlim = range(data_df$psi11), ylim = range(data_df$seg_site),
-     xlab = "psi11", ylab = "seg_site", main = "seg_site vs psi11 across replicates")
+     xlab = "psi11", ylab = "number of segregating sites", main = "number of segregating sites vs psi11 across replicates")
 
 # Use color per burnin_id
 burnin_ids <- sort(unique(data_df$burnin_id))
