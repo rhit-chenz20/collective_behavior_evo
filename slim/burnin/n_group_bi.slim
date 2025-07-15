@@ -11,6 +11,7 @@ initialize() {
 	defineConstant("end_time", shift_time);
 	defineGlobal("L", 500);
 	defineGlobal("mutated_sites", rep(F, maxL));
+
 	
 	defineGlobal("Va0_sqrt", -1);	
 	defineGlobal("mutToAdd", 0);
@@ -21,6 +22,7 @@ initialize() {
 //	defineConstant("psi11", 0.1);
 //	defineConstant("fre_output",folder+ "/"+ "rec_N_"+N+"_psi_"+psi11+"_burnin_"+ID+".tsv");	
 	defineConstant("pop_output",folder+ "/"+ "rec_N_"+N+"_psi_"+psi11+"_pop_"+ID+".pop");	
+//    defineConstant("n", 3);
 	
 	// m2 models a biallelic locus; an m2 mutation is "A",
 	// absence of an m2 mutation is "a"; "aa" is neutral
@@ -104,21 +106,14 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 	shuffled = sample(inds, N, replace=F);
 	phenotype = float(N);
 	
-	for (i in seq(0, N-2, by=2)) {
-		ind1 = shuffled[i];
-		ind2 = shuffled[i+1];
-		
-		a1 = a[ind1.index];
-		e1 = e[ind1.index];
-		
-		a2 = a[ind2.index];
-		e2 = e[ind2.index];
-		
-		z1 = (a1 + e1 + psi11 * (a2 + e2))/(1-psi11^2);
-		z2 = (a2 + e2 + psi11 * (a1 + e1))/(1-psi11^2);
-		
-		phenotype[ind1.index] = z1;
-		phenotype[ind2.index] = z2;
+	for (i in seq(0, N-n, by=n)) {
+		groups = shuffled[i:(i+n-1)];
+        as = a[groups.index];
+
+        for (j in groups){
+            a1 = a[j.index];
+            phenotype[j.index] = (a1*(1+psi11-n*psi11)+psi11*sum(as) )/(1+psi11)*(1+psi11-n*psi11);
+        }
 	}
 	
 	abs_fitness = dnorm(phenotype, optimum, sqrt(Vs));

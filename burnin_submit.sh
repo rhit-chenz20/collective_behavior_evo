@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --account=bscb10
-#SBATCH --job-name=burnin
+#SBATCH --job-name=ngroup_bi
 #SBATCH --array=1-3
 #SBATCH --output="/home/zc524/slurm-outputs/%x-%j-%a.out"
 #SBATCH --time=24:00:00      
@@ -20,8 +20,6 @@ RESULTSHOME=${DATAHOME}/social/${SLURM_JOB_NAME}-${SLURM_ARRAY_JOB_ID}
 
 # Create relevant directory structure
 mkdir -p ${WORKDIR}
-mkdir -p ${WORKDIR}/log
-mkdir -p ${WORKDIR}/pop
 cd ${WORKDIR}
 echo "Working directory is ${WORKDIR}."
 
@@ -41,10 +39,13 @@ for i in {1..2}; do
 
     for psi in 0.1 0.3 0.5 0.7 0.9 0.0 -0.1 -0.3 -0.5 -0.7 -0.9; do
         echo "Running simulation with psi=${psi}"
-
+        for n in 3 11;do
+            bash n_group_bi.sh ${psi} ${n}&
+        done
         # # burnin phase
         # bash burnin_rec.sh ${psi} &
-        bash burnin_relax_sel.sh ${psi} &
+        # bash burnin_relax_sel.sh ${psi} &
+        # bash non0_burnin.sh ${psi} &
         # bash sim_nonrec_slurm.sh ${psi} &
     done
     wait
