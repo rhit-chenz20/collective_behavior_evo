@@ -5,7 +5,7 @@
 #SBATCH --array=1-3
 #SBATCH --output="/home/zc524/slurm-outputs/%x-%j-%a.out"
 #SBATCH --time=4:00:00      
-#SBATCH --cpus-per-task=6   
+#SBATCH --cpus-per-task=3  
 #SBATCH --mem=24G              
 #SBATCH --partition=short
 #SBATCH --mail-user=zc524@cornell.edu
@@ -44,11 +44,11 @@ ln -s ~/bin/slim5.0 bin/slim5.0
 
 echo "Running simulations."
 
-for psi in 0.0 0.1 0.3 0.5 0.7 0.9; do
+for psi in 0.5 0.7 0.9; do
 # for psi in 0.0 0.1 -0.1; do
     echo "Running simulation with psi=${psi}"
 
-    for jobid in 2729516 2729517; do
+    for jobid in 2729516; do
         for i in 1; do
             echo "Submitting job for psi=${psi}, jobid=${jobid}, simid=${i}."
             # burnin phase 
@@ -58,11 +58,39 @@ for psi in 0.0 0.1 0.3 0.5 0.7 0.9; do
 done
 wait
 
-for psi in -0.1 -0.3 -0.5 -0.7 -0.9; do
+for psi in 0.0 0.1 0.3; do
 # for psi in 0.0 0.1 -0.1; do
     echo "Running simulation with psi=${psi}"
 
-    for jobid in 2729516 2729517; do
+    for jobid in 2729516; do
+        for i in 1; do
+            echo "Submitting job for psi=${psi}, jobid=${jobid}, simid=${i}."
+            # burnin phase 
+            bash post_burnin.sh ${psi} ${jobid} ${i} &
+        done
+    done
+done
+wait
+
+for psi in -0.7 -0.9; do
+# for psi in 0.0 0.1 -0.1; do
+    echo "Running simulation with psi=${psi}"
+
+    for jobid in 2729516; do
+        for i in 1; do
+            echo "Submitting job for psi=${psi}, jobid=${jobid}, simid=${i}."
+            # burnin phase 
+            bash post_burnin.sh ${psi} ${jobid} ${i} &
+        done
+    done
+done
+wait
+
+for psi in -0.1 -0.3 -0.5 ; do
+# for psi in 0.0 0.1 -0.1; do
+    echo "Running simulation with psi=${psi}"
+
+    for jobid in 2729516; do
         for i in 1; do
             echo "Submitting job for psi=${psi}, jobid=${jobid}, simid=${i}."
             # burnin phase 
