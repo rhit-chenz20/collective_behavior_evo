@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ## plot genotype data
 ```{r}
 # Set the top-level folder
-folder <- "../data/genotype"
+folder <- "../relax_sel_data/genotype"
 
 # List all .tsv files recursively
 file_list <- list.files(
@@ -62,7 +62,7 @@ genotype_df <- do.call(rbind, lapply(file_list, function(file) {
 
 ```{r}
 # Set up output directory
-output_dir <- "../r_plots"
+output_dir <- "../r_plots/relax_sel"
 if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
 
 # Filter generation 10100
@@ -198,7 +198,7 @@ dev.off()
 ## plot phenotype data
 ```{r}
 # Set the top-level folder
-folder <- "../data/phenotype"
+folder <- "../relax_sel_data/phenotype"
 
 # List all .tsv files recursively
 file_list <- list.files(
@@ -242,9 +242,12 @@ phenotype_df <- do.call(rbind, lapply(file_list, function(file) {
 
   return(df)
 }))
+```
 
+
+```{r}
 # Set up output directory
-output_dir <- "../r_plots"
+output_dir <- "../r_plots/relax_sel"
 if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
 
 # Filter generation 10100
@@ -253,7 +256,7 @@ phenotype_cols <- 2:1001  # assuming genotype data are in columns 2 to 1001
 
 # Define fixed bins for histogram
 num_bins <- 60
-breaks <- seq(-200, 200, length.out = num_bins + 1)
+breaks <- seq(-5, 5, length.out = num_bins + 1)
 bin_mids <- 0.5 * (head(breaks, -1) + tail(breaks, -1))  # bin centers
 
 # Setup color palette: Zissou 1
@@ -272,7 +275,7 @@ for (bid in burnin_ids) {
   png(file.path(output_dir, paste0("phenotype_hist_avg_burnin_", bid, ".png")),
       width = 1000, height = 700)
 
-  plot(NULL, xlim = c(-60, 60), ylim = c(0, 0.3),
+  plot(NULL, xlim = c(-5, 5), ylim = c(0, 0.2),
        xlab = "Phenotype Value", ylab = "Proportion",
        main = paste("Avg Phenotype Histogram | burnin_id =", bid))
   legend_labels <- c()
@@ -289,6 +292,7 @@ for (bid in burnin_ids) {
       rep_data <- subset(df_psi, job_id == reps[r])
       genos <- as.numeric(unlist(rep_data[, phenotype_cols]))
       genos <- genos[!is.na(genos)]
+      genos <- genos[genos >= min(bin_breaks) & genos <= max(bin_breaks)]
       h <- hist(genos, breaks = breaks, plot = FALSE)
       counts_mat[r, ] <- h$counts / sum(h$counts)  # normalize to proportion
     }
@@ -1125,8 +1129,136 @@ dev.copy(png, filename = file_name, width = 800, height = 600)
 dev.off()
 
 ```
-```{r}
 
+
+```{r}
+folder <- "../data/mut"
+
+file_list <- list.files(
+  path = folder,
+  pattern = "\\.tsv$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Function to extract metadata from filename
+extract_geno_metadata <- function(path) {
+  matches <- regexec("mut_(\\d+)_([0-9]+)/rec_N_1000_psi_(-?[0-9.]+)_pop_(\\d+)_1\\.tsv", path)
+  parts <- regmatches(path, matches)[[1]]
+
+  if (length(parts) != 5) {
+    warning("Could not extract metadata from path: ", path)
+    return(NULL)
+  }
+
+  list(
+    job_id = as.integer(parts[2]),
+    job_rep = as.integer(parts[3]),
+    psi11 = as.numeric(parts[4]),
+    burnin_id = as.integer(parts[5])
+  )
+}
+
+# Function to read only the second line of a TSV file and parse as numeric vector
+read_second_row <- function(file) {
+  con <- file(file, "r")
+  on.exit(close(con))
+  readLines(con, n = 1)  # skip first line
+  second_line <- readLines(con, n = 1)
+  if (length(second_line) == 0 || nchar(second_line) == 0) return(NULL)
+  as.numeric(strsplit(second_line, "\t")[[1]])
+}
+
+# Read all files
+mut_list <- lapply(file_list, function(file) {
+  meta <- extract_geno_metadata(file)
+  if (is.null(meta)) return(NULL)
+
+  effect_row <- read_second_row(file)
+  if (is.null(effect_row)) return(NULL)
+
+  data.frame(
+    job_id = meta$job_id + meta$job_rep - 1,
+    job_rep = meta$job_rep,
+    psi11 = meta$psi11,
+    burnin_id = meta$burnin_id,
+    file_id = basename(file),
+    effect_sizes = I(list(effect_row)),
+    stringsAsFactors = FALSE
+  )
+})
+
+# Combine
+mut_df <- do.call(rbind, mut_list)
+mut_df$effect_sizes <- lapply(mut_df$effect_sizes, function(vec) {
+  if (length(vec) > 1) vec[-length(vec)] else numeric(0)
+})
+
+```
+
+
+```{r}
+# Ensure output folder exists
+library(viridis)
+
+# Output path
+output_file <- "../r_plots/all_psi_hist.png"
+if (!dir.exists(dirname(output_file))) dir.create(dirname(output_file), recursive = TRUE)
+
+# Unique psi values and color map
+psi_vals <- sort(unique(mut_df$psi11))
+palette <- viridis(length(psi_vals), option = "C")
+
+# Histogram settings
+num_bins <- 60
+
+# Start PNG device
+png(output_file, width = 1000, height = 800)
+
+# Prepare empty plot
+plot(NULL, xlim = c(NA, NA), ylim = c(0, NA),
+     xlab = "Effect size", ylab = "Density",
+     main = "Effect Size Histograms for All psi11 Values")
+
+# Track plot limits
+x_min <- Inf
+x_max <- -Inf
+y_max <- 0
+
+# First pass: calculate bounds
+hist_data_list <- list()
+for (i in seq_along(psi_vals)) {
+  psi <- psi_vals[i]
+  df_psi <- subset(mut_df, psi11 == psi)
+  all_psi_effects <- unlist(df_psi$effect_sizes)
+  hist_range <- range(all_psi_effects, na.rm = TRUE)
+  bin_breaks <- seq(hist_range[1], hist_range[2], length.out = num_bins + 1)
+  hist_obj <- hist(all_psi_effects, breaks = bin_breaks, plot = FALSE)
+  bin_centers <- 0.5 * (head(bin_breaks, -1) + tail(bin_breaks, -1))
+
+  x_min <- min(x_min, min(bin_centers))
+  x_max <- max(x_max, max(bin_centers))
+  y_max <- max(y_max, max(hist_obj$density, na.rm = TRUE))
+
+  hist_data_list[[i]] <- list(x = bin_centers, y = hist_obj$density)
+}
+
+# Re-plot with known limits
+plot(NULL, xlim = c(x_min, x_max), ylim = c(0, y_max * 1.05),
+     xlab = "Effect size", ylab = "Density",
+     main = "Effect Size for Unique Mutations by psi11")
+
+# Second pass: draw lines
+for (i in seq_along(psi_vals)) {
+  lines(hist_data_list[[i]]$x, hist_data_list[[i]]$y,
+        col = palette[i], lwd = 2)
+}
+
+# Add legend
+legend("topright", legend = paste0("psi = ", psi_vals),
+       col = palette, lwd = 2, bty = "n")
+
+dev.off()
 
 ```
 ```{r}
