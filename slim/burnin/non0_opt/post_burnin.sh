@@ -13,7 +13,7 @@ bin/slim5.0 -d psi11=$psi \
             -d "fre_output='/workdir/$USER/${SLURM_ARRAY_JOB_ID}-${SLURM_ARRAY_TASK_ID}/data/rec_N_1000_psi_${psi}_pop_${burnin_id}_${simid}.tsv'" \
             -d "ind_fn='/workdir/$USER/${SLURM_ARRAY_JOB_ID}-${SLURM_ARRAY_TASK_ID}/ind/rec_N_1000_psi_${psi}_pop_${burnin_id}_${simid}.tsv'" \
             -d "ind_fn='/workdir/$USER/${SLURM_ARRAY_JOB_ID}-${SLURM_ARRAY_TASK_ID}/mut/rec_N_1000_psi_${psi}_pop_${burnin_id}_${simid}.tsv'" \
-            after_burnin_non0.slim &> /workdir/$USER/${SLURM_ARRAY_JOB_ID}-${SLURM_ARRAY_TASK_ID}/log/rec_N_1000_psi_${psi}_pop_${burnin_id}_${simid}.txt &
+            post_burnin_non0.slim &> /workdir/$USER/${SLURM_ARRAY_JOB_ID}-${SLURM_ARRAY_TASK_ID}/log/rec_N_1000_psi_${psi}_pop_${burnin_id}_${simid}.txt &
 
 python split_ind_data.py 
 
