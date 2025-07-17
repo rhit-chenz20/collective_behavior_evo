@@ -28,6 +28,14 @@ echo "Working directory is ${WORKDIR}."
 
 echo "Copying analysis scripts."
 cp -r ~/collective_behavior_evo/slim/burnin/base_model/* .
+
+mkdir -p log
+mkdir -p data
+mkdir -p phenotype
+mkdir -p genotype
+mkdir -p ind
+mkdir -p mut
+
 unzip pop.zip
 echo "Linking SLiM executable."
 mkdir bin
