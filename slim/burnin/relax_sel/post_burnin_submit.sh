@@ -27,7 +27,7 @@ echo "Working directory is ${WORKDIR}."
 /programs/bin/labutils/mount_server cbsubscb10 /storage
 
 echo "Copying analysis scripts."
-cp -r ~/collective_behavior_evo/slim/burnin/base_model/* .
+cp -r ~/collective_behavior_evo/slim/burnin/relax_sel/* .
 
 mkdir -p log
 mkdir -p data
