@@ -48,7 +48,7 @@ for psi in 0.0 0.1 0.3 0.5 0.7 0.9; do
 # for psi in 0.0 0.1 -0.1; do
     echo "Running simulation with psi=${psi}"
 
-    for jobid in 2729516 2729617; do
+    for jobid in 2729516 2729517; do
         for i in 1; do
             echo "Submitting job for psi=${psi}, jobid=${jobid}, simid=${i}."
             # burnin phase 
@@ -62,7 +62,7 @@ for psi in -0.1 -0.3 -0.5 -0.7 -0.9; do
 # for psi in 0.0 0.1 -0.1; do
     echo "Running simulation with psi=${psi}"
 
-    for jobid in 2729516 2729617; do
+    for jobid in 2729516 2729517; do
         for i in 1; do
             echo "Submitting job for psi=${psi}, jobid=${jobid}, simid=${i}."
             # burnin phase 
