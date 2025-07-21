@@ -217,8 +217,8 @@ function (logical) record_phenotype(o<Subpopulation>$ p, [logical$ write = F]){
     	return writeFile(phenotype_fn, header + "\n"+ paste(phenotypeLines, sep="\n"), append=F);
 	}else{
 		line = paste(sim.cycle, p.individuals.tagF, sep = "\t");
-      defineGlobal("phenotypeLines", c(phenotypeLines, line));
-      return T;
+      	defineGlobal("phenotypeLines", c(phenotypeLines, line));
+      	return T;
 	}
 }
 

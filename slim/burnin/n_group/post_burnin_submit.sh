@@ -35,11 +35,20 @@ ln -s ~/bin/slim5.0 bin/slim5.0
 
 echo "Running simulations."
 
+for n in 3 11; do
+    mkdir -p phenotype/n_${n}
+    mkdir -p genotype/n_${n}
+    mkdir -p data/n_${n}
+    mkdir -p ind/n_${n}
+    mkdir -p mut/n_${n}
+    mkdir -p log/n_${n}
+done
+
 for psi in 0.0 0.1 0.3 0.5 0.7 0.9; do
     echo "Running simulation with psi=${psi}, n=${n}"
 
-    for jobid in 2728601 2729534 2729536; do
-        for n in 11; do
+    for jobid in {2730796..2730798}; do
+        for n in 3 11; do
             for i in 1; do
                 echo "Submitting job for psi=${psi}, n=${n}, jobid=${jobid}, simid=${i}."
                 bash post_burnin_n_group.sh ${psi} ${jobid} ${i} ${n}&
@@ -52,8 +61,8 @@ wait
 for psi in -0.1 -0.3 -0.5 -0.7 -0.9; do
     echo "Running simulation with psi=${psi}, n=${n}"
 
-    for jobid in 2728601 2729534 2729536; do
-        for n in 11; do
+    for jobid in {2730796..2730798}; do
+        for n in 3 11; do
             for i in 1; do
                 echo "Submitting job for psi=${psi}, n=${n}, jobid=${jobid}, simid=${i}."
                 bash post_burnin_n_group.sh ${psi} ${jobid} ${i} ${n}&
@@ -71,6 +80,7 @@ mkdir -p ${RESULTSHOME}/phenotype
 mkdir -p ${RESULTSHOME}/genotype
 mkdir -p ${RESULTSHOME}/log
 mkdir -p ${RESULTSHOME}/ind
+mkdir -p ${RESULTSHOME}/mut
 
 zip -r data_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.zip data
 # zip -r pop_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.zip pop
@@ -78,6 +88,7 @@ zip -r phenotype_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.zip phenotype
 zip -r genotype_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.zip genotype
 zip -r log_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.zip log
 zip -r ind_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.zip ind
+zip -r mut_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.zip mut
 
 mv data_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.zip $RESULTSHOME/data/
 # mv pop_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.zip $RESULTSHOME/pop/
@@ -85,6 +96,7 @@ mv phenotype_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.zip $RESULTSHOME/pheno
 mv genotype_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.zip $RESULTSHOME/genotype/
 mv log_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.zip $RESULTSHOME/log/
 mv ind_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.zip $RESULTSHOME/ind/
+mv mut_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.zip $RESULTSHOME/mut/
 
 # mv data/* $RESULTSHOME/data/
 # # mv pop/* $RESULTSHOME/pop/
