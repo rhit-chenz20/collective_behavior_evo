@@ -27,7 +27,7 @@ echo "Working directory is ${WORKDIR}."
 /programs/bin/labutils/mount_server cbsubscb10 /storage
 
 echo "Copying analysis scripts."
-cp -r ~/collective_behavior_evo/slim/burnin/n_group/* .
+cp -r ~/collective_behavior_evo/slim/burnin/n_group_max_geno/* .
 echo "Linking SLiM executable."
 mkdir bin
 ln -s ~/bin/slim5.0 bin/slim5.0
