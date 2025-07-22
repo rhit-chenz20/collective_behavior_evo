@@ -47,7 +47,7 @@ done
 for alpha in 0.0 0.1 0.3 0.5 0.7 0.9; do
     echo "Running simulation with alpha=${alpha}, n=${n}"
 
-    for jobid in {2730796..2730798}; do
+    for jobid in {2743382..2743384}; do
         for n in 2 3 11; do
             for i in 1; do
                 echo "Submitting job for alpha=${alpha}, n=${n}, jobid=${jobid}, simid=${i}."
@@ -61,7 +61,7 @@ wait
 for alpha in -0.1 -0.3 -0.5 -0.7 -0.9; do
     echo "Running simulation with alpha=${alpha}, n=${n}"
 
-    for jobid in {2730796..2730798}; do
+    for jobid in {2743382..2743384}; do
         for n in 2 3 11; do
             for i in 1; do
                 echo "Submitting job for alpha=${alpha}, n=${n}, jobid=${jobid}, simid=${i}."
