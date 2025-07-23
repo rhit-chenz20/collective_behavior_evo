@@ -6,7 +6,7 @@
 #SBATCH --output="/home/zc524/slurm-outputs/%x-%j-%a.out"
 #SBATCH --time=4:00:00      
 #SBATCH --cpus-per-task=6   
-#SBATCH --mem=12G              
+#SBATCH --mem=24G              
 #SBATCH --partition=short
 #SBATCH --mail-user=zc524@cornell.edu
 #SBATCH --mail-type=FAIL,END

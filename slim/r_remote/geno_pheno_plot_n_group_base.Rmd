@@ -14,7 +14,7 @@ base_plot_folder <- "../r_plots/n_group_base"
 ## plot genotype data
 ```{r}
 # Set the top-level folder
-folder <- base_data_folder + "/genotype"
+folder <- paste0(base_data_folder, "/genotype")
 
 # List all .tsv files recursively
 file_list <- list.files(
@@ -64,75 +64,6 @@ genotype_df <- do.call(rbind, lapply(file_list, function(file) {
 
 
 ```{r}
-# Set up output directory
-output_dir <- base_plot_folder
-if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
-
-# Filter generation 10100
-gen10100_df <- subset(genotype_df, generation == 10100)
-genotype_cols <- 2:1001  # assuming genotype data are in columns 2 to 1001
-
-# Define fixed bins for histogram
-num_bins <- 60
-breaks <- seq(-60, 60, length.out = num_bins + 1)
-bin_mids <- 0.5 * (head(breaks, -1) + tail(breaks, -1))  # bin centers
-
-# Setup color palette: Zissou 1
-psi_vals <- sort(unique(gen10100_df$psi11))
-colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
-names(colors) <- as.character(psi_vals)
-
-# Loop over burnin_ids
-burnin_ids <- unique(gen10100_df$burnin_id)
-
-for (bid in burnin_ids) {
-  df_bid <- subset(gen10100_df, burnin_id == bid)
-  psi_in_this_burnin <- sort(unique(df_bid$psi11))
-
-  # Start PNG
-  png(file.path(output_dir, paste0("genotype_hist_avg_burnin_", bid, ".png")),
-      width = 1000, height = 700)
-
-  plot(NULL, xlim = c(-60, 60), ylim = c(0, 0.3),
-       xlab = "Genotype Value", ylab = "Proportion",
-       main = paste("Avg Genotype Histogram | burnin_id =", bid))
-
-  legend_labels <- c()
-
-  for (psi in psi_in_this_burnin) {
-    df_psi <- subset(df_bid, psi11 == psi)
-    reps <- unique(df_psi$job_id)
-    n_reps <- length(reps)
-
-    # Initialize matrix to hold bin counts per replicate
-    counts_mat <- matrix(0, nrow = n_reps, ncol = num_bins)
-
-    for (r in seq_along(reps)) {
-      rep_data <- subset(df_psi, job_id == reps[r])
-      genos <- as.numeric(unlist(rep_data[, genotype_cols]))
-      genos <- genos[!is.na(genos)]
-      h <- hist(genos, breaks = breaks, plot = FALSE)
-      counts_mat[r, ] <- h$counts / sum(h$counts)  # normalize to proportion
-    }
-
-    # Average across replicates
-    avg_counts <- colMeans(counts_mat, na.rm = TRUE)
-
-    # Plot histogram line
-    lines(bin_mids, avg_counts, type = "l", col = colors[as.character(psi)], lwd = 2)
-
-    legend_labels <- c(legend_labels, paste0("psi11=", psi, " (n=", n_reps, ")"))
-  }
-
-  legend("topright", legend = legend_labels,
-         col = colors[as.character(psi_in_this_burnin)], lwd = 2, cex = 0.8, bty = "n")
-
-  dev.off()
-}
-
-```
-
-```{r}
 # Set up color palette for psi11
 psi_vals <- sort(unique(genotype_df$psi11))
 colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
@@ -152,122 +83,172 @@ for (n_val in sort(unique(genotype_df$n))) {
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
   if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
 
-  burnin_ids <- unique(df_n$burnin_id)
+  # Start PNG
+  png(file.path(output_dir, paste0("genotype_hist_reps_all_burnins_n_", n_val, ".png")),
+      width = 1000, height = 700)
 
-  for (bid in burnin_ids) {
-    df_bid <- subset(df_n, burnin_id == bid)
-    psi_in_this_burnin <- sort(unique(df_bid$psi11))
+  plot(NULL, xlim = c(-750, 750), ylim = c(0, 1.0),
+       xlab = "Genotype Value", ylab = "Proportion",
+       main = paste("Genotype Histogram (per rep) | n =", n_val))
 
-    # Start PNG
-    png(file.path(output_dir, paste0("genotype_hist_avg_burnin_", bid, ".png")),
-        width = 1000, height = 700)
+  psi_in_this_n <- sort(unique(df_n$psi11))
+  legend_labels <- c()
 
-    plot(NULL, xlim = c(-750, 750), ylim = c(0, 1.0),
-         xlab = "Genotype Value", ylab = "Proportion",
-         main = paste("Avg Genotype Histogram | n =", n_val, "| burnin_id =", bid))
+  for (psi in psi_in_this_n) {
+    df_psi <- subset(df_n, psi11 == psi)
+    reps <- unique(df_psi$job_id)
 
-    legend_labels <- c()
+    for (r in reps) {
+      rep_data <- subset(df_psi, job_id == r)
+      genos <- as.numeric(unlist(rep_data[, genotype_cols]))
+      genos <- genos[!is.na(genos)]
+      genos <- genos[genos >= min(breaks) & genos <= max(breaks)]
 
-    for (psi in psi_in_this_burnin) {
-      df_psi <- subset(df_bid, psi11 == psi)
-      reps <- unique(df_psi$job_id)
-      n_reps <- length(reps)
+      if (length(genos) == 0) next
 
-      counts_mat <- matrix(0, nrow = n_reps, ncol = num_bins)
+      h <- hist(genos, breaks = breaks, plot = FALSE)
+      prop <- h$counts / sum(h$counts)
 
-      for (r in seq_along(reps)) {
-        rep_data <- subset(df_psi, job_id == reps[r])
-        genos <- as.numeric(unlist(rep_data[, genotype_cols]))
-        genos <- genos[!is.na(genos)]
-        h <- hist(genos, breaks = breaks, plot = FALSE)
-        counts_mat[r, ] <- h$counts / sum(h$counts)
-      }
-
-      avg_counts <- colMeans(counts_mat, na.rm = TRUE)
-      lines(bin_mids, avg_counts, type = "l", col = colors[as.character(psi)], lwd = 2)
-      legend_labels <- c(legend_labels, paste0("psi11=", psi, " (n=", n_reps, ")"))
+      col_transparent <- adjustcolor(colors[as.character(psi)], alpha.f = 0.4)
+      lines(bin_mids, prop, type = "l", col = col_transparent, lwd = 1)
     }
 
-    legend("topright", legend = legend_labels,
-           col = colors[as.character(psi_in_this_burnin)], lwd = 2, cex = 0.8, bty = "n")
-
-    dev.off()
+    legend_labels <- c(legend_labels, paste0("psi11=", psi))
   }
+
+  legend("topright", legend = legend_labels,
+         col = colors[as.character(psi_in_this_n)], lwd = 2, cex = 0.8, bty = "n")
+
+  dev.off()
 }
+
 
 
 ```
 
-## across burnin_id
+## plot average genotype data
 ```{r}
-
-# ---- Genotype Distribution Averaged Across Burnin ID ----
-# Define fixed bins for histogram
-num_bins <- 60
-# Define bins for genotype values
-bin_breaks <- seq(-60, 60, length.out = num_bins + 1)
-bin_centers <- 0.5 * (head(bin_breaks, -1) + tail(bin_breaks, -1))
-
-# Color palette (Zissou1 style)
-library(viridis)
-palette <- viridis(length(unique(genotype_df$psi11)), option = "C")
-
-# Output folder
-outdir <- "../r_plots"
-dir.create(outdir, showWarnings = FALSE)
-
-# Unique psi11 values
+# Set up color palette for psi11
 psi_vals <- sort(unique(genotype_df$psi11))
+colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+names(colors) <- as.character(psi_vals)
 
-# Initialize matrix for each psi11
-plot_matrix <- matrix(0, nrow = length(psi_vals), ncol = length(bin_centers))
-rep_counts <- integer(length(psi_vals))
+# Fixed bin settings
+num_bins <- 20
+breaks <- seq(-5, 5, length.out = num_bins + 1)
+bin_mids <- 0.5 * (head(breaks, -1) + tail(breaks, -1))
+genotype_cols <- 2:1001  # Adjust as needed
 
-# Loop over psi11 values
-for (i in seq_along(psi_vals)) {
-  psi <- psi_vals[i]
-  df_psi <- subset(genotype_df, psi11 == psi & generation == 10100)
+# Loop over each n
+for (n_val in sort(unique(genotype_df$n))) {
+  df_n <- subset(genotype_df, generation == 10100 & n == n_val)
 
-  # Identify unique replicate IDs (burnin_id + job_id)
-  df_psi$replicate_id <- paste(df_psi$burnin_id, df_psi$job_id, sep = "_")
-  reps <- unique(df_psi$replicate_id)
-  rep_counts[i] <- length(reps)
+  # Set up output directory
+  output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
+  if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
 
-  # Compute histogram per replicate
-  rep_hist <- matrix(0, nrow = length(reps), ncol = length(bin_centers))
-  for (j in seq_along(reps)) {
-    df_rep <- subset(df_psi, replicate_id == reps[j])
-    genotypes <- as.numeric(unlist(df_rep[, 3:(ncol(df_rep) - 4)]))  # drop metadata
-    genotypes <- genotypes[genotypes >= min(bin_breaks) & genotypes <= max(bin_breaks)]
-    genotypes <- genotypes[!is.na(genotypes)]
-    rep_hist[j, ] <- hist(genotypes, breaks = bin_breaks, plot = FALSE)$density
-  }
+  png(file.path(output_dir, paste0("genotype_hist_avg_n_", n_val, ".png")),
+      width = 1000, height = 700)
 
-  # Average over replicates
-  plot_matrix[i, ] <- colMeans(rep_hist)
+  plot(NULL, xlim = c(min(breaks), max(breaks)), ylim = c(0, 1.0),
+       xlab = "Genotype Value", ylab = "Proportion",
+       main = paste("Avg Genotype Histogram | n =", n_val))
+
+  legend_labels <- c()
+
+for (psi in psi_vals) {
+  df_psi <- subset(df_n, psi11 == psi)
+  genos <- as.numeric(unlist(df_psi[, genotype_cols]))
+  genos <- genos[is.finite(genos)]
+  genos <- genos[genos >= min(breaks) & genos <= max(breaks)]
+
+  if (length(genos) == 0) next
+
+  h <- hist(genos, breaks = breaks, plot = FALSE)
+
+  if (sum(h$counts) == 0) next
+
+  avg_counts <- h$counts / sum(h$counts)
+
+  # Plot average line
+  lines(bin_mids, avg_counts, col = colors[as.character(psi)], lwd = 2)
+
+  legend_labels <- c(legend_labels, paste0("psi11=", psi, " (n=", nrow(df_psi), ")"))
 }
-# ---- Plot ----
-plot(NULL, xlim = c(-60, 60), ylim = c(0, 0.15), xlab = "Genotype Value", ylab = "Density",
-     main = "Genotype Distribution Averaged Over Burnin IDs")
 
-for (i in seq_along(psi_vals)) {
-  lines(bin_centers, plot_matrix[i, ], col = palette[i], lwd = 2)
+  legend("topright", legend = legend_labels,
+         col = colors[as.character(psi_vals)], lwd = 2, cex = 0.8, bty = "n")
+
+  dev.off()
 }
-
-legend("topright", legend = paste0("psi11=", psi_vals, " (n=", rep_counts, ")"),
-       col = palette, lwd = 2, cex = 0.8)
-
-# Save to file
-file_name <- sprintf("%s/genotype_dist_pooled_burnin_plot.png", outdir)
-dev.copy(png, filename = file_name, width = 800, height = 600)
-dev.off()
 
 ```
 
-## plot phenotype data
+## cdf instead of pdf
+```{r}
+# Color palette for psi11
+psi_vals <- sort(unique(genotype_df$psi11))
+colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+names(colors) <- as.character(psi_vals)
+
+# Define which columns contain genotypes
+genotype_cols <- 2:1001  # Adjust if needed
+
+ran = c(-50, 50)
+
+# Loop over n values
+for (n_val in sort(unique(genotype_df$n))) {
+  df_n <- subset(genotype_df, generation == 10100 & n == n_val)
+
+  # Output folder
+  output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
+  if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
+
+  # Start PNG
+  png(file.path(output_dir, paste0("genotype_cdf_all_reps_n_", n_val, ".png")),
+      width = 1000, height = 700)
+
+  plot(NULL, xlim = c(min(ran), max(ran)), ylim = c(0, 1),
+       xlab = "Genotype Value", ylab = "CDF",
+       main = paste("CDF of Genotypes | n =", n_val))
+
+  legend_labels <- c()
+
+  for (psi in psi_vals) {
+    df_psi <- subset(df_n, psi11 == psi)
+    reps <- unique(df_psi$job_id)
+
+    for (r in reps) {
+      rep_data <- subset(df_psi, job_id == r)
+      genos <- as.numeric(unlist(rep_data[, genotype_cols]))
+      genos <- genos[!is.na(genos)]
+      genos <- genos[genos >= min(ran) & genos <= max(ran)]
+
+      if (length(genos) == 0) next
+
+      ecdf_line <- ecdf(genos)
+      curve(ecdf_line(x), from = min(ran), to = max(ran), add = TRUE,
+            col = adjustcolor(colors[as.character(psi)], alpha.f = 0.4),
+            lwd = 1)
+    }
+
+    legend_labels <- c(legend_labels, paste0("psi11 = ", psi))
+  }
+
+  legend("bottomright", legend = legend_labels,
+         col = colors[as.character(psi_vals)], lwd = 2, cex = 0.8, bty = "n")
+
+  dev.off()
+}
+
+
+```
+
+
+## load phenotype data
 ```{r}
 # Set the top-level folder
-folder <- "../relax_sel_data/phenotype"
+folder <- paste0(base_data_folder, "/phenotype")
 
 # List all .tsv files recursively
 file_list <- list.files(
@@ -279,11 +260,10 @@ file_list <- list.files(
 
 # Function to extract metadata from path
 extract_pheno_metadata <- function(path) {
-  # Extract job_id (x), job_rep (i), psi11 (y), burnin_id (z)
-  matches <- regexec("phenotype_(\\d+)_([1-3])/rec_N_1000_psi_(-?[0-9.]+)_pop_(\\d+)_1\\.tsv", path)
+  matches <- regexec("phenotype_(\\d+)_([1-3])/n_(\\d+)/rec_N_1000_psi_(-?[0-9.]+)_pop_(\\d+)_1\\.tsv", path)
   parts <- regmatches(path, matches)[[1]]
-  
-  if (length(parts) != 5) {
+
+  if (length(parts) != 6) {
     warning("Could not extract metadata from path: ", path)
     return(data.frame())
   }
@@ -291,12 +271,12 @@ extract_pheno_metadata <- function(path) {
   data.frame(
     job_id = as.integer(parts[2]),
     job_rep = as.integer(parts[3]),
-    psi11 = as.numeric(parts[4]),
-    burnin_id = as.integer(parts[5]),
+    n = as.integer(parts[4]),
+    psi11 = as.numeric(parts[5]),
+    burnin_id = as.integer(parts[6]),
     stringsAsFactors = FALSE
   )
 }
-
 # Read and combine all files
 phenotype_df <- do.call(rbind, lapply(file_list, function(file) {
   df <- read.table(file, header = TRUE, sep = "\t")
@@ -307,6 +287,7 @@ phenotype_df <- do.call(rbind, lapply(file_list, function(file) {
   df$job_id <- meta$job_id + meta$job_rep - 1
   df$psi11 <- meta$psi11
   df$burnin_id <- meta$burnin_id
+  df$n <- meta$n
   df$file_id <- basename(file)
 
   return(df)
@@ -314,141 +295,195 @@ phenotype_df <- do.call(rbind, lapply(file_list, function(file) {
 ```
 
 
+## plot all rep in the same plot
 ```{r}
-# Set up output directory
-output_dir <- "../r_plots/relax_sel"
-if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
-
-# Filter generation 10100
-gen10100_df <- subset(phenotype_df, generation == 10100)
-phenotype_cols <- 2:1001  # assuming genotype data are in columns 2 to 1001
-
-# Define fixed bins for histogram
-num_bins <- 60
-breaks <- seq(-5, 5, length.out = num_bins + 1)
-bin_mids <- 0.5 * (head(breaks, -1) + tail(breaks, -1))  # bin centers
-
-# Setup color palette: Zissou 1
-psi_vals <- sort(unique(gen10100_df$psi11))
+# Set up color palette for psi11
+psi_vals <- sort(unique(phenotype_df$psi11))
 colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
 names(colors) <- as.character(psi_vals)
 
-# Loop over burnin_ids
-burnin_ids <- unique(gen10100_df$burnin_id)
+# Fixed bin settings
+num_bins <- 750
+breaks <- seq(-750, 750, length.out = num_bins + 1)
+bin_mids <- 0.5 * (head(breaks, -1) + tail(breaks, -1))
+phenotype_cols <- 2:1001  # Adjust if necessary
 
-for (bid in burnin_ids) {
-  df_bid <- subset(gen10100_df, burnin_id == bid)
-  psi_in_this_burnin <- sort(unique(df_bid$psi11))
+# Loop over unique n values
+for (n_val in sort(unique(phenotype_df$n))) {
+  df_n <- subset(phenotype_df, generation == 10100 & n == n_val)
+
+  # Set up output directory for this n
+  output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
+  if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
 
   # Start PNG
-  png(file.path(output_dir, paste0("phenotype_hist_avg_burnin_", bid, ".png")),
+  png(file.path(output_dir, paste0("phenotype_hist_reps_all_burnins_n_", n_val, ".png")),
       width = 1000, height = 700)
 
-  plot(NULL, xlim = c(-5, 5), ylim = c(0, 0.2),
+  plot(NULL, xlim = c(-750, 750), ylim = c(0, 1.0),
        xlab = "Phenotype Value", ylab = "Proportion",
-       main = paste("Avg Phenotype Histogram | burnin_id =", bid))
+       main = paste("Phenotype Histogram (per rep) | n =", n_val))
+
+  psi_in_this_n <- sort(unique(df_n$psi11))
   legend_labels <- c()
 
-  for (psi in psi_in_this_burnin) {
-    df_psi <- subset(df_bid, psi11 == psi)
+  for (psi in psi_in_this_n) {
+    df_psi <- subset(df_n, psi11 == psi)
     reps <- unique(df_psi$job_id)
-    n_reps <- length(reps)
 
-    # Initialize matrix to hold bin counts per replicate
-    counts_mat <- matrix(0, nrow = n_reps, ncol = num_bins)
+    for (r in reps) {
+      rep_data <- subset(df_psi, job_id == r)
+      phenos <- as.numeric(unlist(rep_data[, phenotype_cols]))
+      phenos <- phenos[!is.na(phenos)]
+      phenos <- phenos[phenos >= min(breaks) & phenos <= max(breaks)]
 
-    for (r in seq_along(reps)) {
-      rep_data <- subset(df_psi, job_id == reps[r])
-      genos <- as.numeric(unlist(rep_data[, phenotype_cols]))
-      genos <- genos[!is.na(genos)]
-      genos <- genos[genos >= min(bin_breaks) & genos <= max(bin_breaks)]
-      h <- hist(genos, breaks = breaks, plot = FALSE)
-      counts_mat[r, ] <- h$counts / sum(h$counts)  # normalize to proportion
+      if (length(phenos) == 0) next
+
+      h <- hist(phenos, breaks = breaks, plot = FALSE)
+      prop <- h$counts / sum(h$counts)
+
+      col_transparent <- adjustcolor(colors[as.character(psi)], alpha.f = 0.4)
+      lines(bin_mids, prop, type = "l", col = col_transparent, lwd = 1)
     }
 
-    # Average across replicates
-    avg_counts <- colMeans(counts_mat, na.rm = TRUE)
-
-    # Plot histogram line
-    lines(bin_mids, avg_counts, type = "l", col = colors[as.character(psi)], lwd = 2)
-
-    legend_labels <- c(legend_labels, paste0("psi11=", psi, " (n=", n_reps, ")"))
+    legend_labels <- c(legend_labels, paste0("psi11=", psi))
   }
 
   legend("topright", legend = legend_labels,
-         col = colors[as.character(psi_in_this_burnin)], lwd = 2, cex = 0.8, bty = "n")
+         col = colors[as.character(psi_in_this_n)], lwd = 2, cex = 0.8, bty = "n")
 
   dev.off()
 }
 
 ```
 
-
-## across burnin_id
+## plot all rep within each bid
 ```{r}
-
-# ---- Genotype Distribution Averaged Across Burnin ID ----
-# Define fixed bins for histogram
-num_bins <- 60
-# Define bins for genotype values
-bin_breaks <- seq(-60, 60, length.out = num_bins + 1)
-bin_centers <- 0.5 * (head(bin_breaks, -1) + tail(bin_breaks, -1))
-
-# Color palette (Zissou1 style)
-library(viridis)
-palette <- viridis(length(unique(phenotype_df$psi11)), option = "C")
-
-# Output folder
-outdir <- "../r_plots"
-dir.create(outdir, showWarnings = FALSE)
-
-# Unique psi11 values
+# Set up color palette for psi11
 psi_vals <- sort(unique(phenotype_df$psi11))
+colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+names(colors) <- as.character(psi_vals)
 
-# Initialize matrix for each psi11
-plot_matrix <- matrix(0, nrow = length(psi_vals), ncol = length(bin_centers))
-rep_counts <- integer(length(psi_vals))
+# Fixed bin settings
+num_bins <- 750
+breaks <- seq(-750, 750, length.out = num_bins + 1)
+bin_mids <- 0.5 * (head(breaks, -1) + tail(breaks, -1))
+phenotype_cols <- 2:1001  # Adjust this if necessary
 
-# Loop over psi11 values
-for (i in seq_along(psi_vals)) {
-  psi <- psi_vals[i]
-  df_psi <- subset(phenotype_df, psi11 == psi & generation == 10100)
+# Loop over each n value
+for (n_val in sort(unique(phenotype_df$n))) {
+  df_n <- subset(phenotype_df, generation == 10100 & n == n_val)
 
-  # Identify unique replicate IDs (burnin_id + job_id)
-  df_psi$replicate_id <- paste(df_psi$burnin_id, df_psi$job_id, sep = "_")
-  reps <- unique(df_psi$replicate_id)
-  rep_counts[i] <- length(reps)
+  burnin_ids <- sort(unique(df_n$burnin_id))
 
-  # Compute histogram per replicate
-  rep_hist <- matrix(0, nrow = length(reps), ncol = length(bin_centers))
-  for (j in seq_along(reps)) {
-    df_rep <- subset(df_psi, replicate_id == reps[j])
-    genotypes <- as.numeric(unlist(df_rep[, 3:(ncol(df_rep) - 4)]))  # drop metadata
-    genotypes <- genotypes[genotypes >= min(bin_breaks) & genotypes <= max(bin_breaks)]
-    genotypes <- genotypes[!is.na(genotypes)]
-    rep_hist[j, ] <- hist(genotypes, breaks = bin_breaks, plot = FALSE)$density
+  for (bid in burnin_ids) {
+    df_bid <- subset(df_n, burnin_id == bid)
+
+    # Set up output directory and filename
+    output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
+    if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
+
+    png(file.path(output_dir, paste0("phenotype_hist_reps_burnin_", bid, ".png")),
+        width = 1000, height = 700)
+
+    plot(NULL, xlim = c(-750, 750), ylim = c(0, 1.0),
+         xlab = "Phenotype Value", ylab = "Proportion",
+         main = paste("Phenotype Histogram (per rep) | n =", n_val, "| burnin_id =", bid))
+
+    psi_in_this_bid <- sort(unique(df_bid$psi11))
+    legend_labels <- c()
+
+    for (psi in psi_in_this_bid) {
+      df_psi <- subset(df_bid, psi11 == psi)
+      reps <- unique(df_psi$job_id)
+
+      for (r in reps) {
+        rep_data <- subset(df_psi, job_id == r)
+        phenos <- as.numeric(unlist(rep_data[, phenotype_cols]))
+        phenos <- phenos[!is.na(phenos)]
+        phenos <- phenos[phenos >= min(breaks) & phenos <= max(breaks)]
+
+        if (length(phenos) == 0) next
+
+        h <- hist(phenos, breaks = breaks, plot = FALSE)
+        prop <- h$counts / sum(h$counts)
+
+        col_transparent <- adjustcolor(colors[as.character(psi)], alpha.f = 0.4)
+        lines(bin_mids, prop, type = "l", col = col_transparent, lwd = 1)
+      }
+
+      legend_labels <- c(legend_labels, paste0("psi11=", psi))
+    }
+
+    legend("topright", legend = legend_labels,
+           col = colors[as.character(psi_in_this_bid)], lwd = 2, cex = 0.8, bty = "n")
+
+    dev.off()
   }
-
-  # Average over replicates
-  plot_matrix[i, ] <- colMeans(rep_hist)
 }
-# ---- Plot ----
-plot(NULL, xlim = c(-60, 60), ylim = c(0, 0.15), xlab = "Phenotype Value", ylab = "Density",
-     main = "Phenotype Distribution Averaged Over Burnin IDs")
-
-for (i in seq_along(psi_vals)) {
-  lines(bin_centers, plot_matrix[i, ], col = palette[i], lwd = 2)
-}
-
-legend("topright", legend = paste0("psi11=", psi_vals, " (n=", rep_counts, ")"),
-       col = palette, lwd = 2, cex = 0.8)
-
-# Save to file
-file_name <- sprintf("%s/phenotype_dist_pooled_burnin_plot.png", outdir)
-dev.copy(png, filename = file_name, width = 800, height = 600)
-dev.off()
 
 ```
+
+## plot cdf for each rep
+```{R}
+# Color palette for psi11
+psi_vals <- sort(unique(phenotype_df$psi11))
+colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+names(colors) <- as.character(psi_vals)
+
+ran = c(-50, 50)
+# Define which columns contain phenotypes
+phenotype_cols <- 2:1001  # change if needed
+
+# Loop over n values
+for (n_val in sort(unique(phenotype_df$n))) {
+  df_n <- subset(phenotype_df, generation == 10100 & n == n_val)
+
+  # Output folder
+  output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
+  if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
+
+  # Start PNG
+  png(file.path(output_dir, paste0("phenotype_cdf_all_reps_n_", n_val, ".png")),
+      width = 1000, height = 700)
+
+  plot(NULL, xlim = c(min(ran), max(ran)), ylim = c(0, 1),
+       xlab = "Phenotype Value", ylab = "CDF",
+       main = paste("CDF of Phenotypes | n =", n_val))
+
+  legend_labels <- c()
+
+  for (psi in psi_vals) {
+    df_psi <- subset(df_n, psi11 == psi)
+    reps <- unique(df_psi$job_id)
+
+    for (r in reps) {
+      rep_data <- subset(df_psi, job_id == r)
+      phenos <- as.numeric(unlist(rep_data[, phenotype_cols]))
+      phenos <- phenos[!is.na(phenos)]
+      phenos <- phenos[phenos >= min(ran) & phenos <= max(ran)]
+
+      if (length(phenos) == 0) next
+
+      ecdf_line <- ecdf(phenos)
+      curve(ecdf_line(x), from = min(ran), to = max(ran), add = TRUE,
+            col = adjustcolor(colors[as.character(psi)], alpha.f = 0.4),
+            lwd = 1)
+    }
+
+    legend_labels <- c(legend_labels, paste0("psi11 = ", psi))
+  }
+
+  legend("bottomright", legend = legend_labels,
+         col = colors[as.character(psi_vals)], lwd = 2, cex = 0.8, bty = "n")
+
+  dev.off()
+}
+
+
+```
+
+
 
 ### process effect size data
 ```{r}
