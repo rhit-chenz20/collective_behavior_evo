@@ -134,8 +134,8 @@ colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
 names(colors) <- as.character(psi_vals)
 
 # Fixed bin settings
-num_bins <- 20
-breaks <- seq(-5, 5, length.out = num_bins + 1)
+num_bins <- 60
+breaks <- seq(-40, 40, length.out = num_bins + 1)
 bin_mids <- 0.5 * (head(breaks, -1) + tail(breaks, -1))
 genotype_cols <- 2:1001  # Adjust as needed
 
@@ -303,8 +303,8 @@ colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
 names(colors) <- as.character(psi_vals)
 
 # Fixed bin settings
-num_bins <- 750
-breaks <- seq(-750, 750, length.out = num_bins + 1)
+num_bins <- 60
+breaks <- seq(-40, 40, length.out = num_bins + 1)
 bin_mids <- 0.5 * (head(breaks, -1) + tail(breaks, -1))
 phenotype_cols <- 2:1001  # Adjust if necessary
 
@@ -320,7 +320,7 @@ for (n_val in sort(unique(phenotype_df$n))) {
   png(file.path(output_dir, paste0("phenotype_hist_reps_all_burnins_n_", n_val, ".png")),
       width = 1000, height = 700)
 
-  plot(NULL, xlim = c(-750, 750), ylim = c(0, 1.0),
+  plot(NULL, xlim = c(-40, 40), ylim = c(0, 1.0),
        xlab = "Phenotype Value", ylab = "Proportion",
        main = paste("Phenotype Histogram (per rep) | n =", n_val))
 
