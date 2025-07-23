@@ -6,13 +6,13 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+setwd("/workdir/zc524/collective_behavior_evo/slim/r_remote")
 ```
 
 ## plot genotype data
 ```{r}
 # Set the top-level folder
-folder <- "../relax_sel_data/genotype"
+folder <- "../n_group_base_data/genotype"
 
 # List all .tsv files recursively
 file_list <- list.files(
