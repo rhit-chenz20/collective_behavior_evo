@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Set main directory containing all the subfolders
-BASEDIR="n_group_base_data"
+BASEDIR="n_group_maxgeno_data"
 
 # List of subfolders inside $BASEDIR
-subfolders=("genotype" "ind" "phenotype" "mut")
+subfolders=("genotype" "phenotype")
 
 # Loop through each subfolder
 for sub in "${subfolders[@]}"; do
