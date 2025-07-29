@@ -77,7 +77,7 @@ genotype_cols <- 2:1001  # Adjust if necessary
 
 # Loop over unique n values
 for (n_val in sort(unique(genotype_df$n))) {
-  df_n <- subset(genotype_df, generation == 10100 & n == n_val)
+  df_n <- subset(genotype_df, generation == 10099 & n == n_val)
 
   # Set up output directory for this n
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -141,7 +141,7 @@ genotype_cols <- 2:1001  # Adjust as needed
 
 # Loop over each n
 for (n_val in sort(unique(genotype_df$n))) {
-  df_n <- subset(genotype_df, generation == 10100 & n == n_val)
+  df_n <- subset(genotype_df, generation == 10099 & n == n_val )
 
   # Set up output directory
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -198,7 +198,7 @@ ran = c(-50, 50)
 
 # Loop over n values
 for (n_val in sort(unique(genotype_df$n))) {
-  df_n <- subset(genotype_df, generation == 10100 & n == n_val)
+  df_n <- subset(genotype_df, generation == 10099 & n == n_val)
 
   # Output folder
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -310,7 +310,7 @@ phenotype_cols <- 2:1001  # Adjust if necessary
 
 # Loop over unique n values
 for (n_val in sort(unique(phenotype_df$n))) {
-  df_n <- subset(phenotype_df, generation == 10100 & n == n_val)
+  df_n <- subset(phenotype_df, generation == 10099 & n == n_val )
 
   # Set up output directory for this n
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -372,7 +372,7 @@ phenotype_cols <- 2:1001  # Adjust this if necessary
 
 # Loop over each n value
 for (n_val in sort(unique(phenotype_df$n))) {
-  df_n <- subset(phenotype_df, generation == 10100 & n == n_val)
+  df_n <- subset(phenotype_df, generation == 10099 & n == n_val)
 
   burnin_ids <- sort(unique(df_n$burnin_id))
 
@@ -437,7 +437,7 @@ phenotype_cols <- 2:1001  # change if needed
 
 # Loop over n values
 for (n_val in sort(unique(phenotype_df$n))) {
-  df_n <- subset(phenotype_df, generation == 10100 & n == n_val)
+  df_n <- subset(phenotype_df, generation == 10099 & n == n_val)
 
   # Output folder
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
