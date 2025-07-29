@@ -47,8 +47,8 @@ done
 for psi in 0.0 0.3 0.6 0.9; do
     echo "Running simulation with psi=${psi}, n=${n}"
 
-    for jobid in {2730796..2730798}; do
-        for n in 3 11; do
+    for jobid in {2800212..2800214}; do
+        for n in 4 5 7 9; do
             for i in 1; do
                 echo "Submitting job for psi=${psi}, n=${n}, jobid=${jobid}, simid=${i}."
                 bash post_burnin_n_group.sh ${psi} ${jobid} ${i} ${n}&
@@ -61,8 +61,8 @@ wait
 for psi in -0.3 -0.6 -0.9; do
     echo "Running simulation with psi=${psi}, n=${n}"
 
-    for jobid in {2730796..2730798}; do
-        for n in 3 11; do
+    for jobid in {2800212..2800214}; do
+        for n in 4 5 7 9; do
             for i in 1; do
                 echo "Submitting job for psi=${psi}, n=${n}, jobid=${jobid}, simid=${i}."
                 bash post_burnin_n_group.sh ${psi} ${jobid} ${i} ${n}&
