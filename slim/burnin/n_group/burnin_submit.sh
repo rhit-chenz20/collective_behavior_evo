@@ -39,7 +39,11 @@ for i in {1..2}; do
 
     for psi in 0.1 0.3 0.5 0.7 0.9 0.0 -0.1 -0.3 -0.5 -0.7 -0.9; do
         echo "Running simulation with psi=${psi}"
-        for n in 3 11;do
+        for n in 4 5;do
+            bash n_group_bi.sh ${psi} ${n} &
+        done
+        wait
+        for n in 7 9;do
             bash n_group_bi.sh ${psi} ${n} &
         done
     done
