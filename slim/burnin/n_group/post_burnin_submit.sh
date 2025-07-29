@@ -35,7 +35,7 @@ ln -s ~/bin/slim5.0 bin/slim5.0
 
 echo "Running simulations."
 
-for n in 3 11; do
+for n in 4 5 7 9; do
     mkdir -p phenotype/n_${n}
     mkdir -p genotype/n_${n}
     mkdir -p data/n_${n}
@@ -44,7 +44,7 @@ for n in 3 11; do
     mkdir -p log/n_${n}
 done
 
-for psi in 0.0 0.1 0.3 0.5 0.7 0.9; do
+for psi in 0.0 0.3 0.6 0.9; do
     echo "Running simulation with psi=${psi}, n=${n}"
 
     for jobid in {2730796..2730798}; do
@@ -58,7 +58,7 @@ for psi in 0.0 0.1 0.3 0.5 0.7 0.9; do
 done
 wait
 
-for psi in -0.1 -0.3 -0.5 -0.7 -0.9; do
+for psi in -0.3 -0.6 -0.9; do
     echo "Running simulation with psi=${psi}, n=${n}"
 
     for jobid in {2730796..2730798}; do

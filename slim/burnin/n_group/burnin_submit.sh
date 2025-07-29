@@ -5,8 +5,8 @@
 #SBATCH --array=1-3
 #SBATCH --output="/home/zc524/slurm-outputs/%x-%j-%a.out"
 #SBATCH --time=24:00:00      
-#SBATCH --cpus-per-task=22  
-#SBATCH --mem=22G              
+#SBATCH --cpus-per-task=28  
+#SBATCH --mem=28G              
 #SBATCH --partition=short,long7
 #SBATCH --mail-user=zc524@cornell.edu
 #SBATCH --mail-type=FAIL,END
@@ -37,13 +37,9 @@ echo "Running simulations."
 for i in {1..2}; do
     echo "Running burnin simulations for simid=${i}."
 
-    for psi in 0.1 0.3 0.5 0.7 0.9 0.0 -0.1 -0.3 -0.5 -0.7 -0.9; do
+    for psi in 0.0 0.3 0.6 0.9 -0.3 -0.6 -0.9; do
         echo "Running simulation with psi=${psi}"
-        for n in 4 5;do
-            bash n_group_bi.sh ${psi} ${n} &
-        done
-        wait
-        for n in 7 9;do
+        for n in 4 5 7 9;do
             bash n_group_bi.sh ${psi} ${n} &
         done
     done
