@@ -279,7 +279,7 @@ for (n_val in sort(unique(genotype_df$n))) {
     png(file.path(output_dir, paste0("genotype_hist_reps_burnin_", bid, ".png")),
         width = 1000, height = 700)
 
-    plot(NULL, xlim = c(-40, 40), ylim = c(0, 1.0),
+    plot(NULL, xlim = c(-750, 750), ylim = c(0, 1.0),
          xlab = "Genotype Value", ylab = "Proportion",
          main = paste("Genotype Histogram (per rep) | n =", n_val, "| burnin_id =", bid))
 
