@@ -307,6 +307,10 @@ for (n_val in sort(unique(genotype_df$n))) {
 
       legend_labels <- c(legend_labels, paste0("psi11=", psi))
     }
+    
+ curve(dnorm(x, mean = 0, sd = sqrt(2000) * diff(breaks)[1]), 
+      from = min(breaks), to = max(breaks), 
+      col = "black", lwd = 2, add = TRUE)
 
     legend("topright", legend = legend_labels,
            col = colors[as.character(psi_in_this_bid)], lwd = 2, cex = 0.8, bty = "n")
@@ -883,10 +887,13 @@ for (n_val in sort(unique(effect_df$n))) {
 n_vals <- sort(unique(summary_by_group$n))
 colors <- setNames(rainbow(length(n_vals)), n_vals)
 
+png(file.path(base_plot_folder, paste0("average_allele_summary.png")),
+        width = 1000, height = 700)
+
 # Create base plot
 plot(NULL, xlim = range(summary_by_group$psi11), ylim = range(summary_by_group$mean_mut_count),
      xlab = "psi11", ylab = "Average # of Mutations",
-     main = "Mutation Load per Individual (per burnin_id)")
+     main = "Mutation Load per Individual (per burnin)")
 
 # Add points, one per burnin_id per psi11 and n
 for (n_val in n_vals) {
@@ -895,7 +902,7 @@ for (n_val in n_vals) {
 }
 
 legend("topright", legend = paste0("n = ", n_vals), col = colors, pch = 16, title = "n")
-
+dev.off()
 ```
 
 
