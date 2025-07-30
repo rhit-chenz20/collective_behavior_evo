@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Set main directory containing all the subfolders
-BASEDIR="n_group_maxgeno_data"
+BASEDIR="data/n_group_base_data"
 
 # List of subfolders inside $BASEDIR
-subfolders=("genotype" "phenotype")
+subfolders=("genotype" "phenotype" "mut" "ind")
 
 # Loop through each subfolder
 for sub in "${subfolders[@]}"; do
@@ -16,8 +16,15 @@ for sub in "${subfolders[@]}"; do
 
     zipname=$(basename "$zipfile")
     foldername="${zipname%.zip}"
+    targetdir="${subdir}/${foldername}"
 
-    echo "Unzipping $zipname in $subdir..."
+    # Skip if the folder already exists
+    if [[ -d "$targetdir" ]]; then
+      echo "⏩ Skipping $zipname — folder already exists."
+      continue
+    fi
+
+    echo "📦 Unzipping $zipname in $subdir..."
 
     # Create a temporary directory to unzip into
     tmpdir="${subdir}/__tmp_unzip__"
@@ -31,12 +38,12 @@ for sub in "${subfolders[@]}"; do
     entries=("$tmpdir"/*)
     if [[ ${#entries[@]} -eq 1 && -d "${entries[0]}" ]]; then
       # Single folder — rename it
-      mv "${entries[0]}" "${subdir}/${foldername}"
+      mv "${entries[0]}" "$targetdir"
       echo "✔ Renamed extracted folder to ${foldername}"
     else
       # Multiple files or complex structure — move all into a folder
-      mkdir -p "${subdir}/${foldername}"
-      mv "$tmpdir"/* "${subdir}/${foldername}/"
+      mkdir -p "$targetdir"
+      mv "$tmpdir"/* "$targetdir/"
       echo "⚠ Multiple items extracted — moved into folder ${foldername}"
     fi
 

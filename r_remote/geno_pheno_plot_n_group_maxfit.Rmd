@@ -80,7 +80,7 @@ phenotype_cols <- 2:1001  # Adjust if necessary
 
 # Loop over each n value
 for (n_val in sort(unique(genotype_df$n))) {
-  df_n <- subset(genotype_df, generation == 10099 & n == n_val)
+  df_n <- subset(genotype_df, generation == 10099 & n == n_val & alpha %in% target_alphas)
 
   burnin_ids <- sort(unique(df_n$burnin_id))
 
@@ -277,7 +277,7 @@ ran = c(-40, 40)
 
 # Loop over n values
 for (n_val in sort(unique(genotype_df$n))) {
-  df_n <- subset(genotype_df, generation == 10099 & n == n_val)
+  df_n <- subset(genotype_df, generation == 10099 & n == n_val & alpha %in% target_alphas)
 
   # Output folder
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -389,7 +389,7 @@ phenotype_cols <- 2:1001  # Adjust if necessary
 
 # Loop over unique n values
 for (n_val in sort(unique(phenotype_df$n))) {
-  df_n <- subset(phenotype_df, generation == 10099 & n == n_val)
+  df_n <- subset(phenotype_df, generation == 10099 & n == n_val & alpha %in% target_alphas)
 
   # Set up output directory for this n
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -455,7 +455,7 @@ phenotype_cols <- 2:1001  # Adjust if necessary
 
 # Loop over each n value
 for (n_val in sort(unique(phenotype_df$n))) {
-  df_n <- subset(phenotype_df, generation == 10099 & n == n_val)
+  df_n <- subset(phenotype_df, generation == 10099 & n == n_val & alpha %in% target_alphas)
 
   burnin_ids <- sort(unique(df_n$burnin_id))
 
@@ -511,6 +511,7 @@ for (n_val in sort(unique(phenotype_df$n))) {
 
 ```
 
+## plot average phenotype data across bid
 ```{r}
 alpha_vals <- sort(target_alphas)
 colors <- hcl.colors(length(alpha_vals), palette = "Zissou 1")
@@ -584,7 +585,7 @@ phenotype_cols <- 2:1001  # change if needed
 
 # Loop over n values
 for (n_val in sort(unique(phenotype_df$n))) {
-  df_n <- subset(phenotype_df, generation == 10099 & n == n_val)
+  df_n <- subset(phenotype_df, generation == 10099 & n == n_val & alpha %in% target_alphas)
 
   # Output folder
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -630,3 +631,53 @@ for (n_val in sort(unique(phenotype_df$n))) {
 
 ```
 
+## load mut data
+```{r}
+# Set the top-level folder
+folder <- paste0(base_data_folder, "/mut")
+
+# List all .tsv files recursively
+file_list <- list.files(
+  path = folder,
+  pattern = "\\.tsv$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Function to extract metadata from path
+extract_mut_metadata <- function(path) {
+  matches <- regexec("mut_(\\d+)_([1-3])/n_(\\d+)/rec_N_1000_alpha_(-?[0-9.]+)_pop_(\\d+)_1\\.tsv", path)
+  parts <- regmatches(path, matches)[[1]]
+
+  if (length(parts) != 6) {
+    warning("Could not extract metadata from path: ", path)
+    return(data.frame())
+  }
+
+  data.frame(
+    job_id = as.integer(parts[2]),
+    job_rep = as.integer(parts[3]),
+    n = as.integer(parts[4]),
+    alpha = as.numeric(parts[5]),
+    burnin_id = as.integer(parts[6]),
+    stringsAsFactors = FALSE
+  )
+}
+
+# Read and combine all files
+mut_df <- do.call(rbind, lapply(file_list, function(file) {
+  df <- read.table(file, header = TRUE, sep = "\t")
+  meta <- extract_mut_metadata(file)
+  if (nrow(meta) == 0) return(NULL)
+
+  # Compute new job_id
+  df$job_id <- meta$job_id + meta$job_rep - 1
+  df$alpha <- meta$alpha
+  df$burnin_id <- meta$burnin_id
+  df$n <- meta$n
+  df$file_id <- basename(file)
+
+  return(df)
+}))
+
+```

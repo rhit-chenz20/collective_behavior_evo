@@ -143,7 +143,7 @@ shift_time late(){
 	calculate_phenotype(p1);
 }
 
-(shift_time-10):(shift_time+10) late(){
+(shift_time-2):(shift_time+2) late(){
 	print("recoding at cycle "+sim.cycle);
 	if (sim.cycle != shift_time+10){
 		record_phenotype(p1);
