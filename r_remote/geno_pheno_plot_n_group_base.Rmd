@@ -258,8 +258,8 @@ colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
 names(colors) <- as.character(psi_vals)
 
 # Fixed bin settings
-num_bins <- 80
-breaks <- seq(-40, 40, length.out = num_bins + 1)
+num_bins <- 750
+breaks <- seq(-750, 750, length.out = num_bins + 1)
 bin_mids <- 0.5 * (head(breaks, -1) + tail(breaks, -1))
 phenotype_cols <- 2:1001  # Adjust this if necessary
 
@@ -276,7 +276,7 @@ for (n_val in sort(unique(genotype_df$n))) {
     output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
     if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
 
-    png(file.path(output_dir, paste0("genotype_hist_reps_burnin_", bid, "_zoomed.png")),
+    png(file.path(output_dir, paste0("genotype_hist_reps_burnin_", bid, ".png")),
         width = 1000, height = 700)
 
     plot(NULL, xlim = c(-40, 40), ylim = c(0, 1.0),
