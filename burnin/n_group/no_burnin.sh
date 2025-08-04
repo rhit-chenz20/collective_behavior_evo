@@ -2,7 +2,7 @@
 
 psi=$1
 n=$2
-echo "post burnin rec, SLURM_JOB_ID=$SLURM_JOB_ID, TASK_ID=$SLURM_ARRAY_TASK_ID"
+echo "no burnin, SLURM_JOB_ID=$SLURM_JOB_ID, TASK_ID=$SLURM_ARRAY_TASK_ID"
 
 bin/slim5.0 -d psi11=$psi \
             -d ID="${SLURM_JOB_ID}" \

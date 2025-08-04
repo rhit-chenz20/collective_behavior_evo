@@ -255,7 +255,7 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 
         for (j in groups){
             a1 = a[j.index];
-            phenotype[j.index] = (a1*(1+psi11-n*psi11)+(psi11/(n-1))*sum(as) )/(1+psi11)*(1+psi11-n*psi11);
+            phenotype[j.index] = ((a1*(n-1)*(1-psi11)) + (psi11*sum(as))) / ((n-1+psi11) * (1-psi11));
         }
 	}
 	

@@ -28,7 +28,6 @@ echo "Working directory is ${WORKDIR}."
 
 echo "Copying analysis scripts."
 cp -r ~/collective_behavior_evo/burnin/n_group/* .
-unzip pop.zip
 echo "Linking SLiM executable."
 mkdir bin
 ln -s ~/bin/slim5.0 bin/slim5.0
@@ -42,10 +41,7 @@ for n in 2 3 5 7 9; do
     mkdir -p ind/n_${n}
     mkdir -p mut/n_${n}
     mkdir -p log/n_${n}
-done
 
-
-for n in 2 3 5 7 9; do
     echo "Running simulation with n=${n}"
     for psi in 0.0 0.3 0.6 0.9 -0.3 -0.6 -0.9; do
         echo "Submitting job for psi=${psi}, n=${n}."
@@ -53,7 +49,6 @@ for n in 2 3 5 7 9; do
     done
     wait
 done
-
 
 echo "Moving results into storage."
 mkdir -p ${RESULTSHOME}/data
