@@ -9,7 +9,7 @@ output: pdf_document
 setwd("/workdir/zc524/collective_behavior_evo/r_remote")
 base_data_folder <- "../data/n_group_maxfit_data"
 base_plot_folder <- "../r_plots/n_group_maxfit"
-target_alphas <- c(-0.9, -0.5, -0.3, 0.0, 0.3, 0.5, 0.9)
+target_psis <- c(-0.9, -0.5, -0.3, 0.0, 0.3, 0.5, 0.9)
 ```
 
 ## plot genotype data
@@ -27,7 +27,7 @@ file_list <- list.files(
 
 # Function to extract metadata from path
 extract_geno_metadata <- function(path) {
-  matches <- regexec("genotype_(\\d+)_([1-3])/n_(\\d+)/rec_N_1000_alpha_(-?[0-9.]+)_pop_(\\d+)_1\\.tsv", path)
+  matches <- regexec("genotype_(\\d+)_([1-3])/n_(\\d+)/rec_N_1000_psi_(-?[0-9.]+)_pop_(\\d+)_1\\.tsv", path)
   parts <- regmatches(path, matches)[[1]]
 
   if (length(parts) != 6) {
@@ -39,7 +39,7 @@ extract_geno_metadata <- function(path) {
     job_id = as.integer(parts[2]),
     job_rep = as.integer(parts[3]),
     n = as.integer(parts[4]),
-    alpha = as.numeric(parts[5]),
+    psi = as.numeric(parts[5]),
     burnin_id = as.integer(parts[6]),
     stringsAsFactors = FALSE
   )
@@ -53,7 +53,7 @@ genotype_df <- do.call(rbind, lapply(file_list, function(file) {
 
   # Compute new job_id
   df$job_id <- meta$job_id + meta$job_rep - 1
-  df$alpha <- meta$alpha
+  df$psi <- meta$psi
   df$burnin_id <- meta$burnin_id
   df$n <- meta$n
   df$file_id <- basename(file)
@@ -66,11 +66,11 @@ genotype_df <- do.call(rbind, lapply(file_list, function(file) {
 
 ## plot all rep within each bid
 ```{r}
-# Set up color palette for alpha
+# Set up color palette for psi
 
-alpha_vals <- sort(target_alphas)
-colors <- hcl.colors(length(alpha_vals), palette = "Zissou 1")
-names(colors) <- as.character(alpha_vals)
+psi_vals <- sort(target_psis)
+colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+names(colors) <- as.character(psi_vals)
 
 # Fixed bin settings
 num_bins <- 80
@@ -80,7 +80,7 @@ phenotype_cols <- 2:1001  # Adjust if necessary
 
 # Loop over each n value
 for (n_val in sort(unique(genotype_df$n))) {
-  df_n <- subset(genotype_df, generation == 10099 & n == n_val & alpha %in% target_alphas)
+  df_n <- subset(genotype_df, generation == 10099 & n == n_val & psi %in% target_psis)
 
   burnin_ids <- sort(unique(df_n$burnin_id))
 
@@ -102,15 +102,15 @@ for (n_val in sort(unique(genotype_df$n))) {
       from = min(breaks), to = max(breaks), 
       col = "black", lwd = 2, add = TRUE)
 
-    alpha_in_this_bid <- sort(unique(df_bid$alpha))
+    psi_in_this_bid <- sort(unique(df_bid$psi))
     legend_labels <- c()
 
-    for (alpha1 in alpha_in_this_bid) {
-      df_alpha <- subset(df_bid, alpha == alpha1)
-      reps <- unique(df_alpha$job_id)
+    for (psi1 in psi_in_this_bid) {
+      df_psi <- subset(df_bid, psi == psi1)
+      reps <- unique(df_psi$job_id)
 
       for (r in reps) {
-        rep_data <- subset(df_alpha, job_id == r)
+        rep_data <- subset(df_psi, job_id == r)
         phenos <- as.numeric(unlist(rep_data[, phenotype_cols]))
         phenos <- phenos[!is.na(phenos)]
         phenos <- phenos[phenos >= min(breaks) & phenos <= max(breaks)]
@@ -120,15 +120,15 @@ for (n_val in sort(unique(genotype_df$n))) {
         h <- hist(phenos, breaks = breaks, plot = FALSE)
         prop <- h$counts / sum(h$counts)
 
-        col_transparent <- adjustcolor(colors[as.character(alpha1)], alpha.f = 0.4)
+        col_transparent <- adjustcolor(colors[as.character(psi1)], alpha.f = 0.4)
         lines(bin_mids, prop, type = "l", col = col_transparent, lwd = 1)
       }
 
-      legend_labels <- c(legend_labels, paste0("alpha=", alpha1))
+      legend_labels <- c(legend_labels, paste0("psi=", psi1))
     }
 
     legend("topright", legend = legend_labels,
-           col = colors[as.character(alpha_in_this_bid)], lwd = 2, cex = 0.8, bty = "n")
+           col = colors[as.character(psi_in_this_bid)], lwd = 2, cex = 0.8, bty = "n")
 
     dev.off()
   }
@@ -138,10 +138,10 @@ for (n_val in sort(unique(genotype_df$n))) {
 
 ### plot all rep in the same plot
 ```{r}
-# Set up color palette for alpha
-alpha_vals <- sort(target_alphas)
-colors <- hcl.colors(length(alpha_vals), palette = "Zissou 1")
-names(colors) <- as.character(alpha_vals)
+# Set up color palette for psi
+psi_vals <- sort(target_psis)
+colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+names(colors) <- as.character(psi_vals)
 
 # Fixed bin settings
 num_bins <- 80
@@ -152,7 +152,7 @@ genotype_cols <- 2:1001  # Adjust if necessary
 
 # Loop over unique n values
 for (n_val in sort(unique(genotype_df$n))) {
-  df_n <- subset(genotype_df, generation == 10099 & n == n_val & alpha %in% target_alphas)
+  df_n <- subset(genotype_df, generation == 10099 & n == n_val & psi %in% target_psis)
 
   # Set up output directory for this n
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -170,15 +170,15 @@ for (n_val in sort(unique(genotype_df$n))) {
       from = min(breaks), to = max(breaks), 
       col = "black", lwd = 2, add = TRUE)
       
-  alpha_in_this_n <- sort(unique(df_n$alpha))
+  psi_in_this_n <- sort(unique(df_n$psi))
   legend_labels <- c()
 
-  for (alpha1 in alpha_in_this_n) {
-    df_alpha <- subset(df_n, alpha == alpha1)
-    reps <- unique(df_alpha$job_id)
+  for (psi1 in psi_in_this_n) {
+    df_psi <- subset(df_n, psi == psi1)
+    reps <- unique(df_psi$job_id)
 
     for (r in reps) {
-      rep_data <- subset(df_alpha, job_id == r)
+      rep_data <- subset(df_psi, job_id == r)
       genos <- as.numeric(unlist(rep_data[, genotype_cols]))
       genos <- genos[!is.na(genos)]
       genos <- genos[genos >= min(breaks) & genos <= max(breaks)]
@@ -188,15 +188,15 @@ for (n_val in sort(unique(genotype_df$n))) {
       h <- hist(genos, breaks = breaks, plot = FALSE)
       prop <- h$counts / sum(h$counts)
 
-      col_transparent <- adjustcolor(colors[as.character(alpha1)], alpha.f = 0.4)
+      col_transparent <- adjustcolor(colors[as.character(psi1)], alpha.f = 0.4)
       lines(bin_mids, prop, type = "l", col = col_transparent, lwd = 1)
     }
 
-    legend_labels <- c(legend_labels, paste0("alpha=", alpha1))
+    legend_labels <- c(legend_labels, paste0("psi=", psi1))
   }
 
   legend("topright", legend = legend_labels,
-         col = colors[as.character(alpha_in_this_n)], lwd = 2, cex = 0.8, bty = "n")
+         col = colors[as.character(psi_in_this_n)], lwd = 2, cex = 0.8, bty = "n")
 
   dev.off()
 }
@@ -204,9 +204,9 @@ for (n_val in sort(unique(genotype_df$n))) {
 
 ## plot average genotype data
 ```{r}
-alpha_vals <- sort(target_alphas)
-colors <- hcl.colors(length(alpha_vals), palette = "Zissou 1")
-names(colors) <- as.character(alpha_vals)
+psi_vals <- sort(target_psis)
+colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+names(colors) <- as.character(psi_vals)
 
 # Fixed bin settings
 num_bins <- 80
@@ -216,7 +216,7 @@ genotype_cols <- 2:1001  # Adjust as needed
 
 # Loop over each n
 for (n_val in sort(unique(genotype_df$n))) {
-  df_n <- subset(genotype_df, generation == 10099 & n == n_val & alpha %in% target_alphas)
+  df_n <- subset(genotype_df, generation == 10099 & n == n_val & psi %in% target_psis)
 
   # Set up output directory
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -235,9 +235,9 @@ for (n_val in sort(unique(genotype_df$n))) {
       
   legend_labels <- c()
 
-for (alpha1 in alpha_vals) {
-  df_alpha <- subset(df_n, alpha == alpha1)
-  genos <- as.numeric(unlist(df_alpha[, genotype_cols]))
+for (psi1 in psi_vals) {
+  df_psi <- subset(df_n, psi == psi1)
+  genos <- as.numeric(unlist(df_psi[, genotype_cols]))
   genos <- genos[is.finite(genos)]
   genos <- genos[genos >= min(breaks) & genos <= max(breaks)]
 
@@ -250,13 +250,13 @@ for (alpha1 in alpha_vals) {
   avg_counts <- h$counts / sum(h$counts)
 
   # Plot average line
-  lines(bin_mids, avg_counts, col = colors[as.character(alpha1)], lwd = 2)
+  lines(bin_mids, avg_counts, col = colors[as.character(psi1)], lwd = 2)
 
-  legend_labels <- c(legend_labels, paste0("alpha=", alpha1, " (n=", nrow(df_alpha), ")"))
+  legend_labels <- c(legend_labels, paste0("psi=", psi1, " (n=", nrow(df_psi), ")"))
 }
 
   legend("topright", legend = legend_labels,
-         col = colors[as.character(alpha_vals)], lwd = 2, cex = 0.8, bty = "n")
+         col = colors[as.character(psi_vals)], lwd = 2, cex = 0.8, bty = "n")
 
   dev.off()
 }
@@ -265,10 +265,10 @@ for (alpha1 in alpha_vals) {
 
 ## cdf instead of pdf
 ```{r}
-# Color palette for alpha
-alpha_vals <- sort(target_alphas)
-colors <- hcl.colors(length(alpha_vals), palette = "Zissou 1")
-names(colors) <- as.character(alpha_vals)
+# Color palette for psi
+psi_vals <- sort(target_psis)
+colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+names(colors) <- as.character(psi_vals)
 
 # Define which columns contain genotypes
 genotype_cols <- 2:1001  # Adjust if needed
@@ -277,7 +277,7 @@ ran = c(-40, 40)
 
 # Loop over n values
 for (n_val in sort(unique(genotype_df$n))) {
-  df_n <- subset(genotype_df, generation == 10099 & n == n_val & alpha %in% target_alphas)
+  df_n <- subset(genotype_df, generation == 10099 & n == n_val & psi %in% target_psis)
 
   # Output folder
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -293,12 +293,12 @@ for (n_val in sort(unique(genotype_df$n))) {
 
   legend_labels <- c()
 
-  for (alpha1 in alpha_vals) {
-    df_alpha <- subset(df_n, alpha == alpha1)
-    reps <- unique(df_alpha$job_id)
+  for (psi1 in psi_vals) {
+    df_psi <- subset(df_n, psi == psi1)
+    reps <- unique(df_psi$job_id)
 
     for (r in reps) {
-      rep_data <- subset(df_alpha, job_id == r)
+      rep_data <- subset(df_psi, job_id == r)
       genos <- as.numeric(unlist(rep_data[, genotype_cols]))
       genos <- genos[!is.na(genos)]
       genos <- genos[genos >= min(ran) & genos <= max(ran)]
@@ -307,15 +307,15 @@ for (n_val in sort(unique(genotype_df$n))) {
 
       ecdf_line <- ecdf(genos)
       curve(ecdf_line(x), from = min(ran), to = max(ran), add = TRUE,
-            col = adjustcolor(colors[as.character(alpha1)], alpha.f = 0.4),
+            col = adjustcolor(colors[as.character(psi1)], alpha.f = 0.4),
             lwd = 1)
     }
 
-    legend_labels <- c(legend_labels, paste0("alpha = ", alpha1))
+    legend_labels <- c(legend_labels, paste0("psi = ", psi1))
   }
 
   legend("bottomright", legend = legend_labels,
-         col = colors[as.character(alpha_vals)], lwd = 2, cex = 0.8, bty = "n")
+         col = colors[as.character(psi_vals)], lwd = 2, cex = 0.8, bty = "n")
 
   dev.off()
 }
@@ -339,7 +339,7 @@ file_list <- list.files(
 
 # Function to extract metadata from path
 extract_pheno_metadata <- function(path) {
-  matches <- regexec("phenotype_(\\d+)_([1-3])/n_(\\d+)/rec_N_1000_alpha_(-?[0-9.]+)_pop_(\\d+)_1\\.tsv", path)
+  matches <- regexec("phenotype_(\\d+)_([1-3])/n_(\\d+)/rec_N_1000_psi_(-?[0-9.]+)_pop_(\\d+)_1\\.tsv", path)
   parts <- regmatches(path, matches)[[1]]
 
   if (length(parts) != 6) {
@@ -351,7 +351,7 @@ extract_pheno_metadata <- function(path) {
     job_id = as.integer(parts[2]),
     job_rep = as.integer(parts[3]),
     n = as.integer(parts[4]),
-    alpha = as.numeric(parts[5]),
+    psi = as.numeric(parts[5]),
     burnin_id = as.integer(parts[6]),
     stringsAsFactors = FALSE
   )
@@ -364,7 +364,7 @@ phenotype_df <- do.call(rbind, lapply(file_list, function(file) {
 
   # Compute new job_id
   df$job_id <- meta$job_id + meta$job_rep - 1
-  df$alpha <- meta$alpha
+  df$psi <- meta$psi
   df$burnin_id <- meta$burnin_id
   df$n <- meta$n
   df$file_id <- basename(file)
@@ -376,10 +376,10 @@ phenotype_df <- do.call(rbind, lapply(file_list, function(file) {
 
 ## plot all rep in the same plot
 ```{r}
-# Set up color palette for alpha
-alpha_vals <- sort(target_alphas)
-colors <- hcl.colors(length(alpha_vals), palette = "Zissou 1")
-names(colors) <- as.character(alpha_vals)
+# Set up color palette for psi
+psi_vals <- sort(target_psis)
+colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+names(colors) <- as.character(psi_vals)
 
 # Fixed bin settings
 num_bins <- 80
@@ -389,7 +389,7 @@ phenotype_cols <- 2:1001  # Adjust if necessary
 
 # Loop over unique n values
 for (n_val in sort(unique(phenotype_df$n))) {
-  df_n <- subset(phenotype_df, generation == 10099 & n == n_val & alpha %in% target_alphas)
+  df_n <- subset(phenotype_df, generation == 10099 & n == n_val & psi %in% target_psis)
 
   # Set up output directory for this n
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -407,15 +407,15 @@ for (n_val in sort(unique(phenotype_df$n))) {
       from = min(breaks), to = max(breaks), 
       col = "black", lwd = 2, add = TRUE)
       
-  alpha_in_this_n <- sort(unique(df_n$alpha))
+  psi_in_this_n <- sort(unique(df_n$psi))
   legend_labels <- c()
 
-  for (alpha1 in alpha_in_this_n) {
-    df_alpha <- subset(df_n, alpha == alpha1)
-    reps <- unique(df_alpha$job_id)
+  for (psi1 in psi_in_this_n) {
+    df_psi <- subset(df_n, psi == psi1)
+    reps <- unique(df_psi$job_id)
 
     for (r in reps) {
-      rep_data <- subset(df_alpha, job_id == r)
+      rep_data <- subset(df_psi, job_id == r)
       phenos <- as.numeric(unlist(rep_data[, phenotype_cols]))
       phenos <- phenos[!is.na(phenos)]
       phenos <- phenos[phenos >= min(breaks) & phenos <= max(breaks)]
@@ -425,15 +425,15 @@ for (n_val in sort(unique(phenotype_df$n))) {
       h <- hist(phenos, breaks = breaks, plot = FALSE)
       prop <- h$counts / sum(h$counts)
 
-      col_transparent <- adjustcolor(colors[as.character(alpha1)], alpha.f = 0.4)
+      col_transparent <- adjustcolor(colors[as.character(psi1)], alpha.f = 0.4)
       lines(bin_mids, prop, type = "l", col = col_transparent, lwd = 1)
     }
 
-    legend_labels <- c(legend_labels, paste0("alpha=", alpha1))
+    legend_labels <- c(legend_labels, paste0("psi=", psi1))
   }
 
   legend("topright", legend = legend_labels,
-         col = colors[as.character(alpha_in_this_n)], lwd = 2, cex = 0.8, bty = "n")
+         col = colors[as.character(psi_in_this_n)], lwd = 2, cex = 0.8, bty = "n")
 
   dev.off()
 }
@@ -442,10 +442,10 @@ for (n_val in sort(unique(phenotype_df$n))) {
 
 ## plot all rep within each bid
 ```{r}
-# Set up color palette for alpha
-alpha_vals <- sort(target_alphas)
-colors <- hcl.colors(length(alpha_vals), palette = "Zissou 1")
-names(colors) <- as.character(alpha_vals)
+# Set up color palette for psi
+psi_vals <- sort(target_psis)
+colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+names(colors) <- as.character(psi_vals)
 
 # Fixed bin settings
 num_bins <- 80
@@ -455,7 +455,7 @@ phenotype_cols <- 2:1001  # Adjust if necessary
 
 # Loop over each n value
 for (n_val in sort(unique(phenotype_df$n))) {
-  df_n <- subset(phenotype_df, generation == 10099 & n == n_val & alpha %in% target_alphas)
+  df_n <- subset(phenotype_df, generation == 10099 & n == n_val & psi %in% target_psis)
 
   burnin_ids <- sort(unique(df_n$burnin_id))
 
@@ -477,15 +477,15 @@ for (n_val in sort(unique(phenotype_df$n))) {
       from = min(breaks), to = max(breaks), 
       col = "black", lwd = 2, add = TRUE)
       
-    alpha_in_this_bid <- sort(unique(df_bid$alpha))
+    psi_in_this_bid <- sort(unique(df_bid$psi))
     legend_labels <- c()
 
-    for (alpha1 in alpha_in_this_bid) {
-      df_alpha <- subset(df_bid, alpha == alpha1)
-      reps <- unique(df_alpha$job_id)
+    for (psi1 in psi_in_this_bid) {
+      df_psi <- subset(df_bid, psi == psi1)
+      reps <- unique(df_psi$job_id)
 
       for (r in reps) {
-        rep_data <- subset(df_alpha, job_id == r)
+        rep_data <- subset(df_psi, job_id == r)
         phenos <- as.numeric(unlist(rep_data[, phenotype_cols]))
         phenos <- phenos[!is.na(phenos)]
         phenos <- phenos[phenos >= min(breaks) & phenos <= max(breaks)]
@@ -495,15 +495,15 @@ for (n_val in sort(unique(phenotype_df$n))) {
         h <- hist(phenos, breaks = breaks, plot = FALSE)
         prop <- h$counts / sum(h$counts)
 
-        col_transparent <- adjustcolor(colors[as.character(alpha1)], alpha.f = 0.4)
+        col_transparent <- adjustcolor(colors[as.character(psi1)], alpha.f = 0.4)
         lines(bin_mids, prop, type = "l", col = col_transparent, lwd = 1)
       }
 
-      legend_labels <- c(legend_labels, paste0("alpha=", alpha1))
+      legend_labels <- c(legend_labels, paste0("psi=", psi1))
     }
 
     legend("topright", legend = legend_labels,
-           col = colors[as.character(alpha_in_this_bid)], lwd = 2, cex = 0.8, bty = "n")
+           col = colors[as.character(psi_in_this_bid)], lwd = 2, cex = 0.8, bty = "n")
 
     dev.off()
   }
@@ -513,9 +513,9 @@ for (n_val in sort(unique(phenotype_df$n))) {
 
 ## plot average phenotype data across bid
 ```{r}
-alpha_vals <- sort(target_alphas)
-colors <- hcl.colors(length(alpha_vals), palette = "Zissou 1")
-names(colors) <- as.character(alpha_vals)
+psi_vals <- sort(target_psis)
+colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+names(colors) <- as.character(psi_vals)
 
 # Fixed bin settings
 num_bins <- 80
@@ -525,7 +525,7 @@ genotype_cols <- 2:1001  # Adjust as needed
 
 # Loop over each n
 for (n_val in sort(unique(phenotype_df$n))) {
-  df_n <- subset(phenotype_df, generation == 10099 & n == n_val & alpha %in% target_alphas)
+  df_n <- subset(phenotype_df, generation == 10099 & n == n_val & psi %in% target_psis)
 
   # Set up output directory
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -544,9 +544,9 @@ for (n_val in sort(unique(phenotype_df$n))) {
 
   legend_labels <- c()
 
-for (alpha1 in alpha_vals) {
-  df_alpha <- subset(df_n, alpha == alpha1)
-  genos <- as.numeric(unlist(df_alpha[, genotype_cols]))
+for (psi1 in psi_vals) {
+  df_psi <- subset(df_n, psi == psi1)
+  genos <- as.numeric(unlist(df_psi[, genotype_cols]))
   genos <- genos[is.finite(genos)]
   genos <- genos[genos >= min(breaks) & genos <= max(breaks)]
 
@@ -559,13 +559,13 @@ for (alpha1 in alpha_vals) {
   avg_counts <- h$counts / sum(h$counts)
 
   # Plot average line
-  lines(bin_mids, avg_counts, col = colors[as.character(alpha1)], lwd = 2)
+  lines(bin_mids, avg_counts, col = colors[as.character(psi1)], lwd = 2)
 
-  legend_labels <- c(legend_labels, paste0("alpha=", alpha1, " (n=", nrow(df_alpha), ")"))
+  legend_labels <- c(legend_labels, paste0("psi=", psi1, " (n=", nrow(df_psi), ")"))
 }
 
   legend("topright", legend = legend_labels,
-         col = colors[as.character(alpha_vals)], lwd = 2, cex = 0.8, bty = "n")
+         col = colors[as.character(psi_vals)], lwd = 2, cex = 0.8, bty = "n")
 
   dev.off()
 }
@@ -574,10 +574,10 @@ for (alpha1 in alpha_vals) {
 
 ## plot cdf for each rep
 ```{R}
-# Color palette for alpha
-alpha_vals <- sort(target_alphas)
-colors <- hcl.colors(length(alpha_vals), palette = "Zissou 1")
-names(colors) <- as.character(alpha_vals)
+# Color palette for psi
+psi_vals <- sort(target_psis)
+colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+names(colors) <- as.character(psi_vals)
 
 ran = c(-40, 40)
 # Define which columns contain phenotypes
@@ -585,7 +585,7 @@ phenotype_cols <- 2:1001  # change if needed
 
 # Loop over n values
 for (n_val in sort(unique(phenotype_df$n))) {
-  df_n <- subset(phenotype_df, generation == 10099 & n == n_val & alpha %in% target_alphas)
+  df_n <- subset(phenotype_df, generation == 10099 & n == n_val & psi %in% target_psis)
 
   # Output folder
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -601,12 +601,12 @@ for (n_val in sort(unique(phenotype_df$n))) {
 
   legend_labels <- c()
 
-  for (alpha1 in alpha_vals) {
-    df_alpha <- subset(df_n, alpha == alpha1)
-    reps <- unique(df_alpha$job_id)
+  for (psi1 in psi_vals) {
+    df_psi <- subset(df_n, psi == psi1)
+    reps <- unique(df_psi$job_id)
 
     for (r in reps) {
-      rep_data <- subset(df_alpha, job_id == r)
+      rep_data <- subset(df_psi, job_id == r)
       phenos <- as.numeric(unlist(rep_data[, phenotype_cols]))
       phenos <- phenos[!is.na(phenos)]
       phenos <- phenos[phenos >= min(ran) & phenos <= max(ran)]
@@ -615,15 +615,15 @@ for (n_val in sort(unique(phenotype_df$n))) {
 
       ecdf_line <- ecdf(phenos)
       curve(ecdf_line(x), from = min(ran), to = max(ran), add = TRUE,
-            col = adjustcolor(colors[as.character(alpha1)], alpha.f = 0.4),
+            col = adjustcolor(colors[as.character(psi1)], alpha.f = 0.4),
             lwd = 1)
     }
 
-    legend_labels <- c(legend_labels, paste0("alpha = ", alpha1))
+    legend_labels <- c(legend_labels, paste0("psi = ", psi1))
   }
 
   legend("bottomright", legend = legend_labels,
-         col = colors[as.character(alpha_vals)], lwd = 2, cex = 0.8, bty = "n")
+         col = colors[as.character(psi_vals)], lwd = 2, cex = 0.8, bty = "n")
 
   dev.off()
 }
@@ -646,7 +646,7 @@ file_list <- list.files(
 
 # Function to extract metadata from path
 extract_mut_metadata <- function(path) {
-  matches <- regexec("mut_(\\d+)_([1-3])/n_(\\d+)/rec_N_1000_alpha_(-?[0-9.]+)_pop_(\\d+)_1\\.tsv", path)
+  matches <- regexec("mut_(\\d+)_([1-3])/n_(\\d+)/rec_N_1000_psi_(-?[0-9.]+)_pop_(\\d+)_1\\.tsv", path)
   parts <- regmatches(path, matches)[[1]]
 
   if (length(parts) != 6) {
@@ -658,7 +658,7 @@ extract_mut_metadata <- function(path) {
     job_id = as.integer(parts[2]),
     job_rep = as.integer(parts[3]),
     n = as.integer(parts[4]),
-    alpha = as.numeric(parts[5]),
+    psi = as.numeric(parts[5]),
     burnin_id = as.integer(parts[6]),
     stringsAsFactors = FALSE
   )
@@ -672,7 +672,7 @@ mut_df <- do.call(rbind, lapply(file_list, function(file) {
 
   # Compute new job_id
   df$job_id <- meta$job_id + meta$job_rep - 1
-  df$alpha <- meta$alpha
+  df$psi <- meta$psi
   df$burnin_id <- meta$burnin_id
   df$n <- meta$n
   df$file_id <- basename(file)

@@ -24,7 +24,7 @@ file_list <- list.files(
 
 # Function to extract metadata from path
 extract_geno_metadata <- function(path) {
-  # Extract job_id (x), job_rep (i), psi11 (y), burnin_id (z)
+  # Extract job_id (x), job_rep (i), psi (y), burnin_id (z)
   matches <- regexec("genotype_(\\d+)_([1-3])/rec_N_1000_psi_(-?[0-9.]+)_pop_(\\d+)_1\\.tsv", path)
   parts <- regmatches(path, matches)[[1]]
   
@@ -36,7 +36,7 @@ extract_geno_metadata <- function(path) {
   data.frame(
     job_id = as.integer(parts[2]),
     job_rep = as.integer(parts[3]),
-    psi11 = as.numeric(parts[4]),
+    psi = as.numeric(parts[4]),
     burnin_id = as.integer(parts[5]),
     stringsAsFactors = FALSE
   )
@@ -50,7 +50,7 @@ genotype_df <- do.call(rbind, lapply(file_list, function(file) {
 
   # Compute new job_id
   df$job_id <- meta$job_id + meta$job_rep - 1
-  df$psi11 <- meta$psi11
+  df$psi <- meta$psi
   df$burnin_id <- meta$burnin_id
   df$file_id <- basename(file)
 
@@ -75,7 +75,7 @@ breaks <- seq(-60, 60, length.out = num_bins + 1)
 bin_mids <- 0.5 * (head(breaks, -1) + tail(breaks, -1))  # bin centers
 
 # Setup color palette: Zissou 1
-psi_vals <- sort(unique(gen10100_df$psi11))
+psi_vals <- sort(unique(gen10100_df$psi))
 colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
 names(colors) <- as.character(psi_vals)
 
@@ -84,7 +84,7 @@ burnin_ids <- unique(gen10100_df$burnin_id)
 
 for (bid in burnin_ids) {
   df_bid <- subset(gen10100_df, burnin_id == bid)
-  psi_in_this_burnin <- sort(unique(df_bid$psi11))
+  psi_in_this_burnin <- sort(unique(df_bid$psi))
 
   # Start PNG
   png(file.path(output_dir, paste0("genotype_hist_avg_burnin_", bid, ".png")),
@@ -97,7 +97,7 @@ for (bid in burnin_ids) {
   legend_labels <- c()
 
   for (psi in psi_in_this_burnin) {
-    df_psi <- subset(df_bid, psi11 == psi)
+    df_psi <- subset(df_bid, psi == psi)
     reps <- unique(df_psi$job_id)
     n_reps <- length(reps)
 
@@ -118,7 +118,7 @@ for (bid in burnin_ids) {
     # Plot histogram line
     lines(bin_mids, avg_counts, type = "l", col = colors[as.character(psi)], lwd = 2)
 
-    legend_labels <- c(legend_labels, paste0("psi11=", psi, " (n=", n_reps, ")"))
+    legend_labels <- c(legend_labels, paste0("psi=", psi, " (n=", n_reps, ")"))
   }
 
   legend("topright", legend = legend_labels,
@@ -141,23 +141,23 @@ bin_centers <- 0.5 * (head(bin_breaks, -1) + tail(bin_breaks, -1))
 
 # Color palette (Zissou1 style)
 library(viridis)
-palette <- viridis(length(unique(genotype_df$psi11)), option = "C")
+palette <- viridis(length(unique(genotype_df$psi)), option = "C")
 
 # Output folder
 outdir <- "../r_plots"
 dir.create(outdir, showWarnings = FALSE)
 
-# Unique psi11 values
-psi_vals <- sort(unique(genotype_df$psi11))
+# Unique psi values
+psi_vals <- sort(unique(genotype_df$psi))
 
-# Initialize matrix for each psi11
+# Initialize matrix for each psi
 plot_matrix <- matrix(0, nrow = length(psi_vals), ncol = length(bin_centers))
 rep_counts <- integer(length(psi_vals))
 
-# Loop over psi11 values
+# Loop over psi values
 for (i in seq_along(psi_vals)) {
   psi <- psi_vals[i]
-  df_psi <- subset(genotype_df, psi11 == psi & generation == 10100)
+  df_psi <- subset(genotype_df, psi == psi & generation == 10100)
 
   # Identify unique replicate IDs (burnin_id + job_id)
   df_psi$replicate_id <- paste(df_psi$burnin_id, df_psi$job_id, sep = "_")
@@ -185,7 +185,7 @@ for (i in seq_along(psi_vals)) {
   lines(bin_centers, plot_matrix[i, ], col = palette[i], lwd = 2)
 }
 
-legend("topright", legend = paste0("psi11=", psi_vals, " (n=", rep_counts, ")"),
+legend("topright", legend = paste0("psi=", psi_vals, " (n=", rep_counts, ")"),
        col = palette, lwd = 2, cex = 0.8)
 
 # Save to file
@@ -210,7 +210,7 @@ file_list <- list.files(
 
 # Function to extract metadata from path
 extract_pheno_metadata <- function(path) {
-  # Extract job_id (x), job_rep (i), psi11 (y), burnin_id (z)
+  # Extract job_id (x), job_rep (i), psi (y), burnin_id (z)
   matches <- regexec("phenotype_(\\d+)_([1-3])/rec_N_1000_psi_(-?[0-9.]+)_pop_(\\d+)_1\\.tsv", path)
   parts <- regmatches(path, matches)[[1]]
   
@@ -222,7 +222,7 @@ extract_pheno_metadata <- function(path) {
   data.frame(
     job_id = as.integer(parts[2]),
     job_rep = as.integer(parts[3]),
-    psi11 = as.numeric(parts[4]),
+    psi = as.numeric(parts[4]),
     burnin_id = as.integer(parts[5]),
     stringsAsFactors = FALSE
   )
@@ -236,7 +236,7 @@ phenotype_df <- do.call(rbind, lapply(file_list, function(file) {
 
   # Compute new job_id
   df$job_id <- meta$job_id + meta$job_rep - 1
-  df$psi11 <- meta$psi11
+  df$psi <- meta$psi
   df$burnin_id <- meta$burnin_id
   df$file_id <- basename(file)
 
@@ -260,7 +260,7 @@ breaks <- seq(-5, 5, length.out = num_bins + 1)
 bin_mids <- 0.5 * (head(breaks, -1) + tail(breaks, -1))  # bin centers
 
 # Setup color palette: Zissou 1
-psi_vals <- sort(unique(gen10100_df$psi11))
+psi_vals <- sort(unique(gen10100_df$psi))
 colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
 names(colors) <- as.character(psi_vals)
 
@@ -269,7 +269,7 @@ burnin_ids <- unique(gen10100_df$burnin_id)
 
 for (bid in burnin_ids) {
   df_bid <- subset(gen10100_df, burnin_id == bid)
-  psi_in_this_burnin <- sort(unique(df_bid$psi11))
+  psi_in_this_burnin <- sort(unique(df_bid$psi))
 
   # Start PNG
   png(file.path(output_dir, paste0("phenotype_hist_avg_burnin_", bid, ".png")),
@@ -281,7 +281,7 @@ for (bid in burnin_ids) {
   legend_labels <- c()
 
   for (psi in psi_in_this_burnin) {
-    df_psi <- subset(df_bid, psi11 == psi)
+    df_psi <- subset(df_bid, psi == psi)
     reps <- unique(df_psi$job_id)
     n_reps <- length(reps)
 
@@ -303,7 +303,7 @@ for (bid in burnin_ids) {
     # Plot histogram line
     lines(bin_mids, avg_counts, type = "l", col = colors[as.character(psi)], lwd = 2)
 
-    legend_labels <- c(legend_labels, paste0("psi11=", psi, " (n=", n_reps, ")"))
+    legend_labels <- c(legend_labels, paste0("psi=", psi, " (n=", n_reps, ")"))
   }
 
   legend("topright", legend = legend_labels,
@@ -327,23 +327,23 @@ bin_centers <- 0.5 * (head(bin_breaks, -1) + tail(bin_breaks, -1))
 
 # Color palette (Zissou1 style)
 library(viridis)
-palette <- viridis(length(unique(phenotype_df$psi11)), option = "C")
+palette <- viridis(length(unique(phenotype_df$psi)), option = "C")
 
 # Output folder
 outdir <- "../r_plots"
 dir.create(outdir, showWarnings = FALSE)
 
-# Unique psi11 values
-psi_vals <- sort(unique(phenotype_df$psi11))
+# Unique psi values
+psi_vals <- sort(unique(phenotype_df$psi))
 
-# Initialize matrix for each psi11
+# Initialize matrix for each psi
 plot_matrix <- matrix(0, nrow = length(psi_vals), ncol = length(bin_centers))
 rep_counts <- integer(length(psi_vals))
 
-# Loop over psi11 values
+# Loop over psi values
 for (i in seq_along(psi_vals)) {
   psi <- psi_vals[i]
-  df_psi <- subset(phenotype_df, psi11 == psi & generation == 10100)
+  df_psi <- subset(phenotype_df, psi == psi & generation == 10100)
 
   # Identify unique replicate IDs (burnin_id + job_id)
   df_psi$replicate_id <- paste(df_psi$burnin_id, df_psi$job_id, sep = "_")
@@ -371,7 +371,7 @@ for (i in seq_along(psi_vals)) {
   lines(bin_centers, plot_matrix[i, ], col = palette[i], lwd = 2)
 }
 
-legend("topright", legend = paste0("psi11=", psi_vals, " (n=", rep_counts, ")"),
+legend("topright", legend = paste0("psi=", psi_vals, " (n=", rep_counts, ")"),
        col = palette, lwd = 2, cex = 0.8)
 
 # Save to file
@@ -402,7 +402,7 @@ extract_effect_metadata <- function(path) {
   list(
     job_id = as.integer(parts[2]),
     job_rep = as.integer(parts[3]),
-    psi11 = as.numeric(parts[4]),
+    psi = as.numeric(parts[4]),
     burnin_id = as.integer(parts[5]),
     file_id = basename(path)
   )
@@ -446,7 +446,7 @@ for (file in file_list) {
 
   # Store as list with metadata appended
   df$job_id <- meta$job_id + meta$job_rep - 1
-  df$psi11 <- meta$psi11
+  df$psi <- meta$psi
   df$burnin_id <- meta$burnin_id
   df$file_id <- meta$file_id
 
@@ -474,7 +474,7 @@ reordered_list <- lapply(df_list, function(df) {
   }
 
   colnames(head_cols) <- c("generation", "individual_id")
-  colnames(meta_cols) <- c("job_id", "psi11", "burnin_id", "file_id")
+  colnames(meta_cols) <- c("job_id", "psi", "burnin_id", "file_id")
   colnames(mut_cols) <- paste0("mut_", seq_len(ncol(mut_cols)))
 
   cbind(head_cols, meta_cols, mut_cols)
@@ -501,7 +501,7 @@ bin_breaks <- seq(-3, 3, by = 0.2)
 bin_centers <- head(bin_breaks, -1) + diff(bin_breaks)/2
 
 # Prepare color palette
-psi_vals <- sort(unique(effect_df$psi11))
+psi_vals <- sort(unique(effect_df$psi))
 palette <- viridis::viridis(length(psi_vals), option = "C")  # Zissou 1-like
 
 # Output folder
@@ -524,7 +524,7 @@ for (bid in unique(effect_df$burnin_id)) {
 
   for (i in seq_along(psi_vals)) {
     psi <- psi_vals[i]
-    df_psi <- subset(df_bid, psi11 == psi)
+    df_psi <- subset(df_bid, psi == psi)
 
     # Split by replicate (job_id)
     job_ids <- unique(df_psi$job_id)
@@ -551,7 +551,7 @@ for (bid in unique(effect_df$burnin_id)) {
     lines(bin_centers, plot_matrix[i, ], col = palette[i], lwd = 2)
   }
 
-  legend("topright", legend = paste0("psi11=", psi_vals, " (n=", rep_counts, ")"),
+  legend("topright", legend = paste0("psi=", psi_vals, " (n=", rep_counts, ")"),
          col = palette, lwd = 2, cex = 0.8)
 
   # Save plot
@@ -570,7 +570,7 @@ library(viridis)
 
 bin_breaks <- seq(-3, 3, by = 0.2)
 bin_centers <- head(bin_breaks, -1) + diff(bin_breaks)/2
-psi_vals <- sort(unique(effect_df$psi11))
+psi_vals <- sort(unique(effect_df$psi))
 palette <- viridis(length(psi_vals), option = "C")
 
 # Output folder
@@ -584,13 +584,13 @@ extract_effects <- function(row) {
   as.numeric(sub(".*:", "", vals))
 }
 
-# ---- GROUP BY psi11 ----
+# ---- GROUP BY psi ----
 plot_matrix <- matrix(0, nrow = length(psi_vals), ncol = length(bin_centers))
 rep_counts <- integer(length(psi_vals))
 
 for (i in seq_along(psi_vals)) {
   psi <- psi_vals[i]
-  df_psi <- subset(effect_df, psi11 == psi)
+  df_psi <- subset(effect_df, psi == psi)
 
   # Unique replicate = job_id + burnin_id combo
   df_psi$replicate_id <- paste(df_psi$burnin_id, df_psi$job_id, sep = "_")
@@ -614,17 +614,17 @@ for (i in seq_along(psi_vals)) {
 
 # ---- PLOT ----
 plot(NULL, xlim = c(-3, 3), ylim = c(0, 1.0), xlab = "Effect Size", ylab = "Density",
-     main = "Effect Size Distribution Averaged by psi11\n(Rep = burnin × job_id)")
+     main = "Effect Size Distribution Averaged by psi\n(Rep = burnin × job_id)")
 
 for (i in seq_along(psi_vals)) {
   lines(bin_centers, plot_matrix[i, ], col = palette[i], lwd = 2)
 }
 
-legend("topright", legend = paste0("psi11 = ", psi_vals, " (n=", rep_counts, ")"),
+legend("topright", legend = paste0("psi = ", psi_vals, " (n=", rep_counts, ")"),
        col = palette, lwd = 2, cex = 0.8)
 
 # Save plot
-file_name <- sprintf("%s/effect_dist_by_psi11_combined.png", outdir)
+file_name <- sprintf("%s/effect_dist_by_psi_combined.png", outdir)
 dev.copy(png, filename = file_name, width = 800, height = 600)
 dev.off()
 
@@ -643,7 +643,7 @@ bin_breaks <- seq(-3, 3, by = 0.2)
 bin_centers <- head(bin_breaks, -1) + diff(bin_breaks)/2
 
 # Prepare color palette
-psi_vals <- sort(unique(effect_df$psi11))
+psi_vals <- sort(unique(effect_df$psi))
 palette <- viridis(length(psi_vals), option = "C")
 
 # Output folder
@@ -680,7 +680,7 @@ for (bid in unique(effect_df$burnin_id)) {
 
   for (i in seq_along(psi_vals)) {
     psi <- psi_vals[i]
-    df_psi <- subset(df_bid, psi11 == psi)
+    df_psi <- subset(df_bid, psi == psi)
 
     job_ids <- unique(df_psi$job_id)
     rep_counts[i] <- length(job_ids)
@@ -708,7 +708,7 @@ for (bid in unique(effect_df$burnin_id)) {
     lines(bin_centers, plot_matrix[i, ], col = palette[i], lwd = 2)
   }
 
-  legend("topright", legend = paste0("psi11=", psi_vals, " (n=", rep_counts, ")"),
+  legend("topright", legend = paste0("psi=", psi_vals, " (n=", rep_counts, ")"),
          col = palette, lwd = 2, cex = 0.8)
 
   # Save plot
@@ -733,7 +733,7 @@ bin_breaks <- seq(-3, 3, by = 0.2)
 bin_centers <- head(bin_breaks, -1) + diff(bin_breaks)/2
 
 # Prepare color palette
-psi_vals <- sort(unique(effect_df$psi11))
+psi_vals <- sort(unique(effect_df$psi))
 palette <- viridis(length(psi_vals), option = "C")
 
 # Output folder
@@ -761,13 +761,13 @@ extract_unique_effects <- function(df_rep) {
 }
 
 
-# Create one plot for all psi11 values with burnin_id pooled
+# Create one plot for all psi values with burnin_id pooled
 plot_matrix <- matrix(0, nrow = length(psi_vals), ncol = length(bin_centers))
 rep_counts <- integer(length(psi_vals))
 
 for (i in seq_along(psi_vals)) {
   psi <- psi_vals[i]
-  df_psi <- subset(effect_df, generation == "10100" & psi11 == psi)
+  df_psi <- subset(effect_df, generation == "10100" & psi == psi)
 
   job_ids <- unique(paste(df_psi$burnin_id, df_psi$job_id, sep = "_"))
   rep_counts[i] <- length(job_ids)
@@ -799,7 +799,7 @@ for (i in seq_along(psi_vals)) {
   lines(bin_centers, plot_matrix[i, ], col = palette[i], lwd = 2)
 }
 
-legend("topright", legend = paste0("psi11=", psi_vals, " (n=", rep_counts, ")"),
+legend("topright", legend = paste0("psi=", psi_vals, " (n=", rep_counts, ")"),
        col = palette, lwd = 2, cex = 0.8)
 
 # Save plot
@@ -822,10 +822,10 @@ library(viridis)
 # psi_keep <- c(0.9, 0.8, 0.7, 0.2, 0.1, 0.0, -0.2, -0.5, -0.7, -0.8, -0.9)
 
 # # Filter the dataset
-# df_10100 <- subset(df_10100, psi11 %in% psi_keep)
+# df_10100 <- subset(df_10100, psi %in% psi_keep)
 
 # Prepare color palette
-psi_vals <- sort(unique(df_10100$psi11))
+psi_vals <- sort(unique(df_10100$psi))
 palette <- viridis(length(psi_vals), option = "C")
 
 # Output folder
@@ -863,11 +863,11 @@ compute_freq_effect <- function(df_rep, N = 1000) {
   return(merged_df)
 }
 
-# Loop by psi11 and gather all mutation info
+# Loop by psi and gather all mutation info
 all_data <- list()
 for (i in seq_along(psi_vals)) {
   psi <- psi_vals[i]
-  df_psi <- subset(df_10100, psi11 == psi)
+  df_psi <- subset(df_10100, psi == psi)
 
   job_ids <- unique(paste(df_psi$burnin_id, df_psi$job_id, sep = "_"))
 
@@ -880,7 +880,7 @@ for (i in seq_along(psi_vals)) {
   }))
 
   if (nrow(df_all_mut) > 0) {
-    df_all_mut$psi11 <- psi
+    df_all_mut$psi <- psi
     all_data[[i]] <- df_all_mut
   }
 }
@@ -894,11 +894,11 @@ plot(NULL, xlim = c(-3, 3), ylim = c(0, 1.0), xlab = "Effect Size", ylab = "Alle
 
 for (i in seq_along(psi_vals)) {
   psi <- psi_vals[i]
-  sub_df <- subset(plot_df, psi11 == psi)
+  sub_df <- subset(plot_df, psi == psi)
   points(sub_df$effect, sub_df$allele_freq, col = palette[i], pch = 16, cex = 0.6)
 }
 
-legend("topright", legend = paste0("psi11=", psi_vals), col = palette, pch = 16, cex = 0.8)
+legend("topright", legend = paste0("psi=", psi_vals), col = palette, pch = 16, cex = 0.8)
 
 # Save plot
 file_name <- sprintf("%s/allele_freq_vs_effect_plot3.png", outdir)
@@ -915,11 +915,11 @@ dev.off()
 library(viridis)
 
 # ---- Analysis 2: Individual-Level Effect Size Distributions ----
-# Define the psi11 values you want to keep
+# Define the psi values you want to keep
 psi_keep <- c(0.9, 0.8, 0.7, 0.2, 0.1, 0.0, -0.2, -0.5, -0.7, -0.8, -0.9)
 
 # Filter the dataset
-df_10100 <- subset(df_10100, psi11 %in% psi_keep)
+df_10100 <- subset(df_10100, psi %in% psi_keep)
 
 # Define effect size bins
 bin_breaks <- seq(-3, 3, by = 0.2)
@@ -930,7 +930,7 @@ outdir <- "../r_plots"
 dir.create(outdir, showWarnings = FALSE)
 
 # Prepare color palette
-psi_vals <- sort(unique(df_10100$psi11))
+psi_vals <- sort(unique(df_10100$psi))
 palette <- viridis(length(psi_vals), option = "C")
 
 # Function: get individual effect size histogram (filtering out-of-range)
@@ -960,9 +960,9 @@ for (bid in unique(df_10100$burnin_id)) {
 
   for (i in seq_along(psi_vals)) {
     psi <- psi_vals[i]
-    df_psi <- subset(df_bid, psi11 == psi)
+    df_psi <- subset(df_bid, psi == psi)
 
-    if (nrow(df_psi) == 0) next  # <-- SKIP if no data for this psi11
+    if (nrow(df_psi) == 0) next  # <-- SKIP if no data for this psi
 
     indiv_hist <- t(apply(df_psi, 1, get_individual_hist))
     indiv_hist <- indiv_hist[rowSums(is.na(indiv_hist)) == 0, , drop = FALSE]
@@ -982,7 +982,7 @@ Burnin ID", bid))
     lines(bin_centers, plot_matrix[i, ], col = palette[i], lwd = 2)
   }
 
-  legend("topright", legend = paste0("psi11=", psi_vals, " (n=", rep_counts, ")"),
+  legend("topright", legend = paste0("psi=", psi_vals, " (n=", rep_counts, ")"),
          col = palette, lwd = 2, cex = 0.8)
 
   # Save plot
@@ -1001,18 +1001,18 @@ Burnin ID", bid))
 # Load package
 library(viridis)
 
-# Set psi11 values to keep
+# Set psi values to keep
 psi_keep <- c(0.9, 0.8, 0.6, 0.3, 0.0, -0.3, -0.6, -0.8, -0.9)
 
-# Filter generation 10100 and psi11 of interest
-df_10100 <- subset(effect_df, generation == "10100" & psi11 %in% psi_keep)
+# Filter generation 10100 and psi of interest
+df_10100 <- subset(effect_df, generation == "10100" & psi %in% psi_keep)
 
 # Define bins
 bin_breaks <- seq(-3, 3, by = 0.2)
 bin_centers <- head(bin_breaks, -1) + diff(bin_breaks)/2
 
 # Prepare color palette
-psi_vals <- sort(unique(df_10100$psi11))
+psi_vals <- sort(unique(df_10100$psi))
 palette <- viridis(length(psi_vals), option = "C")
 
 # Output folder
@@ -1036,7 +1036,7 @@ rep_counts <- integer(length(psi_vals))
 
 for (i in seq_along(psi_vals)) {
   psi <- psi_vals[i]
-  df_psi <- subset(df_10100, psi11 == psi)
+  df_psi <- subset(df_10100, psi == psi)
   
   # Apply histogram function per row
   indiv_hist <- t(apply(df_psi, 1, get_individual_hist))
@@ -1057,7 +1057,7 @@ for (i in valid_idx) {
   lines(bin_centers, plot_matrix[i, ], col = palette[i], lwd = 2)
 }
 
-legend("topright", legend = paste0("psi11=", psi_vals[valid_idx], " (n=", rep_counts[valid_idx]/1000, ")"),
+legend("topright", legend = paste0("psi=", psi_vals[valid_idx], " (n=", rep_counts[valid_idx]/1000, ")"),
        col = palette[valid_idx], lwd = 2, cex = 0.8)
 
 # Save
@@ -1101,13 +1101,13 @@ data_df <- do.call(rbind, lapply(file_list, function(file) {
 # Drop rows where burnin_id failed to extract
 data_df <- subset(data_df, !is.na(burnin_id))
 
-# Preview expected structure: seg_site, psi11, rep, burnin_id
-stopifnot(all(c("seg_site", "psi11", "rep") %in% names(data_df)))
+# Preview expected structure: seg_site, psi, rep, burnin_id
+stopifnot(all(c("seg_site", "psi", "rep") %in% names(data_df)))
 
 # ---- PLOT ----
 # Set up plot
-plot(NULL, xlim = range(data_df$psi11), ylim = range(data_df$seg_site),
-     xlab = "psi11", ylab = "number of segregating sites", main = "number of segregating sites vs psi11 across replicates")
+plot(NULL, xlim = range(data_df$psi), ylim = range(data_df$seg_site),
+     xlab = "psi", ylab = "number of segregating sites", main = "number of segregating sites vs psi across replicates")
 
 # Use color per burnin_id
 burnin_ids <- sort(unique(data_df$burnin_id))
@@ -1115,7 +1115,7 @@ colors <- rainbow(length(burnin_ids))
 
 for (i in seq_along(burnin_ids)) {
   df_b <- subset(data_df, burnin_id == burnin_ids[i])
-  points(df_b$psi11, df_b$seg_site, col = colors[i], pch = 16)
+  points(df_b$psi, df_b$seg_site, col = colors[i], pch = 16)
 }
 
 # Output folder
@@ -1154,7 +1154,7 @@ extract_geno_metadata <- function(path) {
   list(
     job_id = as.integer(parts[2]),
     job_rep = as.integer(parts[3]),
-    psi11 = as.numeric(parts[4]),
+    psi = as.numeric(parts[4]),
     burnin_id = as.integer(parts[5])
   )
 }
@@ -1180,7 +1180,7 @@ mut_list <- lapply(file_list, function(file) {
   data.frame(
     job_id = meta$job_id + meta$job_rep - 1,
     job_rep = meta$job_rep,
-    psi11 = meta$psi11,
+    psi = meta$psi,
     burnin_id = meta$burnin_id,
     file_id = basename(file),
     effect_sizes = I(list(effect_row)),
@@ -1206,7 +1206,7 @@ output_file <- "../r_plots/all_psi_hist.png"
 if (!dir.exists(dirname(output_file))) dir.create(dirname(output_file), recursive = TRUE)
 
 # Unique psi values and color map
-psi_vals <- sort(unique(mut_df$psi11))
+psi_vals <- sort(unique(mut_df$psi))
 palette <- viridis(length(psi_vals), option = "C")
 
 # Histogram settings
@@ -1218,7 +1218,7 @@ png(output_file, width = 1000, height = 800)
 # Prepare empty plot
 plot(NULL, xlim = c(NA, NA), ylim = c(0, NA),
      xlab = "Effect size", ylab = "Density",
-     main = "Effect Size Histograms for All psi11 Values")
+     main = "Effect Size Histograms for All psi Values")
 
 # Track plot limits
 x_min <- Inf
@@ -1229,7 +1229,7 @@ y_max <- 0
 hist_data_list <- list()
 for (i in seq_along(psi_vals)) {
   psi <- psi_vals[i]
-  df_psi <- subset(mut_df, psi11 == psi)
+  df_psi <- subset(mut_df, psi == psi)
   all_psi_effects <- unlist(df_psi$effect_sizes)
   hist_range <- range(all_psi_effects, na.rm = TRUE)
   bin_breaks <- seq(hist_range[1], hist_range[2], length.out = num_bins + 1)
@@ -1246,7 +1246,7 @@ for (i in seq_along(psi_vals)) {
 # Re-plot with known limits
 plot(NULL, xlim = c(x_min, x_max), ylim = c(0, y_max * 1.05),
      xlab = "Effect size", ylab = "Density",
-     main = "Effect Size for Unique Mutations by psi11")
+     main = "Effect Size for Unique Mutations by psi")
 
 # Second pass: draw lines
 for (i in seq_along(psi_vals)) {

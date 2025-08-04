@@ -6,7 +6,7 @@ simid=$3
 n=$4
 echo "post burnin rec, SLURM_JOB_ID=$SLURM_JOB_ID, TASK_ID=$SLURM_ARRAY_TASK_ID"
 
-bin/slim5.0 -d psi11=$psi \
+bin/slim5.0 -d psi=$psi \
             -d ID="${SLURM_JOB_ID}" \
             -d n=$n \
             -d "burnin_fn='/workdir/$USER/${SLURM_ARRAY_JOB_ID}-${SLURM_ARRAY_TASK_ID}/pop/rec_N_1000_psi_${psi}_n_${n}_pop_${burnin_id}.pop'" \

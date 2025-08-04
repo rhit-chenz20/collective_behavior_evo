@@ -37,10 +37,10 @@ echo "Running simulations."
 for i in {1..2}; do
     echo "Running burnin simulations for simid=${i}."
 
-    for alpha in 0.1 0.3 0.5 0.7 0.9 0.0 -0.1 -0.3 -0.5 -0.7 -0.9; do
-        echo "Running simulation with alpha=${alpha}"
+    for psi in 0.1 0.3 0.5 0.7 0.9 0.0 -0.1 -0.3 -0.5 -0.7 -0.9; do
+        echo "Running simulation with psi=${psi}"
         for n in 2 3 11;do
-            bash n_group_bi.sh ${alpha} ${n} &
+            bash n_group_bi.sh ${psi} ${n} &
         done
     done
     wait

@@ -2,7 +2,7 @@
 
 psi=$1
 n=$2
-echo "no burnin, SLURM_JOB_ID=$SLURM_JOB_ID, TASK_ID=$SLURM_ARRAY_TASK_ID"
+echo "no burnin max fit, SLURM_JOB_ID=$SLURM_JOB_ID, TASK_ID=$SLURM_ARRAY_TASK_ID"
 
 bin/slim5.0 -d psi=$psi \
             -d ID="${SLURM_JOB_ID}" \

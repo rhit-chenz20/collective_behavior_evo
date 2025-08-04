@@ -19,9 +19,9 @@ initialize() {
 	
 //	defineConstant("ID", "-2");
 //	defineConstant("folder", "tsv_output/social_new/temp");
-//	defineConstant("alpha", 0.1);
-//	defineConstant("fre_output",folder+ "/"+ "rec_N_"+N+"_alpha_"+alpha+"_burnin_"+ID+".tsv");	
-	defineConstant("pop_output",folder+ "/"+ "rec_N_"+N+"_alpha_"+alpha+"_n_"+n+"_pop_"+ID+".pop");	
+//	defineConstant("psi", 0.1);
+//	defineConstant("fre_output",folder+ "/"+ "rec_N_"+N+"_psi_"+psi+"_burnin_"+ID+".tsv");	
+	defineConstant("pop_output",folder+ "/"+ "rec_N_"+N+"_psi_"+psi+"_n_"+n+"_pop_"+ID+".pop");	
 //    defineConstant("n", 3);
 	
 	// m2 models a biallelic locus; an m2 mutation is "A",
@@ -114,7 +114,7 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 
         for (j in groups){
             a1 = a[j.index];
-            phenotype[j.index] = a1 * (1-alpha) + alpha * best_a;
+            phenotype[j.index] = a1 * (1-psi) + psi * best_a;
         }
 	}
 	

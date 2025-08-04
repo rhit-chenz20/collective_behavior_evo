@@ -1,13 +1,13 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --account=bscb10
-#SBATCH --job-name=postburnin_n_group_max_fit
-#SBATCH --array=1-3
+#SBATCH --job-name=noburnin_max_fit
+#SBATCH --array=1-20
 #SBATCH --output="/home/zc524/slurm-outputs/%x-%j-%a.out"
 #SBATCH --time=4:00:00      
-#SBATCH --cpus-per-task=6   
-#SBATCH --mem=24G              
-#SBATCH --partition=short
+#SBATCH --cpus-per-task=7  
+#SBATCH --mem=14G              
+#SBATCH --partition=short,long7
 #SBATCH --mail-user=zc524@cornell.edu
 #SBATCH --mail-type=FAIL,END
 
@@ -28,50 +28,27 @@ echo "Working directory is ${WORKDIR}."
 
 echo "Copying analysis scripts."
 cp -r ~/collective_behavior_evo/burnin/n_group_max_fit/* .
-unzip pop.zip
+# unzip pop.zip
 echo "Linking SLiM executable."
 mkdir bin
 ln -s ~/bin/slim5.0 bin/slim5.0
 
 echo "Running simulations."
 
-for n in 2 3 11; do
+for n in 2; do
     mkdir -p phenotype/n_${n}
     mkdir -p genotype/n_${n}
     mkdir -p data/n_${n}
     mkdir -p ind/n_${n}
     mkdir -p mut/n_${n}
     mkdir -p log/n_${n}
-done
 
-for psi in 0.0 0.1 0.3 0.5 0.7 0.9; do
-    echo "Running simulation with psi=${psi}, n=${n}"
-
-    for jobid in {2744735..2744737}; do
-        for n in 2 3 11; do
-            for i in 1; do
-                echo "Submitting job for psi=${psi}, n=${n}, jobid=${jobid}, simid=${i}."
-                bash post_burnin_n_group.sh ${psi} ${jobid} ${i} ${n}&
-            done
-        done
+    for psi in 0.0 0.3 0.6 0.9 -0.3 -0.6 -0.9; do
+        echo "Submitting job for psi=${psi}, n=${n}."
+        bash no_burnin.sh ${psi} ${n} &
     done
+    wait
 done
-wait
-
-for psi in -0.1 -0.3 -0.5 -0.7 -0.9; do
-    echo "Running simulation with psi=${psi}, n=${n}"
-
-    for jobid in {2744735..2744737}; do
-        for n in 2 3 11; do
-            for i in 1; do
-                echo "Submitting job for psi=${psi}, n=${n}, jobid=${jobid}, simid=${i}."
-                bash post_burnin_n_group.sh ${psi} ${jobid} ${i} ${n}&
-            done
-        done
-    done
-done
-wait
-
 
 echo "Moving results into storage."
 mkdir -p ${RESULTSHOME}/data

@@ -44,28 +44,28 @@ for n in 2 3 11; do
     mkdir -p log/n_${n}
 done
 
-for alpha in 0.0 0.1 0.3 0.5 0.7 0.9; do
-    echo "Running simulation with alpha=${alpha}, n=${n}"
+for psi in 0.0 0.1 0.3 0.5 0.7 0.9; do
+    echo "Running simulation with psi=${psi}, n=${n}"
 
     for jobid in {2744739..2744741}; do
         for n in 2 3 11; do
             for i in 1; do
-                echo "Submitting job for alpha=${alpha}, n=${n}, jobid=${jobid}, simid=${i}."
-                bash post_burnin_n_group.sh ${alpha} ${jobid} ${i} ${n}&
+                echo "Submitting job for psi=${psi}, n=${n}, jobid=${jobid}, simid=${i}."
+                bash post_burnin_n_group.sh ${psi} ${jobid} ${i} ${n}&
             done
         done
     done
 done
 wait
 
-for alpha in -0.1 -0.3 -0.5 -0.7 -0.9; do
-    echo "Running simulation with alpha=${alpha}, n=${n}"
+for psi in -0.1 -0.3 -0.5 -0.7 -0.9; do
+    echo "Running simulation with psi=${psi}, n=${n}"
 
     for jobid in {2744739..2744741}; do
         for n in 2 3 11; do
             for i in 1; do
-                echo "Submitting job for alpha=${alpha}, n=${n}, jobid=${jobid}, simid=${i}."
-                bash post_burnin_n_group.sh ${alpha} ${jobid} ${i} ${n}&
+                echo "Submitting job for psi=${psi}, n=${n}, jobid=${jobid}, simid=${i}."
+                bash post_burnin_n_group.sh ${psi} ${jobid} ${i} ${n}&
             done
         done
     done

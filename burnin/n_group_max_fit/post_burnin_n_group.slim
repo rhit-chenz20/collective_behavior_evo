@@ -23,13 +23,13 @@ initialize() {
 	
 //	defineConstant("ID", "-2");
 //	defineConstant("folder", "tsv_output/social_new/temp/");
-//	defineConstant("alpha", 0.1);
-//	defineConstant("burnin_fn", "burnin/pop/rec_N_1000_alpha_0.1_pop_2702577.pop");
-//	defineConstant("fre_output",folder+ "rec_alpha_"+alpha+"_"+ID+".tsv");	
-//	defineConstant("phenotype_fn", folder+ "pheno_rec_alpha_"+alpha+"_"+ID+".tsv");
-//	defineConstant("genotype_fn", folder+"geno_rec_alpha_"+alpha+"_"+ID+".tsv");
-//	defineConstant("ind_fn", folder+"ind_rec_alpha_"+alpha+"_"+ID+".tsv");
-//	defineConstant("mut_fn", folder+"mut_rec_alpha_"+alpha+"_"+ID+".tsv");
+//	defineConstant("psi", 0.1);
+//	defineConstant("burnin_fn", "burnin/pop/rec_N_1000_psi_0.1_pop_2702577.pop");
+//	defineConstant("fre_output",folder+ "rec_psi_"+psi+"_"+ID+".tsv");	
+//	defineConstant("phenotype_fn", folder+ "pheno_rec_psi_"+psi+"_"+ID+".tsv");
+//	defineConstant("genotype_fn", folder+"geno_rec_psi_"+psi+"_"+ID+".tsv");
+//	defineConstant("ind_fn", folder+"ind_rec_psi_"+psi+"_"+ID+".tsv");
+//	defineConstant("mut_fn", folder+"mut_rec_psi_"+psi+"_"+ID+".tsv");
 	
 	// m2 models a biallelic locus; an m2 mutation is "A",
 	// absence of an m2 mutation is "a"; "aa" is neutral
@@ -45,7 +45,8 @@ initialize() {
 }
 1 late() {
 	if(!exists("burnin_fn")){ 
-		print("no burnin file found, abort...", error=T);
+		print("no burnin file found, simulate from the start...");
+		sim.addSubpop("p1", N);
 	} else{
 		print("reading burnin from "+burnin_fn);
 		sim.readFromPopulationFile(burnin_fn);
@@ -130,7 +131,7 @@ shift_time-50 late(){
 	log.addCustomColumn("s", "parent_mean=mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]); parent_mean-mean(last_gen_z);");
 	log.addCustomColumn("dz1_pred", "parent_mean=mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]); var(last_gen_g)/var(last_gen_z)*(parent_mean-mean(last_gen_z));");
 	log.addCustomColumn("rep", "ID;");
-	log.addCustomColumn("alpha", "alpha;");
+	log.addCustomColumn("psi", "psi;");
 	log.addCustomColumn("rec", "1;");
 }
 
@@ -257,7 +258,7 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
             a1 = a[j.index];
 			best_i = whichMax(fits);
 			best_a = as[best_i];
-            phenotype[j.index] = a1 * (1-alpha) + alpha * best_a;
+            phenotype[j.index] = a1 + psi * best_a;
         }
 	}
 	

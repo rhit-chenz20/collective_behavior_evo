@@ -9,7 +9,7 @@ output: pdf_document
 setwd("/workdir/zc524/collective_behavior_evo/r_remote")
 base_data_folder <- "../data/n_group_base_data"
 base_plot_folder <- "../r_plots/n_group_base"
-target_psi11 <- c(-0.9, -0.5, -0.6, -0.3, 0.0, 0.3, 0.5, 0.6, 0.9)
+target_psi <- c(-0.9, -0.5, -0.6, -0.3, 0.0, 0.3, 0.5, 0.6, 0.9)
 ```
 
 ## plot genotype data
@@ -39,7 +39,7 @@ extract_geno_metadata <- function(path) {
     job_id = as.integer(parts[2]),
     job_rep = as.integer(parts[3]),
     n = as.integer(parts[4]),
-    psi11 = as.numeric(parts[5]),
+    psi = as.numeric(parts[5]),
     burnin_id = as.integer(parts[6]),
     stringsAsFactors = FALSE
   )
@@ -53,7 +53,7 @@ genotype_df <- do.call(rbind, lapply(file_list, function(file) {
 
   # Compute new job_id
   df$job_id <- meta$job_id + meta$job_rep - 1
-  df$psi11 <- meta$psi11
+  df$psi <- meta$psi
   df$burnin_id <- meta$burnin_id
   df$n <- meta$n
   df$file_id <- basename(file)
@@ -65,8 +65,8 @@ genotype_df <- do.call(rbind, lapply(file_list, function(file) {
 
 ## plot all rep in same plot
 ```{r}
-# Set up color palette for psi11
-psi_vals <- sort(target_psi11)
+# Set up color palette for psi
+psi_vals <- sort(target_psi)
 colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
 names(colors) <- as.character(psi_vals)
 
@@ -78,7 +78,7 @@ genotype_cols <- 2:1001  # Adjust if necessary
 
 # Loop over unique n values
 for (n_val in sort(unique(genotype_df$n))) {
-  df_n <- subset(genotype_df, generation == 10099 & n == n_val & psi11 %in% target_psi11)
+  df_n <- subset(genotype_df, generation == 10099 & n == n_val & psi %in% target_psi)
 
   # Set up output directory for this n
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -96,11 +96,11 @@ for (n_val in sort(unique(genotype_df$n))) {
       from = min(breaks), to = max(breaks), 
       col = "black", lwd = 2, add = TRUE)
 
-  psi_in_this_n <- sort(unique(df_n$psi11))
+  psi_in_this_n <- sort(unique(df_n$psi))
   legend_labels <- c()
 
   for (psi in psi_in_this_n) {
-    df_psi <- subset(df_n, psi11 == psi)
+    df_psi <- subset(df_n, psi == psi)
     reps <- unique(df_psi$job_id)
 
     for (r in reps) {
@@ -118,7 +118,7 @@ for (n_val in sort(unique(genotype_df$n))) {
       lines(bin_mids, prop, type = "l", col = col_transparent, lwd = 1)
     }
 
-    legend_labels <- c(legend_labels, paste0("psi11=", psi))
+    legend_labels <- c(legend_labels, paste0("psi=", psi))
   }
 
   legend("topright", legend = legend_labels,
@@ -130,8 +130,8 @@ for (n_val in sort(unique(genotype_df$n))) {
 
 ## plot average genotype data
 ```{r}
-# Set up color palette for psi11
-psi_vals <- sort(target_psi11)
+# Set up color palette for psi
+psi_vals <- sort(target_psi)
 colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
 names(colors) <- as.character(psi_vals)
 
@@ -143,7 +143,7 @@ genotype_cols <- 2:1001  # Adjust as needed
 
 # Loop over each n
 for (n_val in sort(unique(genotype_df$n))) {
-  df_n <- subset(genotype_df, generation == 10099 & n == n_val & psi11 %in% target_psi11)
+  df_n <- subset(genotype_df, generation == 10099 & n == n_val & psi %in% target_psi)
 
   # Set up output directory
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -163,7 +163,7 @@ for (n_val in sort(unique(genotype_df$n))) {
   legend_labels <- c()
 
 for (psi in psi_vals) {
-  df_psi <- subset(df_n, psi11 == psi)
+  df_psi <- subset(df_n, psi == psi)
   genos <- as.numeric(unlist(df_psi[, genotype_cols]))
   genos <- genos[is.finite(genos)]
   genos <- genos[genos >= min(breaks) & genos <= max(breaks)]
@@ -179,7 +179,7 @@ for (psi in psi_vals) {
   # Plot average line
   lines(bin_mids, avg_counts, col = colors[as.character(psi)], lwd = 2)
 
-  legend_labels <- c(legend_labels, paste0("psi11=", psi, " (n=", nrow(df_psi), ")"))
+  legend_labels <- c(legend_labels, paste0("psi=", psi, " (n=", nrow(df_psi), ")"))
 }
 
   legend("topright", legend = legend_labels,
@@ -192,8 +192,8 @@ for (psi in psi_vals) {
 
 ## cdf instead of pdf
 ```{r}
-# Color palette for psi11
-psi_vals <- sort(target_psi11)
+# Color palette for psi
+psi_vals <- sort(target_psi)
 colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
 names(colors) <- as.character(psi_vals)
 
@@ -204,7 +204,7 @@ ran = c(-50, 50)
 
 # Loop over n values
 for (n_val in sort(unique(genotype_df$n))) {
-  df_n <- subset(genotype_df, generation == 10099 & n == n_val & psi11 %in% target_psi11)
+  df_n <- subset(genotype_df, generation == 10099 & n == n_val & psi %in% target_psi)
 
   # Output folder
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -221,7 +221,7 @@ for (n_val in sort(unique(genotype_df$n))) {
   legend_labels <- c()
 
   for (psi in psi_vals) {
-    df_psi <- subset(df_n, psi11 == psi)
+    df_psi <- subset(df_n, psi == psi)
     reps <- unique(df_psi$job_id)
 
     for (r in reps) {
@@ -238,7 +238,7 @@ for (n_val in sort(unique(genotype_df$n))) {
             lwd = 1)
     }
 
-    legend_labels <- c(legend_labels, paste0("psi11 = ", psi))
+    legend_labels <- c(legend_labels, paste0("psi = ", psi))
   }
 
   legend("bottomright", legend = legend_labels,
@@ -252,8 +252,8 @@ for (n_val in sort(unique(genotype_df$n))) {
 
 ## plot all rep within each burnin_id
 ```{r}
-# Set up color palette for psi11
-psi_vals <- sort(target_psi11)
+# Set up color palette for psi
+psi_vals <- sort(target_psi)
 colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
 names(colors) <- as.character(psi_vals)
 
@@ -265,7 +265,7 @@ phenotype_cols <- 2:1001  # Adjust this if necessary
 
 # Loop over each n value
 for (n_val in sort(unique(genotype_df$n))) {
-  df_n <- subset(genotype_df, generation == 10099 & n == n_val  & psi11 %in% target_psi11)
+  df_n <- subset(genotype_df, generation == 10099 & n == n_val  & psi %in% target_psi)
 
   burnin_ids <- sort(unique(df_n$burnin_id))
 
@@ -283,11 +283,11 @@ for (n_val in sort(unique(genotype_df$n))) {
          xlab = "Genotype Value", ylab = "Proportion",
          main = paste("Genotype Histogram (per rep) | n =", n_val, "| burnin_id =", bid))
 
-    psi_in_this_bid <- sort(unique(df_bid$psi11))
+    psi_in_this_bid <- sort(unique(df_bid$psi))
     legend_labels <- c()
 
     for (psi in psi_in_this_bid) {
-      df_psi <- subset(df_bid, psi11 == psi)
+      df_psi <- subset(df_bid, psi == psi)
       reps <- unique(df_psi$job_id)
 
       for (r in reps) {
@@ -305,7 +305,7 @@ for (n_val in sort(unique(genotype_df$n))) {
         lines(bin_mids, prop, type = "l", col = col_transparent, lwd = 1)
       }
 
-      legend_labels <- c(legend_labels, paste0("psi11=", psi))
+      legend_labels <- c(legend_labels, paste0("psi=", psi))
     }
     
  curve(dnorm(x, mean = 0, sd = sqrt(2000) * diff(breaks)[1]), 
@@ -348,7 +348,7 @@ extract_pheno_metadata <- function(path) {
     job_id = as.integer(parts[2]),
     job_rep = as.integer(parts[3]),
     n = as.integer(parts[4]),
-    psi11 = as.numeric(parts[5]),
+    psi = as.numeric(parts[5]),
     burnin_id = as.integer(parts[6]),
     stringsAsFactors = FALSE
   )
@@ -361,7 +361,7 @@ phenotype_df <- do.call(rbind, lapply(file_list, function(file) {
 
   # Compute new job_id
   df$job_id <- meta$job_id + meta$job_rep - 1
-  df$psi11 <- meta$psi11
+  df$psi <- meta$psi
   df$burnin_id <- meta$burnin_id
   df$n <- meta$n
   df$file_id <- basename(file)
@@ -373,8 +373,8 @@ phenotype_df <- do.call(rbind, lapply(file_list, function(file) {
 
 ## plot all rep in the same plot
 ```{r}
-# Set up color palette for psi11
-psi_vals <- sort(target_psi11)
+# Set up color palette for psi
+psi_vals <- sort(target_psi)
 colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
 names(colors) <- as.character(psi_vals)
 
@@ -386,7 +386,7 @@ phenotype_cols <- 2:1001  # Adjust if necessary
 
 # Loop over unique n values
 for (n_val in sort(unique(phenotype_df$n))) {
-  df_n <- subset(phenotype_df, generation == 10099 & n == n_val  & psi11 %in% target_psi11)
+  df_n <- subset(phenotype_df, generation == 10099 & n == n_val  & psi %in% target_psi)
 
   # Set up output directory for this n
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -404,11 +404,11 @@ for (n_val in sort(unique(phenotype_df$n))) {
       from = min(breaks), to = max(breaks), 
       col = "black", lwd = 2, add = TRUE)
 
-  psi_in_this_n <- sort(unique(df_n$psi11))
+  psi_in_this_n <- sort(unique(df_n$psi))
   legend_labels <- c()
 
   for (psi in psi_in_this_n) {
-    df_psi <- subset(df_n, psi11 == psi)
+    df_psi <- subset(df_n, psi == psi)
     reps <- unique(df_psi$job_id)
 
     for (r in reps) {
@@ -426,7 +426,7 @@ for (n_val in sort(unique(phenotype_df$n))) {
       lines(bin_mids, prop, type = "l", col = col_transparent, lwd = 1)
     }
 
-    legend_labels <- c(legend_labels, paste0("psi11=", psi))
+    legend_labels <- c(legend_labels, paste0("psi=", psi))
   }
 
   legend("topright", legend = legend_labels,
@@ -439,8 +439,8 @@ for (n_val in sort(unique(phenotype_df$n))) {
 
 ## plot all rep within each bid
 ```{r}
-# Set up color palette for psi11
-psi_vals <- sort(target_psi11)
+# Set up color palette for psi
+psi_vals <- sort(target_psi)
 colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
 names(colors) <- as.character(psi_vals)
 
@@ -452,7 +452,7 @@ phenotype_cols <- 2:1001  # Adjust this if necessary
 
 # Loop over each n value
 for (n_val in sort(unique(phenotype_df$n))) {
-  df_n <- subset(phenotype_df, generation == 10099 & n == n_val  & psi11 %in% target_psi11)
+  df_n <- subset(phenotype_df, generation == 10099 & n == n_val  & psi %in% target_psi)
 
   burnin_ids <- sort(unique(df_n$burnin_id))
 
@@ -470,11 +470,11 @@ for (n_val in sort(unique(phenotype_df$n))) {
          xlab = "Phenotype Value", ylab = "Proportion",
          main = paste("Phenotype Histogram (per rep) | n =", n_val, "| burnin_id =", bid))
 
-    psi_in_this_bid <- sort(unique(df_bid$psi11))
+    psi_in_this_bid <- sort(unique(df_bid$psi))
     legend_labels <- c()
 
     for (psi in psi_in_this_bid) {
-      df_psi <- subset(df_bid, psi11 == psi)
+      df_psi <- subset(df_bid, psi == psi)
       reps <- unique(df_psi$job_id)
 
       for (r in reps) {
@@ -492,7 +492,7 @@ for (n_val in sort(unique(phenotype_df$n))) {
         lines(bin_mids, prop, type = "l", col = col_transparent, lwd = 1)
       }
 
-      legend_labels <- c(legend_labels, paste0("psi11=", psi))
+      legend_labels <- c(legend_labels, paste0("psi=", psi))
     }
 
     legend("topright", legend = legend_labels,
@@ -506,8 +506,8 @@ for (n_val in sort(unique(phenotype_df$n))) {
 
 ## plot cdf for each rep
 ```{R}
-# Color palette for psi11
-psi_vals <- sort(target_psi11)
+# Color palette for psi
+psi_vals <- sort(target_psi)
 colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
 names(colors) <- as.character(psi_vals)
 
@@ -517,7 +517,7 @@ phenotype_cols <- 2:1001  # change if needed
 
 # Loop over n values
 for (n_val in sort(unique(phenotype_df$n))) {
-  df_n <- subset(phenotype_df, generation == 10099 & n == n_val & psi11 %in% target_psi11)
+  df_n <- subset(phenotype_df, generation == 10099 & n == n_val & psi %in% target_psi)
 
   # Output folder
   output_dir <- file.path(base_plot_folder, paste0("n_", n_val))
@@ -534,7 +534,7 @@ for (n_val in sort(unique(phenotype_df$n))) {
   legend_labels <- c()
 
   for (psi in psi_vals) {
-    df_psi <- subset(df_n, psi11 == psi)
+    df_psi <- subset(df_n, psi == psi)
     reps <- unique(df_psi$job_id)
 
     for (r in reps) {
@@ -551,7 +551,7 @@ for (n_val in sort(unique(phenotype_df$n))) {
             lwd = 1)
     }
 
-    legend_labels <- c(legend_labels, paste0("psi11 = ", psi))
+    legend_labels <- c(legend_labels, paste0("psi = ", psi))
   }
 
   legend("bottomright", legend = legend_labels,
@@ -586,7 +586,7 @@ extract_effect_metadata <- function(path) {
     job_id = as.integer(parts[2]),
     job_rep = as.integer(parts[3]),
     n = as.integer(parts[4]),
-    psi11 = as.numeric(parts[5]),
+    psi = as.numeric(parts[5]),
     burnin_id = as.integer(parts[6]),
     file_id = basename(path)
   )
@@ -612,7 +612,7 @@ read_variable_tsv <- function(file_path) {
 # ---- READ FILES ----
 
 # Format for matching in filename (convert to character)
-target_strs <- sprintf("psi_%s", formatC(target_psi11, format = "f", digits = 1))
+target_strs <- sprintf("psi_%s", formatC(target_psi, format = "f", digits = 1))
 
 # List all matching generation files
 file_list <- list.files(
@@ -638,7 +638,7 @@ for (file in file_list) {
 
   # Store as list with metadata appended
   df$job_id <- meta$job_id + meta$job_rep - 1
-  df$psi11 <- meta$psi11
+  df$psi <- meta$psi
   df$n <- meta$n
   df$burnin_id <- meta$burnin_id
   df$file_id <- meta$file_id
@@ -672,7 +672,7 @@ reordered_list <- lapply(df_list, function(df) {
   }
 
   colnames(head_cols) <- c("generation", "individual_id")
-  colnames(meta_cols) <- c("job_id", "psi11", "n", "burnin_id", "file_id")
+  colnames(meta_cols) <- c("job_id", "psi", "n", "burnin_id", "file_id")
   colnames(mut_cols) <- paste0("mut_", seq_len(ncol(mut_cols)))
 
   cbind(head_cols, meta_cols, mut_cols)
@@ -699,7 +699,7 @@ bin_breaks <- seq(-3, 3, by = 0.2)
 bin_centers <- head(bin_breaks, -1) + diff(bin_breaks)/2
 
 # Prepare color palette
-psi_vals <- sort(unique(effect_df$psi11))
+psi_vals <- sort(unique(effect_df$psi))
 palette <- viridis::viridis(length(psi_vals), option = "C")  # Zissou 1-like
 
 # Output folder
@@ -722,7 +722,7 @@ for (bid in unique(effect_df$burnin_id)) {
 
   for (i in seq_along(psi_vals)) {
     psi <- psi_vals[i]
-    df_psi <- subset(df_bid, psi11 == psi)
+    df_psi <- subset(df_bid, psi == psi)
 
     # Split by replicate (job_id)
     job_ids <- unique(df_psi$job_id)
@@ -749,7 +749,7 @@ for (bid in unique(effect_df$burnin_id)) {
     lines(bin_centers, plot_matrix[i, ], col = palette[i], lwd = 2)
   }
 
-  legend("topright", legend = paste0("psi11=", psi_vals, " (n=", rep_counts, ")"),
+  legend("topright", legend = paste0("psi=", psi_vals, " (n=", rep_counts, ")"),
          col = palette, lwd = 2, cex = 0.8)
 
   # Save plot
@@ -763,8 +763,8 @@ for (bid in unique(effect_df$burnin_id)) {
 ## plot effect size within each burnin_id
 ```{r}
 
-# Color palette for psi11
-psi_vals <- sort(unique(effect_df$psi11))  # or use target_psi11
+# Color palette for psi
+psi_vals <- sort(unique(effect_df$psi))  # or use target_psi
 colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
 names(colors) <- as.character(psi_vals)
 
@@ -776,7 +776,7 @@ effect_cols <- grep("^mut_", colnames(effect_df), value = TRUE)
 
 # Loop over each n
 for (n_val in sort(unique(effect_df$n))) {
-  df_n <- subset(effect_df, n == n_val & psi11 %in% psi_vals)
+  df_n <- subset(effect_df, n == n_val & psi %in% psi_vals)
   burnin_ids <- sort(unique(df_n$burnin_id))
 
   for (bid in burnin_ids) {
@@ -793,11 +793,11 @@ for (n_val in sort(unique(effect_df$n))) {
          xlab = "Mutation Effect Size", ylab = "Average Proportion (per individual)",
          main = paste("Avg Effect Distribution per Individual | n =", n_val, "| burnin_id =", bid))
 
-    psi_in_this_bid <- sort(unique(df_bid$psi11))
+    psi_in_this_bid <- sort(unique(df_bid$psi))
     legend_labels <- c()
 
     for (psi in psi_in_this_bid) {
-      df_psi <- subset(df_bid, psi11 == psi)
+      df_psi <- subset(df_bid, psi == psi)
       reps <- unique(df_psi$job_id)
 
       for (r in reps) {
@@ -852,8 +852,8 @@ for (n_val in sort(unique(effect_df$n))) {
   for (bid in sort(unique(df_n$burnin_id))) {
     df_bid <- subset(df_n, burnin_id == bid)
 
-    for (psi in sort(unique(df_bid$psi11))) {
-      df_psi <- subset(df_bid, psi11 == psi)
+    for (psi in sort(unique(df_bid$psi))) {
+      df_psi <- subset(df_bid, psi == psi)
 
       # Compute population averages for each job_id replicate
       job_ids <- unique(df_psi$job_id)
@@ -869,7 +869,7 @@ for (n_val in sort(unique(effect_df$n))) {
       avg_mut <- mean(pop_means)
 
       summary_by_group <- rbind(summary_by_group, data.frame(
-        psi11 = psi,
+        psi = psi,
         n = n_val,
         burnin_id = bid,
         mean_mut_count = avg_mut
@@ -891,14 +891,14 @@ png(file.path(base_plot_folder, paste0("average_allele_summary1.png")),
         width = 1000, height = 700)
 
 # Create base plot
-plot(NULL, xlim = range(summary_by_group$psi11), ylim = range(summary_by_group$mean_mut_count),
-     xlab = "psi11", ylab = "Average # of Mutations",
+plot(NULL, xlim = range(summary_by_group$psi), ylim = range(summary_by_group$mean_mut_count),
+     xlab = "psi", ylab = "Average # of Mutations",
      main = "Mutation Load per Individual (per burnin)")
 
-# Add points, one per burnin_id per psi11 and n
+# Add points, one per burnin_id per psi and n
 for (n_val in n_vals) {
   df_n <- subset(summary_by_group, n == n_val)
-  points(df_n$psi11, df_n$mean_mut_count, col = colors[as.character(n_val)], pch = 16)
+  points(df_n$psi, df_n$mean_mut_count, col = colors[as.character(n_val)], pch = 16)
 }
 
 legend("topright", legend = paste0("n = ", n_vals), col = colors, pch = 16, title = "n")
