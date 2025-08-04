@@ -887,7 +887,7 @@ for (n_val in sort(unique(effect_df$n))) {
 n_vals <- sort(unique(summary_by_group$n))
 colors <- setNames(rainbow(length(n_vals)), n_vals)
 
-png(file.path(base_plot_folder, paste0("average_allele_summary.png")),
+png(file.path(base_plot_folder, paste0("average_allele_summary1.png")),
         width = 1000, height = 700)
 
 # Create base plot

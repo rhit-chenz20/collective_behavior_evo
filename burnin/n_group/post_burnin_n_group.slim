@@ -3,11 +3,11 @@
 initialize() {
 //	setSeed(8301386815623071564);
 	initializeSLiMOptions(keepPedigrees=T);
-	defineConstant("maxL", 50000);
+	defineConstant("maxL", 10000);
 	defineConstant("U", 0.03);
 	defineConstant("N", 1000);
 	defineConstant("Vs", 2*N);
-	defineConstant("shift_time", 10*N+100);
+	defineConstant("shift_time", 10*N);
 	defineConstant("end_time", shift_time+100);
 	defineGlobal("L", 500);
 	defineGlobal("mutated_sites", rep(F, maxL));
@@ -45,7 +45,8 @@ initialize() {
 }
 1 late() {
 	if(!exists("burnin_fn")){ 
-		print("no burnin file found, abort...", error=T);
+		print("no burnin file found, simulate from the start...");
+		sim.addSubpop("p1", N);
 	} else{
 		print("reading burnin from "+burnin_fn);
 		sim.readFromPopulationFile(burnin_fn);
@@ -254,7 +255,7 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 
         for (j in groups){
             a1 = a[j.index];
-            phenotype[j.index] = (a1*(1+psi11-n*psi11)+(psi11/n)*sum(as) )/(1+psi11)*(1+psi11-n*psi11);
+            phenotype[j.index] = (a1*(1+psi11-n*psi11)+(psi11/(n-1))*sum(as) )/(1+psi11)*(1+psi11-n*psi11);
         }
 	}
 	
