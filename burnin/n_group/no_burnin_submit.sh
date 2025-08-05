@@ -2,12 +2,12 @@
 #SBATCH --nodes=1
 #SBATCH --account=bscb10
 #SBATCH --job-name=noburnin_ngroup
-#SBATCH --array=1-20
+#SBATCH --array=1-10
 #SBATCH --output="/home/zc524/slurm-outputs/%x-%j-%a.out"
 #SBATCH --time=24:00:00      
 #SBATCH --cpus-per-task=7   
 #SBATCH --mem=14G              
-#SBATCH --partition=short,long7
+#SBATCH --partition=long7
 #SBATCH --mail-user=zc524@cornell.edu
 #SBATCH --mail-type=FAIL,END
 
@@ -34,7 +34,7 @@ ln -s ~/bin/slim5.0 bin/slim5.0
 
 echo "Running simulations."
 
-for n in 2 3 6 9; do
+for n in 2 3 6; do
     mkdir -p phenotype/n_${n}
     mkdir -p genotype/n_${n}
     mkdir -p data/n_${n}
