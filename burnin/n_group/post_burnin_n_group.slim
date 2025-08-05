@@ -146,7 +146,7 @@ shift_time late(){
 
 (shift_time-2):(shift_time+2) late(){
 	print("recoding at cycle "+sim.cycle);
-	if (sim.cycle != shift_time+10){
+	if (sim.cycle != shift_time+2){
 		record_phenotype(p1);
 		record_genotype(p1);
 	}else{
@@ -158,9 +158,9 @@ shift_time late(){
 		}
 	}
 
-	if (sim.cycle != shift_time+10){
+	if (sim.cycle != shift_time+2){
 		record_effectsize(p1);
-	}else if (sim.cycle == shift_time +10){
+	}else if (sim.cycle == shift_time +2){
 		if (record_effectsize(p1, write = T)){
 			print("written effectsize to file "+ind_fn);
 		}
