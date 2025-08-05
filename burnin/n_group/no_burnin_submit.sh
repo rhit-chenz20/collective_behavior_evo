@@ -2,7 +2,7 @@
 #SBATCH --nodes=1
 #SBATCH --account=bscb10
 #SBATCH --job-name=noburnin_ngroup
-#SBATCH --array=1-5
+#SBATCH --array=1-3
 #SBATCH --output="/home/zc524/slurm-outputs/%x-%j-%a.out"
 #SBATCH --time=24:00:00      
 #SBATCH --cpus-per-task=7   
