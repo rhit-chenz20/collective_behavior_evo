@@ -283,7 +283,7 @@ for (n_val in sort(unique(df$n))) {
     h <- hist(values, breaks=bin_breaks, plot=FALSE)
     max_y <- max(max_y, max(h$counts / sum(h$counts)))
   }
-max_y = 0.2
+
   # Plot
   png(file.path(base_plot_folder, paste0("phenotype_hist_reps_n_", n_val, ".png")), width=1000, height=700)
   plot(NULL, xlim=range(bin_breaks), ylim=c(0, max_y), xlab="Phenotype Value", ylab="Proportion",
@@ -341,7 +341,7 @@ for (n_val in sort(unique(df$n))) {
     avg_counts <- colMeans(counts_mat, na.rm=TRUE)
     max_y <- max(max_y, max(avg_counts, na.rm=TRUE))
   }
-max_y = 0.2
+
   # Plot
   png(file.path(base_plot_folder, paste0("phenotype_hist_avg_n_", n_val, ".png")), width=1000, height=700)
   plot(NULL, xlim=range(bin_breaks), ylim=c(0, max_y), xlab="Phenotype Value", ylab="Proportion",
