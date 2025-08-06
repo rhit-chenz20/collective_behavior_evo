@@ -384,6 +384,273 @@ max_y = 0.2
 
 
 
+## process ind data
+```{r}
+# ---- CONFIG ----
+library(tools)
+
+folder <- paste0(base_data_folder, "/ind")
+gen_filter <- "10099"     # generation to keep
+
+# ---- HELPERS ----
+
+# Extract metadata from filename
+extract_effect_metadata <- function(path) {
+  # matches <- regexec(paste0("ind_(\\d+)_([1-3])/n_(\\d+)/rec_N_1000_psi_(-?[0-9.]+)_pop_(\\d+)_1_gen10099\\.tsv"), path)
+  matches <- regexec(paste0("ind/n_(\\d+)_psi_(-?[0-9.]+)_(\\d+)_gen",gen_filter,"\\.tsv"), path)
+  parts <- regmatches(path, matches)[[1]]
+  if (length(parts) != 4) {
+    warning("Could not extract metadata from path: ", path, " with matches: ", paste(parts, collapse = ", "))
+    return(data.frame())
+  }
+  list(
+    n = as.integer(parts[2]),
+    psi = as.numeric(parts[3]),
+    rep = as.integer(parts[4]),
+    file_id = basename(path)
+  )
+}
+
+# Read variable-length TSV file, pad with NA
+read_variable_tsv <- function(file_path) {
+  lines <- readLines(file_path)
+  if (length(lines) == 0) return(NULL)
+  split_lines <- strsplit(lines, "\t")
+  max_len <- max(sapply(split_lines, length))
+  padded <- lapply(split_lines, function(row) {
+    length(row) <- max_len
+    row
+  })
+  df <- as.data.frame(do.call(rbind, padded), stringsAsFactors = FALSE)
+  names(df)[1:2] <- c("generation", "individual_id")
+  return(df)
+}
+```
+
+```{r}
+# ---- READ FILES ----
+
+# Format for matching in filename (convert to character)
+target_strs <- sprintf("psi_%s", formatC(target_psi, format = "f", digits = 1))
+
+# List all matching generation files
+file_list <- list.files(
+  path = folder,
+  pattern = paste0("_gen", gen_filter,"\\.tsv$"),
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Filter: only keep files with a matching psi string
+file_list <- Filter(function(f) {
+  any(sapply(target_strs, function(p) grepl(p, f, fixed = TRUE)))
+}, file_list)
+
+# Read and collect all data frames into a list
+df_list <- list()
+for (file in file_list) {
+  df <- read_variable_tsv(file)
+  if (is.null(df)) next
+  meta <- extract_effect_metadata(file)
+  if (is.null(meta)) next
+  n_cols <- ncol(df)
+
+  # Store as list with metadata appended
+  df$rep <- meta$rep
+  df$psi <- meta$psi
+  df$n <- meta$n
+  df$file_id <- meta$file_id
+
+  df_list[[length(df_list) + 1]] <- df
+}
+```
+
+
+```{r}
+# ---- PROCESS ----
+
+# Determine max number of mutation columns (exclude 2 main + 4 meta)
+max_mut_cols <- max(sapply(df_list, function(x) ncol(x) - 6))
+
+# Reformat and reorder each df
+reordered_list <- lapply(df_list, function(df) {
+  n <- ncol(df)
+  head_cols <- df[, 1:2]  # generation, individual_id
+  meta_cols <- df[, (n - 3):n]
+  mut_cols <- df[, 3:(n - 4)]
+
+  # Pad mutation columns
+  n_mut <- ncol(mut_cols)
+  if(is.null(n_mut) || n_mut == 0) {
+    return(NULL)  # Skip empty mutation columns
+  }
+
+  if (n_mut < max_mut_cols) {
+    mut_cols <- cbind(mut_cols, matrix(NA, nrow = nrow(mut_cols), ncol = max_mut_cols - n_mut))
+  }
+
+  colnames(head_cols) <- c("generation", "individual_id")
+  colnames(meta_cols) <- c("rep", "psi", "n",  "file_id")
+  colnames(mut_cols) <- paste0("mut_", seq_len(ncol(mut_cols)))
+
+  cbind(head_cols, meta_cols, mut_cols)
+})
+
+# Combine into final dataframe
+effect_df <- do.call(rbind, reordered_list)
+
+# ---- OPTIONAL SAVE ----
+saveRDS(effect_df, file = paste0(base_data_folder, paste0("/ind/effect_df_gen", gen_filter,"_cleaned.rds")))
+
+```
+
+# load IND data
+```{r}
+# Load the cleaned effect data
+effect_df <- readRDS(file = paste0(base_data_folder, "/ind/effect_df_gen", gen_filter, "_cleaned.rds"))
+```
+
+## plot EFFECT SIZE histogram 
+```{r}
+# Get mutation columns
+mut_cols <- grep("^mut_", names(effect_df), value = TRUE)
+
+# Define histogram bins
+num_bins <- 100
+bin_breaks <- seq(-5, 5, length.out = num_bins + 1)
+bin_mids <- 0.5 * (head(bin_breaks, -1) + tail(bin_breaks, -1))
+
+# Get color palette
+psi_vals <- sort(unique(effect_df$psi))
+colors <- hcl.colors(length(psi_vals), palette = "Berlin")
+names(colors) <- as.character(psi_vals)
+
+# Get all n values
+n_vals <- sort(unique(effect_df$n))
+
+```
+
+```{r}
+for (n_val in n_vals) {
+  df_n <- subset(effect_df, n == n_val)
+  unique_combos <- unique(df_n[, c("psi", "rep")])
+  
+  png(file.path(base_plot_folder, paste0("effect_size_indlevel_reps_n_", n_val, ".png")),
+      width=1000, height=700)
+  plot(NULL, xlim=range(bin_breaks), ylim=c(0, 0.15),
+       xlab="Effect Size", ylab="Proportion",
+       main=paste("Effect Size Dist. (Per Rep) | n =", n_val))
+  
+  for (i in seq_len(nrow(unique_combos))) {
+    psi_val <- unique_combos$psi[i]
+    rep_val <- unique_combos$rep[i]
+    
+    sub_df <- subset(df_n, psi == psi_val & rep == rep_val)
+    indiv_mat <- matrix(0, nrow = nrow(sub_df), ncol = num_bins)
+    
+    for (j in seq_len(nrow(sub_df))) {
+      entries <- na.omit(as.character(unlist(sub_df[j, mut_cols])))
+      effect_sizes <- as.numeric(sub(":.*", "", sub(".*:", "", entries)))
+      if (length(effect_sizes) > 0) {
+        h <- hist(effect_sizes, breaks = bin_breaks, plot = FALSE)
+        indiv_mat[j, ] <- h$counts / sum(h$counts)
+      }
+    }
+    
+    indiv_avg <- colMeans(indiv_mat, na.rm = TRUE)
+    lines(bin_mids, indiv_avg, col=colors[as.character(psi_val)], lwd=1)
+  }
+
+  legend("topright", legend = paste0("psi=", psi_vals), col = colors, lty = 1, lwd = 2, cex = 0.8)
+  dev.off()
+}
+
+```
+
+
+# load MUT data TODO
+```{r}
+# Set the top-level folder
+folder <- file.path(base_data_folder, "mut")
+
+# List all .tsv files recursively
+file_list <- list.files(
+  path = folder,
+  pattern = "\\.tsv$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Function to extract metadata from path
+extract_mut_metadata <- function(path) {
+  matches <- regexec("mut/n_(\\d+)_psi_(-?[0-9.]+)_(\\d+)\\.tsv", path)
+  parts <- regmatches(path, matches)[[1]]
+  
+  if (length(parts) != 4) {
+    warning("Could not extract metadata from path: ", path)
+    return(data.frame())
+  }
+
+  data.frame(
+    n = as.integer(parts[2]),
+    psi = as.numeric(parts[3]),
+    rep = as.integer(parts[4]),
+    stringsAsFactors = FALSE
+  )
+}
+
+# Read and combine all files
+mut_df <- do.call(rbind, lapply(file_list, function(file) {
+  meta <- extract_mut_metadata(file)
+  if (nrow(meta) == 0) return(NULL)
+
+  raw_lines <- readLines(file)
+  if (length(raw_lines) < 2) return(NULL)  # skip empty/broken files
+
+  header <- strsplit(raw_lines[1], "\t")[[1]]
+  num_cols <- length(header)
+
+  # Parse even-numbered rows only (effect sizes)
+  out_list <- list()
+  for (i in seq(2, length(raw_lines), by = 2)) {
+    row_vals <- strsplit(raw_lines[i], "\t")[[1]]
+    num_vals <- length(row_vals)
+    if (num_vals < 2) next  # skip short rows
+
+    # Last column = generation number
+    gen <- as.integer(row_vals[num_vals])
+    
+    # Remaining values = effect sizes
+    effect_vals <- row_vals[1:(num_vals - 1)]
+    
+    # Pad to match header length if necessary
+    if (length(effect_vals) < num_cols - 1) {
+      effect_vals <- c(effect_vals, rep(NA, (num_cols - 1) - length(effect_vals)))
+    }
+
+    # Construct data frame: one row per effect
+    df <- data.frame(
+      generation = gen,
+      mut_col = header[1:(num_cols - 1)],
+      effect_size = as.numeric(effect_vals),
+      n = meta$n,
+      psi = meta$psi,
+      rep = meta$rep,
+      file_id = basename(file),
+      stringsAsFactors = FALSE
+    )
+
+    out_list[[length(out_list) + 1]] <- df
+  }
+
+  do.call(rbind, out_list)
+}))
+
+```
+
+
+
+
 
 
 

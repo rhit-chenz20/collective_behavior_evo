@@ -6,3 +6,75 @@ Submitting job for psi=0.9, n=2.
 Submitting job for psi=-0.3, n=2.
 Submitting job for psi=-0.6, n=2.
 Submitting job for psi=-0.9, n=2.
+Running simulation with n=2
+Submitting job for psi=0.0, n=2.
+Submitting job for psi=0.3, n=2.
+Submitting job for psi=0.6, n=2.
+Submitting job for psi=0.9, n=2.
+Submitting job for psi=-0.3, n=2.
+Submitting job for psi=-0.6, n=2.
+Submitting job for psi=-0.9, n=2.
+Running simulation with n=2
+Submitting job for psi=0.0, n=2.
+Submitting job for psi=0.3, n=2.
+Submitting job for psi=0.6, n=2.
+Submitting job for psi=0.9, n=2.
+Submitting job for psi=-0.3, n=2.
+Submitting job for psi=-0.6, n=2.
+Submitting job for psi=-0.9, n=2.
+Running simulation with n=2
+Submitting job for psi=0.0, n=2.
+Submitting job for psi=0.3, n=2.
+Submitting job for psi=0.6, n=2.
+Submitting job for psi=0.9, n=2.
+Submitting job for psi=-0.3, n=2.
+Submitting job for psi=-0.6, n=2.
+Submitting job for psi=-0.9, n=2.
+Running simulation with n=2
+Submitting job for psi=0.0, n=2.
+Submitting job for psi=0.3, n=2.
+Submitting job for psi=0.6, n=2.
+Submitting job for psi=0.9, n=2.
+Submitting job for psi=-0.3, n=2.
+Submitting job for psi=-0.6, n=2.
+Submitting job for psi=-0.9, n=2.
+Running simulation with n=2
+Submitting job for psi=0.0, n=2.
+Submitting job for psi=0.3, n=2.
+Submitting job for psi=0.6, n=2.
+Submitting job for psi=0.9, n=2.
+Submitting job for psi=-0.3, n=2.
+Submitting job for psi=-0.6, n=2.
+Submitting job for psi=-0.9, n=2.
+Running simulation with n=2
+Submitting job for psi=0.0, n=2.
+Submitting job for psi=0.3, n=2.
+Submitting job for psi=0.6, n=2.
+Submitting job for psi=0.9, n=2.
+Submitting job for psi=-0.3, n=2.
+Submitting job for psi=-0.6, n=2.
+Submitting job for psi=-0.9, n=2.
+Running simulation with n=2
+Submitting job for psi=0.0, n=2.
+Submitting job for psi=0.3, n=2.
+Submitting job for psi=0.6, n=2.
+Submitting job for psi=0.9, n=2.
+Submitting job for psi=-0.3, n=2.
+Submitting job for psi=-0.6, n=2.
+Submitting job for psi=-0.9, n=2.
+Running simulation with n=2
+Submitting job for psi=0.0, n=2.
+Submitting job for psi=0.3, n=2.
+Submitting job for psi=0.6, n=2.
+Submitting job for psi=0.9, n=2.
+Submitting job for psi=-0.3, n=2.
+Submitting job for psi=-0.6, n=2.
+Submitting job for psi=-0.9, n=2.
+Running simulation with n=2
+Submitting job for psi=0.0, n=2.
+Submitting job for psi=0.3, n=2.
+Submitting job for psi=0.6, n=2.
+Submitting job for psi=0.9, n=2.
+Submitting job for psi=-0.3, n=2.
+Submitting job for psi=-0.6, n=2.
+Submitting job for psi=-0.9, n=2.

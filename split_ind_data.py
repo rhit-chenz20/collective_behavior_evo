@@ -32,4 +32,4 @@ def split_all_ind_files_by_generation(root_folder):
                     print(f"Created {out_path} with {len(lines)} lines for generation {gen}.")
 
 # Run the batch split for ../data1/ind
-split_all_ind_files_by_generation("data/n_group_base_data/ind")
+split_all_ind_files_by_generation("data/max_fit_data/ind")

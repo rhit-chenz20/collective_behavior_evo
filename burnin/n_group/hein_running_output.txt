@@ -142,65 +142,182 @@ Submitting job for psi=0.9, n=12.
 Submitting job for psi=-0.3, n=12.
 Submitting job for psi=-0.6, n=12.
 Submitting job for psi=-0.9, n=12.
-job for psi=0.3, n=2.
-Submitting job for psi=0.6, n=2.
-Submitting job for psi=0.9, n=2.
-Submitting job for psi=-0.3, n=2.
-Submitting job for psi=-0.6, n=2.
-Submitting job for psi=-0.9, n=2.
-Running simulation with n=3
-Submitting job for psi=0.0, n=3.
-Submitting job for psi=0.3, n=3.
-Submitting job for psi=0.6, n=3.
-Submitting job for psi=0.9, n=3.
-Submitting job for psi=-0.3, n=3.
-Submitting job for psi=-0.6, n=3.
-Submitting job for psi=-0.9, n=3.
-Running simulation with n=6
-Submitting job for psi=0.0, n=6.
-Submitting job for psi=0.3, n=6.
-Submitting job for psi=0.6, n=6.
-Submitting job for psi=0.9, n=6.
-Submitting job for psi=-0.3, n=6.
-Submitting job for psi=-0.6, n=6.
-Submitting job for psi=-0.9, n=6.
-Running simulation with n=2
-Submitting job for psi=0.0, n=2.
-Submitting job for psi=0.3, n=2.
-Submitting job for psi=0.6, n=2.
-Submitting job for psi=0.9, n=2.
-Submitting job for psi=-0.3, n=2.
-Submitting job for psi=-0.6, n=2.
-Submitting job for psi=-0.9, n=2.
-Running simulation with n=3
-Submitting job for psi=0.0, n=3.
-Submitting job for psi=0.3, n=3.
-Submitting job for psi=0.6, n=3.
-Submitting job for psi=0.9, n=3.
-Submitting job for psi=-0.3, n=3.
-Submitting job for psi=-0.6, n=3.
-Submitting job for psi=-0.9, n=3.
-Running simulation with n=6
-Submitting job for psi=0.0, n=6.
-Submitting job for psi=0.3, n=6.
-Submitting job for psi=0.6, n=6.
-Submitting job for psi=0.9, n=6.
-Submitting job for psi=-0.3, n=6.
-Submitting job for psi=-0.6, n=6.
-Submitting job for psi=-0.9, n=6.
-Running simulation with n=2
-Submitting job for psi=0.0, n=2.
-Submitting job for psi=0.3, n=2.
-Submitting job for psi=0.6, n=2.
-Submitting job for psi=0.9, n=2.
-Submitting job for psi=-0.3, n=2.
-Submitting job for psi=-0.6, n=2.
-Submitting job for psi=-0.9, n=2.
-Running simulation with n=3
-Submitting job for psi=0.0, n=3.
-Submitting job for psi=0.3, n=3.
-Submitting job for psi=0.6, n=3.
-Submitting job for psi=0.9, n=3.
+Running simulation with n=9
+Submitting job for psi=0.0, n=9.
+Submitting job for psi=0.3, n=9.
+Submitting job for psi=0.6, n=9.
+Submitting job for psi=0.9, n=9.
+Submitting job for psi=-0.3, n=9.
+Submitting job for psi=-0.6, n=9.
+Submitting job for psi=-0.9, n=9.
+Running simulation with n=12
+Submitting job for psi=0.0, n=12.
+Submitting job for psi=0.3, n=12.
+Submitting job for psi=0.6, n=12.
+Submitting job for psi=0.9, n=12.
+Submitting job for psi=-0.3, n=12.
+Submitting job for psi=-0.6, n=12.
+Submitting job for psi=-0.9, n=12.
+Running simulation with n=9
+Submitting job for psi=0.0, n=9.
+Submitting job for psi=0.3, n=9.
+Submitting job for psi=0.6, n=9.
+Submitting job for psi=0.9, n=9.
+Submitting job for psi=-0.3, n=9.
+Submitting job for psi=-0.6, n=9.
+Submitting job for psi=-0.9, n=9.
+Running simulation with n=12
+Submitting job for psi=0.0, n=12.
+Submitting job for psi=0.3, n=12.
+Submitting job for psi=0.6, n=12.
+Submitting job for psi=0.9, n=12.
+Submitting job for psi=-0.3, n=12.
+Submitting job for psi=-0.6, n=12.
+Submitting job for psi=-0.9, n=12.
+Running simulation with n=9
+Submitting job for psi=0.0, n=9.
+Submitting job for psi=0.3, n=9.
+Submitting job for psi=0.6, n=9.
+Submitting job for psi=0.9, n=9.
+Submitting job for psi=-0.3, n=9.
+Submitting job for psi=-0.6, n=9.
+Submitting job for psi=-0.9, n=9.
+Running simulation with n=12
+Submitting job for psi=0.0, n=12.
+Submitting job for psi=0.3, n=12.
+Submitting job for psi=0.6, n=12.
+Submitting job for psi=0.9, n=12.
+Submitting job for psi=-0.3, n=12.
+Submitting job for psi=-0.6, n=12.
+Submitting job for psi=-0.9, n=12.
+Running simulation with n=9
+Submitting job for psi=0.0, n=9.
+Submitting job for psi=0.3, n=9.
+Submitting job for psi=0.6, n=9.
+Submitting job for psi=0.9, n=9.
+Submitting job for psi=-0.3, n=9.
+Submitting job for psi=-0.6, n=9.
+Submitting job for psi=-0.9, n=9.
+Running simulation with n=12
+Submitting job for psi=0.0, n=12.
+Submitting job for psi=0.3, n=12.
+Submitting job for psi=0.6, n=12.
+Submitting job for psi=0.9, n=12.
+Submitting job for psi=-0.3, n=12.
+Submitting job for psi=-0.6, n=12.
+Submitting job for psi=-0.9, n=12.
+Running simulation with n=9
+Submitting job for psi=0.0, n=9.
+Submitting job for psi=0.3, n=9.
+Submitting job for psi=0.6, n=9.
+Submitting job for psi=0.9, n=9.
+Submitting job for psi=-0.3, n=9.
+Submitting job for psi=-0.6, n=9.
+Submitting job for psi=-0.9, n=9.
+Running simulation with n=12
+Submitting job for psi=0.0, n=12.
+Submitting job for psi=0.3, n=12.
+Submitting job for psi=0.6, n=12.
+Submitting job for psi=0.9, n=12.
+Submitting job for psi=-0.3, n=12.
+Submitting job for psi=-0.6, n=12.
+Submitting job for psi=-0.9, n=12.
+Running simulation with n=9
+Submitting job for psi=0.0, n=9.
+Submitting job for psi=0.3, n=9.
+Submitting job for psi=0.6, n=9.
+Submitting job for psi=0.9, n=9.
+Submitting job for psi=-0.3, n=9.
+Submitting job for psi=-0.6, n=9.
+Submitting job for psi=-0.9, n=9.
+Running simulation with n=12
+Submitting job for psi=0.0, n=12.
+Submitting job for psi=0.3, n=12.
+Submitting job for psi=0.6, n=12.
+Submitting job for psi=0.9, n=12.
+Submitting job for psi=-0.3, n=12.
+Submitting job for psi=-0.6, n=12.
+Submitting job for psi=-0.9, n=12.
+Running simulation with n=9
+Submitting job for psi=0.0, n=9.
+Submitting job for psi=0.3, n=9.
+Submitting job for psi=0.6, n=9.
+Submitting job for psi=0.9, n=9.
+Submitting job for psi=-0.3, n=9.
+Submitting job for psi=-0.6, n=9.
+Submitting job for psi=-0.9, n=9.
+Running simulation with n=12
+Submitting job for psi=0.0, n=12.
+Submitting job for psi=0.3, n=12.
+Submitting job for psi=0.6, n=12.
+Submitting job for psi=0.9, n=12.
+Submitting job for psi=-0.3, n=12.
+Submitting job for psi=-0.6, n=12.
+Submitting job for psi=-0.9, n=12.
+Running simulation with n=9
+Submitting job for psi=0.0, n=9.
+Submitting job for psi=0.3, n=9.
+Submitting job for psi=0.6, n=9.
+Submitting job for psi=0.9, n=9.
+Submitting job for psi=-0.3, n=9.
+Submitting job for psi=-0.6, n=9.
+Submitting job for psi=-0.9, n=9.
+Running simulation with n=12
+Submitting job for psi=0.0, n=12.
+Submitting job for psi=0.3, n=12.
+Submitting job for psi=0.6, n=12.
+Submitting job for psi=0.9, n=12.
+Submitting job for psi=-0.3, n=12.
+Submitting job for psi=-0.6, n=12.
+Submitting job for psi=-0.9, n=12.
+Running simulation with n=9
+Submitting job for psi=0.0, n=9.
+Submitting job for psi=0.3, n=9.
+Submitting job for psi=0.6, n=9.
+Submitting job for psi=0.9, n=9.
+Submitting job for psi=-0.3, n=9.
+Submitting job for psi=-0.6, n=9.
+Submitting job for psi=-0.9, n=9.
+Running simulation with n=12
+Submitting job for psi=0.0, n=12.
+Submitting job for psi=0.3, n=12.
+Submitting job for psi=0.6, n=12.
+Submitting job for psi=0.9, n=12.
+Submitting job for psi=-0.3, n=12.
+Submitting job for psi=-0.6, n=12.
+Submitting job for psi=-0.9, n=12.
+Running simulation with n=9
+Submitting job for psi=0.0, n=9.
+Submitting job for psi=0.3, n=9.
+Submitting job for psi=0.6, n=9.
+Submitting job for psi=0.9, n=9.
+Submitting job for psi=-0.3, n=9.
+Submitting job for psi=-0.6, n=9.
+Submitting job for psi=-0.9, n=9.
+Running simulation with n=12
+Submitting job for psi=0.0, n=12.
+Submitting job for psi=0.3, n=12.
+Submitting job for psi=0.6, n=12.
+Submitting job for psi=0.9, n=12.
+Submitting job for psi=-0.3, n=12.
+Submitting job for psi=-0.6, n=12.
+Submitting job for psi=-0.9, n=12.
+Running simulation with n=9
+Submitting job for psi=0.0, n=9.
+Submitting job for psi=0.3, n=9.
+Submitting job for psi=0.6, n=9.
+Submitting job for psi=0.9, n=9.
+Submitting job for psi=-0.3, n=9.
+Submitting job for psi=-0.6, n=9.
+Submitting job for psi=-0.9, n=9.
+Running simulation with n=12
+Submitting job for psi=0.0, n=12.
+Submitting job for psi=0.3, n=12.
+Submitting job for psi=0.6, n=12.
+Submitting job for psi=0.9, n=12.
+Submitting job for psi=-0.3, n=12.
+Submitting job for psi=-0.6, n=12.
+Submitting job for psi=-0.9, n=12.
 Submitting job for psi=-0.3, n=3.
 Submitting job for psi=-0.6, n=3.
 Submitting job for psi=-0.9, n=3.
