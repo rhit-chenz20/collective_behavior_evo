@@ -1,0 +1,391 @@
+---
+title: "plot genotype, phenotype and effect size data"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+setwd("/workdir/zc524/collective_behavior_evo/r_remote")
+base_data_folder <- "../data/max_fit_data"
+base_plot_folder <- "../r_plots/maxfit"
+target_psis <- c(-0.9, -0.5, -0.3, 0.0, 0.3, 0.5, 0.9)
+```
+
+# load GENOTYPE data
+```{r}
+# Set the top-level folder
+folder <- paste0(base_data_folder, "/genotype")
+
+# List all .tsv files recursively
+file_list <- list.files(
+  path = folder,
+  pattern = "\\.tsv$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Function to extract metadata from path
+extract_geno_metadata <- function(path) {
+  matches <- regexec("genotype/n_(\\d+)_psi_(-?[0-9.]+)_(\\d+)\\.tsv", path)
+  parts <- regmatches(path, matches)[[1]]
+
+  if (length(parts) != 4) {
+    warning("Could not extract metadata from path: ", path, " with matches: ", paste(parts, collapse = ", "))
+    return(data.frame())
+  }
+
+  data.frame(
+    n = as.integer(parts[2]),
+    psi = as.numeric(parts[3]),
+    rep = as.integer(parts[4]),
+    stringsAsFactors = FALSE
+  )
+}
+
+# Read and combine all files
+genotype_df <- do.call(rbind, lapply(file_list, function(file) {
+  df <- read.table(file, header = TRUE, sep = "\t")
+  meta <- extract_geno_metadata(file)
+  if (nrow(meta) == 0) return(NULL)
+
+  # Compute new job_id
+  df$rep <- meta$rep
+  df$psi <- meta$psi
+  df$n <- meta$n
+  df$file_id <- basename(file)
+
+  return(df)
+}))
+
+```
+
+
+# plot GENOTYPE histogram
+```{r}
+library(RColorBrewer)
+# Assuming you want to focusxw on a specific generation (e.g., 10100)
+df <- subset(genotype_df, generation == 10099)
+target_gen <- 10099
+
+# Define histogram bins
+num_bins <- 100
+bin_breaks <- seq(-50, 50, length.out = num_bins + 1)
+bin_mids <- 0.5 * (head(bin_breaks, -1) + tail(bin_breaks, -1))
+
+# Color setup
+psi_vals <- target_psi
+colors <- rainbow(length(psi_vals))
+names(colors) <- as.character(psi_vals)
+```
+
+## plot GENOTYPE histogram for each run
+```{r}
+for (n_val in sort(unique(df$n))) {
+  df_n <- subset(genotype_df, generation == target_gen & n == n_val)
+  psi_vals <- sort(unique(df_n$psi))
+  colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+  names(colors) <- as.character(psi_vals)
+
+  # Estimate ymax across all (psi, rep) combos
+  unique_combos <- unique(df_n[, c("psi", "rep")])
+  max_y <- 0
+  for (i in seq_len(nrow(unique_combos))) {
+    psi_val <- unique_combos$psi[i]
+    rep_val <- unique_combos$rep[i]
+    row <- subset(df_n, psi == psi_val & rep == rep_val)[1, ]
+    values <- as.numeric(as.vector(unlist(row[ , grep("^X", names(row))])))
+    h <- hist(values, breaks=bin_breaks, plot=FALSE)
+    max_y <- max(max_y, max(h$counts / sum(h$counts)))
+  }
+max_y = 0.07
+  # Plot
+  png(file.path(base_plot_folder, paste0("genotype_hist_reps_n_", n_val, ".png")), width=1000, height=700)
+  plot(NULL, xlim=range(bin_breaks), ylim=c(0, max_y), xlab="Genotype Value", ylab="Proportion",
+       main=paste("Genotype Histogram by Rep | n =", n_val))
+
+  for (i in seq_len(nrow(unique_combos))) {
+    psi_val <- unique_combos$psi[i]
+    rep_val <- unique_combos$rep[i]
+    row <- subset(df_n, psi == psi_val & rep == rep_val)[1, ]
+    values <- as.numeric(as.vector(unlist(row[ , grep("^X", names(row))])))
+    h <- hist(values, breaks=bin_breaks, plot=FALSE)
+    lines(bin_mids, h$counts / sum(h$counts), col=colors[as.character(psi_val)])
+  }
+
+  # Add Gaussian fitness curve
+  Vs <- sqrt(2000)
+  z_vals <- seq(min(bin_breaks), max(bin_breaks), length.out = 500)
+  W_z <- exp(- (z_vals^2) / (2 * Vs))
+
+  # Rescale W_z to match plot height
+  W_z_scaled <- W_z / max(W_z) * max_y  # max_y = ylim[2] used in your plot
+
+  # Add the line
+  lines(z_vals, W_z_scaled, col = "black", lwd = 2, lty = 2)
+
+  legend("topright", legend=paste0("psi=", psi_vals), col=colors, lty=1, cex=0.8)
+  dev.off()
+}
+
+```
+
+## plot average GENOTYPE for each psi
+```{r}
+for (n_val in sort(unique(df$n))) {
+  df_n <- subset(genotype_df, generation == target_gen & n == n_val)
+  psi_vals <- sort(unique(df_n$psi))
+  colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+  names(colors) <- as.character(psi_vals)
+
+  # Estimate max_y across all averaged psi histograms
+  max_y <- 0
+  for (psi_val in psi_vals) {
+    df_psi <- subset(df_n, psi == psi_val)
+    rep_combos <- unique(df_psi[, c("rep", "psi")])
+    num_reps <- nrow(rep_combos)
+
+    counts_mat <- matrix(NA, nrow=num_reps, ncol=num_bins)
+    for (i in seq_len(num_reps)) {
+      rep_val <- rep_combos$rep[i]
+      row <- subset(df_psi, rep == rep_val)[1, ]
+      values <- as.numeric(as.vector(unlist(row[ , grep("^X", names(row))])))
+      h <- hist(values, breaks=bin_breaks, plot=FALSE)
+      counts_mat[i, ] <- h$counts / sum(h$counts)
+    }
+    avg_counts <- colMeans(counts_mat, na.rm=TRUE)
+    max_y <- max(max_y, max(avg_counts, na.rm=TRUE))
+  }
+max_y = 0.07
+  # Plot
+  png(file.path(base_plot_folder, paste0("genotype_hist_avg_n_", n_val, ".png")), width=1000, height=700)
+  plot(NULL, xlim=range(bin_breaks), ylim=c(0, max_y), xlab="Genotype Value", ylab="Proportion",
+       main=paste("Avg Genotype Histogram | n =", n_val))
+
+  for (psi_val in psi_vals) {
+    df_psi <- subset(df_n, psi == psi_val)
+    rep_combos <- unique(df_psi[, c("rep", "psi")])
+    num_reps <- nrow(rep_combos)
+
+    counts_mat <- matrix(NA, nrow=num_reps, ncol=num_bins)
+    for (i in seq_len(num_reps)) {
+      rep_val <- rep_combos$rep[i]
+      row <- subset(df_psi, rep == rep_val)[1, ]
+      values <- as.numeric(as.vector(unlist(row[ , grep("^X", names(row))])))
+      h <- hist(values, breaks=bin_breaks, plot=FALSE)
+      counts_mat[i, ] <- h$counts / sum(h$counts)
+    }
+
+    avg_counts <- colMeans(counts_mat, na.rm=TRUE)
+    lines(bin_mids, avg_counts, col=colors[as.character(psi_val)], lwd=2)
+  }
+
+  # Add Gaussian fitness curve
+  Vs <- sqrt(2000)
+  z_vals <- seq(min(bin_breaks), max(bin_breaks), length.out = 500)
+  W_z <- exp(- (z_vals^2) / (2 * Vs))
+
+  # Rescale W_z to match plot height
+  W_z_scaled <- W_z / max(W_z) * max_y  # max_y = ylim[2] used in your plot
+
+  # Add the line
+  lines(z_vals, W_z_scaled, col = "black", lwd = 2, lty = 2)
+
+  legend("topright", legend=paste0("psi=", psi_vals), col=colors, lty=1, lwd=2, cex=0.8)
+  dev.off()
+}
+
+```
+
+
+# load PHENOTYPE data
+```{r}
+# Set the top-level folder
+folder <- paste0(base_data_folder, "/phenotype")
+
+# List all .tsv files recursively
+file_list <- list.files(
+  path = folder,
+  pattern = "\\.tsv$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Function to extract metadata from path
+extract_pheno_metadata <- function(path) {
+  matches <- regexec("phenotype/n_(\\d+)_psi_(-?[0-9.]+)_(\\d+)\\.tsv", path)
+  parts <- regmatches(path, matches)[[1]]
+
+  if (length(parts) != 4) {
+    warning("Could not extract metadata from path: ", path, " with matches: ", paste(parts, collapse = ", "))
+    return(data.frame())
+  }
+
+  data.frame(
+    n = as.integer(parts[2]),
+    psi = as.numeric(parts[3]),
+    rep = as.integer(parts[4]),
+    stringsAsFactors = FALSE
+  )
+}
+
+# Read and combine all files
+phenotype_df <- do.call(rbind, lapply(file_list, function(file) {
+  df <- read.table(file, header = TRUE, sep = "\t")
+  meta <- extract_pheno_metadata(file)
+  if (nrow(meta) == 0) return(NULL)
+
+  # Compute new job_id
+  df$rep <- meta$rep
+  df$psi <- meta$psi
+  df$n <- meta$n
+  df$file_id <- basename(file)
+
+  return(df)
+}))
+
+```
+
+
+# plot PHENOTYPE histogram 
+```{r}
+# Assuming you want to focus on a specific generation (e.g., 10100)
+df <- subset(phenotype_df, generation == 10099)
+target_gen <- 10099
+
+# Define histogram bins
+num_bins <- 600
+bin_breaks <- seq(-150, 150, length.out = num_bins + 1)
+bin_mids <- 0.5 * (head(bin_breaks, -1) + tail(bin_breaks, -1))
+
+# Color setup
+psi_vals <- target_psi
+colors <- rainbow(length(psi_vals))
+names(colors) <- as.character(psi_vals)
+```
+
+## plot PHENOTYPE histogram for each run
+```{r}
+for (n_val in sort(unique(df$n))) {
+  df_n <- subset(phenotype_df, generation == target_gen & n == n_val)
+  psi_vals <- sort(unique(df_n$psi))
+  colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+  names(colors) <- as.character(psi_vals)
+
+  # Estimate ymax across all (psi, rep) combos
+  unique_combos <- unique(df_n[, c("psi", "rep")])
+  max_y <- 0
+  for (i in seq_len(nrow(unique_combos))) {
+    psi_val <- unique_combos$psi[i]
+    rep_val <- unique_combos$rep[i]
+    row <- subset(df_n, psi == psi_val & rep == rep_val)[1, ]
+    values <- as.numeric(as.vector(unlist(row[ , grep("^X", names(row))])))
+    h <- hist(values, breaks=bin_breaks, plot=FALSE)
+    max_y <- max(max_y, max(h$counts / sum(h$counts)))
+  }
+max_y = 0.2
+  # Plot
+  png(file.path(base_plot_folder, paste0("phenotype_hist_reps_n_", n_val, ".png")), width=1000, height=700)
+  plot(NULL, xlim=range(bin_breaks), ylim=c(0, max_y), xlab="Phenotype Value", ylab="Proportion",
+       main=paste("Phenotype Histogram by Rep | n =", n_val))
+
+  for (i in seq_len(nrow(unique_combos))) {
+    psi_val <- unique_combos$psi[i]
+    rep_val <- unique_combos$rep[i]
+    row <- subset(df_n, psi == psi_val & rep == rep_val)[1, ]
+    values <- as.numeric(as.vector(unlist(row[ , grep("^X", names(row))])))
+    h <- hist(values, breaks=bin_breaks, plot=FALSE)
+    lines(bin_mids, h$counts / sum(h$counts), col=colors[as.character(psi_val)])
+  }
+
+  # Add Gaussian fitness curve
+  Vs <- sqrt(2000)
+  z_vals <- seq(min(bin_breaks), max(bin_breaks), length.out = 500)
+  W_z <- exp(- (z_vals^2) / (2 * Vs))
+
+  # Rescale W_z to match plot height
+  W_z_scaled <- W_z / max(W_z) * max_y  # max_y = ylim[2] used in your plot
+
+  # Add the line
+  lines(z_vals, W_z_scaled, col = "black", lwd = 2, lty = 2)
+
+  legend("topright", legend=paste0("psi=", psi_vals), col=colors, lty=1, cex=0.8)
+  dev.off()
+}
+
+```
+
+## plot average PHENOTYPE histogram for each psi
+```{r}
+for (n_val in sort(unique(df$n))) {
+  df_n <- subset(phenotype_df, generation == target_gen & n == n_val)
+  psi_vals <- sort(unique(df_n$psi))
+  colors <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+  names(colors) <- as.character(psi_vals)
+
+  # Estimate max_y across all averaged psi histograms
+  max_y <- 0
+  for (psi_val in psi_vals) {
+    df_psi <- subset(df_n, psi == psi_val)
+    rep_combos <- unique(df_psi[, c("rep", "psi")])
+    num_reps <- nrow(rep_combos)
+
+    counts_mat <- matrix(NA, nrow=num_reps, ncol=num_bins)
+    for (i in seq_len(num_reps)) {
+      rep_val <- rep_combos$rep[i]
+      row <- subset(df_psi, rep == rep_val)[1, ]
+      values <- as.numeric(as.vector(unlist(row[ , grep("^X", names(row))])))
+      h <- hist(values, breaks=bin_breaks, plot=FALSE)
+      counts_mat[i, ] <- h$counts / sum(h$counts)
+    }
+    avg_counts <- colMeans(counts_mat, na.rm=TRUE)
+    max_y <- max(max_y, max(avg_counts, na.rm=TRUE))
+  }
+max_y = 0.2
+  # Plot
+  png(file.path(base_plot_folder, paste0("phenotype_hist_avg_n_", n_val, ".png")), width=1000, height=700)
+  plot(NULL, xlim=range(bin_breaks), ylim=c(0, max_y), xlab="Phenotype Value", ylab="Proportion",
+       main=paste("Avg Phenotype Histogram | n =", n_val))
+
+  for (psi_val in psi_vals) {
+    df_psi <- subset(df_n, psi == psi_val)
+    rep_combos <- unique(df_psi[, c("rep", "psi")])
+    num_reps <- nrow(rep_combos)
+
+    counts_mat <- matrix(NA, nrow=num_reps, ncol=num_bins)
+    for (i in seq_len(num_reps)) {
+      rep_val <- rep_combos$rep[i]
+      row <- subset(df_psi, rep == rep_val)[1, ]
+      values <- as.numeric(as.vector(unlist(row[ , grep("^X", names(row))])))
+      h <- hist(values, breaks=bin_breaks, plot=FALSE)
+      counts_mat[i, ] <- h$counts / sum(h$counts)
+    }
+
+    avg_counts <- colMeans(counts_mat, na.rm=TRUE)
+    lines(bin_mids, avg_counts, col=colors[as.character(psi_val)], lwd=2)
+  }
+
+  # Add Gaussian fitness curve
+  Vs <- sqrt(2000)
+  z_vals <- seq(min(bin_breaks), max(bin_breaks), length.out = 500)
+  W_z <- exp(- (z_vals^2) / (2 * Vs))
+
+  # Rescale W_z to match plot height
+  W_z_scaled <- W_z / max(W_z) * max_y  # max_y = ylim[2] used in your plot
+
+  # Add the line
+  lines(z_vals, W_z_scaled, col = "black", lwd = 2, lty = 2)
+
+  legend("topright", legend=paste0("psi=", psi_vals), col=colors, lty=1, lwd=2, cex=0.8)
+  dev.off()
+}
+
+```
+
+
+
+
+
+
+
+

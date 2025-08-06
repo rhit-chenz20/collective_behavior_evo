@@ -258,7 +258,11 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
             a1 = a[j.index];
 			best_i = whichMax(fits);
 			best_a = as[best_i];
-            phenotype[j.index] = a1 + psi * best_a;
+			if (best_a == a1) {
+				phenotype[j.index] = a1;
+			}else{
+				phenotype[j.index] = a1 + psi * best_a;
+			}
         }
 	}
 	
