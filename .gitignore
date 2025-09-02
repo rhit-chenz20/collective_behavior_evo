@@ -10,3 +10,4 @@ slim/data
 slim/r_remote/workspace.RData
 slim/pop
 *_data
+data/

@@ -24,6 +24,7 @@ initialize() {
 //	defineConstant("ID", "-2");
 //	defineConstant("folder", "tsv_output/social_new/temp/");
 //	defineConstant("psi", 0.1);
+//	defineConstant("shift_size", 0.0);
 //	defineConstant("burnin_fn", "burnin/pop/rec_N_1000_psi_0.1_pop_2702577.pop");
 //	defineConstant("fre_output",folder+ "rec_psi_"+psi+"_"+ID+".tsv");	
 //	defineConstant("phenotype_fn", folder+ "pheno_rec_psi_"+psi+"_"+ID+".tsv");
@@ -103,12 +104,12 @@ late() {
 	calculate_phenotype(p1);
 }
 
-shift_time-50: early(){
+shift_time-30: early(){
 	defineGlobal("last_gen_z", p1.individuals.tagF);
 	defineGlobal("last_gen_g", p1.individuals.sumOfMutationsOfType(m2)+2*sum(sim.substitutions.selectionCoeff));
 }
 
-shift_time-50 late(){
+shift_time-30 late(){
 	print("logging at cycle "+sim.cycle);
 	// log results
 	log = community.createLogFile(fre_output,  sep="\t", logInterval=1);
@@ -137,18 +138,23 @@ shift_time-50 late(){
 
 shift_time late(){
 	print("shift time");
-	shift_size = sqrt(var(p1.individuals.tagF));
-	defineGlobal("optimum", optimum+4*shift_size);
+	if (shift_size == 0){
+		shift_size1 = 4*sqrt(var(p1.individuals.tagF));
+		defineGlobal("optimum", optimum+shift_size1);
+	}else{
+		defineGlobal("optimum", optimum+shift_size);
+	}
 	print("new opt is " + optimum);
-	defineGlobal("Va0_sqrt", shift_size);	
+	defineGlobal("Va0_sqrt", sqrt(var(p1.individuals.tagF)));
 	calculate_phenotype(p1);
 }
 
-(shift_time-2):(shift_time+2) late(){
+(shift_time-5):(shift_time+10) late(){
 	print("recoding at cycle "+sim.cycle);
-	if (sim.cycle != shift_time+2){
+	if (sim.cycle != shift_time+10){
 		record_phenotype(p1);
 		record_genotype(p1);
+		record_effectsize(p1);
 	}else{
 		if (record_phenotype(p1, write = T)){
 			print("written phenotype to "+phenotype_fn);
@@ -156,11 +162,6 @@ shift_time late(){
 		if (record_genotype(p1, write = T)){
 			print("written genotype to "+genotype_fn);
 		}
-	}
-
-	if (sim.cycle != shift_time+2){
-		record_effectsize(p1);
-	}else if (sim.cycle == shift_time +2){
 		if (record_effectsize(p1, write = T)){
 			print("written effectsize to file "+ind_fn);
 		}
