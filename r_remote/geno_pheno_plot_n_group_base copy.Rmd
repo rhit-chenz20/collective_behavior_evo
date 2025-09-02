@@ -110,7 +110,7 @@ genotype_df <- do.call(rbind, lapply(file_list, function(file) {
 ```{r}
 library(RColorBrewer)
 # Assuming you want to focus on a specific generation (e.g., 10100)
-target_gen <- 10001
+target_gen <- 10000
 df <- subset(genotype_df, generation == target_gen)
 
 # Define histogram bins
@@ -504,7 +504,7 @@ phenotype_df <- do.call(rbind, lapply(pheno_files, function(file) {
 # plot PHENOTYPE histogram 
 ```{r}
 # Assuming you want to focus on a specific generation (e.g., 10100)
-target_gen <- 10001
+target_gen <- 10000
 df <- subset(phenotype_df, generation == target_gen)
 
 # Define histogram bins
