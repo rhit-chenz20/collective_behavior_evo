@@ -1304,7 +1304,7 @@ plot_asd_vs_n_by_psi(summary_stat_df, out_subfolder = "summary_asd_vs_n_by_psi",
 # Panels = psi; one PNG per (n, shift-group), base R only
 # ------------------------------------------------------
 
-tick_seq <- 10000:10005
+tick_seq <- 10000:10100
 rep_col  <- adjustcolor("gray30", alpha.f = 0.35)
 mean_col <- "black"
 

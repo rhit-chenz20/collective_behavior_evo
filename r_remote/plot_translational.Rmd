@@ -1312,12 +1312,15 @@ plot_asd_vs_n_by_psi(summary_stat_df, out_subfolder = "summary_asd_vs_n_by_psi",
 # Summary stats multipanel (x = tick, y = dist_norm * Va0_sqrt)
 # Panels = psi; one PNG per (n, shift-group), base R only
 # ------------------------------------------------------
+# ------------------------------------------------------
+# Summary stats multipanel (x = tick, y = dist_norm * Va0_sqrt)
+# Panels = psi; one PNG per (n, shift-group), base R only
+# ------------------------------------------------------
 
-tick_seq <- 10000:10005
+tick_seq <- 10000:10100
 rep_col  <- adjustcolor("gray30", alpha.f = 0.35)
 mean_col <- "black"
 
-# Per-psi pooled shift label: prefer 'optimum' at tick==10001 if present
 .per_psi_avg_shift <- function(df_panel) {
   if ("optimum" %in% names(df_panel)) {
     v <- df_panel$optimum[df_panel$tick == 10001]
@@ -1330,7 +1333,6 @@ mean_col <- "black"
   mean(v)
 }
 
-# Build per-rep series over tick_seq and across-rep mean
 .compute_series <- function(df_panel, tick_seq) {
   needed <- c("dist_norm","Va0_sqrt","tick","rep")
   if (!all(needed %in% names(df_panel))) {
@@ -1343,9 +1345,7 @@ mean_col <- "black"
   df_sub <- df_sub[is.finite(df_sub$y) & is.finite(df_sub$tick) & is.finite(df_sub$rep), , drop = FALSE]
   if (!nrow(df_sub)) return(list(reps = list(), mean = rep(NA_real_, length(tick_seq)), present_ticks = integer(0)))
 
-  # If duplicates per (tick, rep), average them
   agg <- aggregate(y ~ tick + rep, data = df_sub, FUN = mean)
-
   reps <- sort(unique(agg$rep))
   rep_series <- lapply(reps, function(r) {
     yv <- rep(NA_real_, length(tick_seq))
@@ -1359,7 +1359,7 @@ mean_col <- "black"
   names(rep_series) <- as.character(reps)
 
   if (length(rep_series)) {
-    mat <- do.call(rbind, rep_series)  # reps x ticks
+    mat <- do.call(rbind, rep_series)
     mean_series  <- apply(mat, 2L, function(col) mean(col, na.rm = TRUE))
     present_ticks <- tick_seq[colSums(!is.na(mat)) > 0]
   } else {
@@ -1371,122 +1371,149 @@ mean_col <- "black"
 }
 
 plot_summary_multi_by_psi_ticks <- function(summary_stat_df,
-                                            out_subfolder = "summary_multi_by_psi") {
-  out_dir <- file.path(base_plot_folder, out_subfolder)
-  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+                                            out_subfolder = "summary_multi_by_psi_ticks",
+                                            regimes = NULL) {
+  if (!dir.exists(file.path(base_plot_folder, out_subfolder))) {
+    dir.create(file.path(base_plot_folder, out_subfolder), recursive = TRUE)
+  }
+
+  # Figure out which regimes to plot
+  if (is.null(regimes)) {
+    if ("reg" %in% names(summary_stat_df)) {
+      regimes <- sort(unique(summary_stat_df$reg))
+    } else {
+      regimes <- "all"
+      summary_stat_df$reg <- "all"
+    }
+  }
 
   has_sz_orig <- "sz_orig" %in% names(summary_stat_df)
 
-  for (n_val in sort(unique(summary_stat_df$n))) {
-    df_n <- subset(summary_stat_df, n == n_val)
-    if (nrow(df_n) == 0) next
+  # ---- NEW: loop over regimes and write to separate subfolders ----
+  for (reg_lab in regimes) {
+    df_reg <- subset(summary_stat_df, reg == reg_lab)
+    if (nrow(df_reg) == 0) next
 
-    # Shift groups: pooled sz=0 + each nonzero shift
-    if (has_sz_orig) {
-      has_sz0 <- any(df_n$sz_orig == 0, na.rm = TRUE)
-      nonzero <- sort(unique(df_n$shift_size[df_n$sz_orig != 0]))
-      shift_keys <- c(if (has_sz0) "pooled_sz0" else character(0),
-                      if (length(nonzero)) paste0("shift=", nonzero) else character(0))
-    } else {
-      has_sz0 <- any(df_n$shift_size == 0, na.rm = TRUE)
-      nonzero <- sort(unique(df_n$shift_size[df_n$shift_size != 0]))
-      shift_keys <- c(if (has_sz0) "pooled_sz0" else character(0),
-                      if (length(nonzero)) paste0("shift=", nonzero) else character(0))
-    }
+    out_dir <- file.path(base_plot_folder, out_subfolder, paste0("reg_", reg_lab))
+    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
-    all_psis <- sort(unique(df_n$psi))
+    for (n_val in sort(unique(df_reg$n))) {
+      df_n <- subset(df_reg, n == n_val)
+      if (nrow(df_n) == 0) next
 
-    for (sk in shift_keys) {
-      df_group <- if (sk == "pooled_sz0") {
-        if (has_sz_orig) subset(df_n, sz_orig == 0) else subset(df_n, shift_size == 0)
+      # Shift groups
+      if (has_sz_orig) {
+        has_sz0 <- any(df_n$sz_orig == 0, na.rm = TRUE)
+        nonzero <- sort(unique(df_n$shift_size[df_n$sz_orig != 0]))
+        shift_keys <- c(if (has_sz0) "pooled_sz0" else character(0),
+                        if (length(nonzero)) paste0("shift=", nonzero) else character(0))
       } else {
-        sh <- as.numeric(sub("shift=", "", sk))
-        if (has_sz_orig) subset(df_n, ifelse(is.na(sz_orig), FALSE, sz_orig != 0) & shift_size == sh)
-        else subset(df_n, shift_size == sh)
-      }
-      if (nrow(df_group) == 0) next
-
-      # Y-limits across all psi panels
-      y_min <- Inf; y_max <- -Inf
-      for (psi_val in all_psis) {
-        df_p <- subset(df_group, psi == psi_val & tick %in% tick_seq)
-        s <- .compute_series(df_p, tick_seq)
-        y_all <- c(unlist(s$reps, use.names = FALSE), s$mean)
-        y_all <- y_all[is.finite(y_all)]
-        if (length(y_all)) {
-          y_min <- min(y_min, y_all)
-          y_max <- max(y_max, y_all)
-        }
-      }
-      if (!is.finite(y_min) || !is.finite(y_max) || y_min == y_max) {
-        y_min <- 0; y_max <- 1
+        has_sz0 <- any(df_n$shift_size == 0, na.rm = TRUE)
+        nonzero <- sort(unique(df_n$shift_size[df_n$shift_size != 0]))
+        shift_keys <- c(if (has_sz0) "pooled_sz0" else character(0),
+                        if (length(nonzero)) paste0("shift=", nonzero) else character(0))
       }
 
-      # Layout
-      K <- length(all_psis)
-      ncol <- ceiling(sqrt(K))
-      nrow <- ceiling(K / ncol)
-      png_w <- 900 * ncol
-      png_h <- 700 * nrow
+      all_psis <- sort(unique(df_n$psi))
 
-      # Title
-      title_suffix <- if (sk == "pooled_sz0") {
-        "pooled sz=0 (per-psi avg shift shown in panels)"
-      } else {
-        sh <- as.numeric(sub("shift=", "", sk))
-        paste0("shift_size = ", sh)
-      }
-
-      out_name <- paste0("summary_multi_by_psi_ticks_n_", n_val, "_", gsub("[ =]", "", title_suffix), ".png")
-      png(file.path(out_dir, out_name), width = png_w, height = png_h)
-      op <- par(mfrow = c(nrow, ncol), mar = c(4, 4, 3, 1) + 0.1, oma = c(0, 0, 3.5, 0))
-
-      for (psi_val in all_psis) {
-        df_p <- subset(df_group, psi == psi_val & tick %in% tick_seq)
-
-        panel_title <- if (sk == "pooled_sz0") {
-          mpsi <- .per_psi_avg_shift(df_p)
-          paste0("psi = ", psi_val, " | avg shift_size = ",
-                 if (is.finite(mpsi)) formatC(mpsi, format = "f", digits = 3) else "NA")
+      for (sk in shift_keys) {
+        df_group <- if (sk == "pooled_sz0") {
+          if (has_sz_orig) subset(df_n, sz_orig == 0) else subset(df_n, shift_size == 0)
         } else {
-          paste0("psi = ", psi_val)
+          sh <- as.numeric(sub("shift=", "", sk))
+          if (has_sz_orig) subset(df_n, ifelse(is.na(sz_orig), FALSE, sz_orig != 0) & shift_size == sh)
+          else subset(df_n, shift_size == sh)
         }
+        if (nrow(df_group) == 0) next
 
-        plot(NA, xlim = range(tick_seq), ylim = c(y_min, y_max),
-             xlab = "Tick", ylab = "dist_norm × Va0_sqrt", main = panel_title,
-             xaxt = "n")
-        axis(1, at = tick_seq)
-
-        s <- .compute_series(df_p, tick_seq)
-
-        # Rep series (gray)
-        if (length(s$reps)) {
-          for (r in seq_along(s$reps)) {
-            lines(tick_seq, s$reps[[r]], col = rep_col, lwd = 1)
-            points(tick_seq, s$reps[[r]], pch = 16, cex = 0.5, col = rep_col)
+        # Y-limits across all psi panels
+        y_min <- Inf; y_max <- -Inf
+        for (psi_val in all_psis) {
+          df_p <- subset(df_group, psi == psi_val & tick %in% tick_seq)
+          s <- .compute_series(df_p, tick_seq)
+          y_all <- c(unlist(s$reps, use.names = FALSE), s$mean)
+          y_all <- y_all[is.finite(y_all)]
+          if (length(y_all)) {
+            y_min <- min(y_min, y_all)
+            y_max <- max(y_max, y_all)
           }
         }
-        # Across-rep mean (black)
-        lines(tick_seq, s$mean, col = mean_col, lwd = 2)
-        points(tick_seq, s$mean, pch = 16, cex = 0.9, col = mean_col)
+        if (!is.finite(y_min) || !is.finite(y_max) || y_min == y_max) {
+          y_min <- 0; y_max <- 1
+        }
 
-        legend("topleft", inset = 0.02,
-               legend = c("Replicate", "Across-rep mean"),
-               col = c(rep_col, mean_col), lty = 1, lwd = c(1,2), pch = c(16,16),
-               pt.cex = c(0.5,0.9), bty = "n", cex = 0.85)
+        # Layout
+        K <- length(all_psis)
+        ncol <- ceiling(sqrt(K))
+        nrow <- ceiling(K / ncol)
+        png_w <- 900 * ncol
+        png_h <- 700 * nrow
+
+        # Title pieces
+        title_suffix <- if (sk == "pooled_sz0") {
+          "pooled sz=0 (per-psi avg shift shown in panels)"
+        } else {
+          sh <- as.numeric(sub("shift=", "", sk))
+          paste0("shift_size = ", sh)
+        }
+
+        out_name <- paste0("summary_multi_by_psi_ticks_reg_", reg_lab,
+                           "_n_", n_val, "_", gsub("[ =]", "", title_suffix), ".png")
+
+        png(file.path(out_dir, out_name), width = png_w, height = png_h)
+        op <- par(mfrow = c(nrow, ncol), mar = c(4, 4, 3, 1) + 0.1, oma = c(0, 0, 3.5, 0))
+
+        for (psi_val in all_psis) {
+          df_p <- subset(df_group, psi == psi_val & tick %in% tick_seq)
+
+          panel_title <- if (sk == "pooled_sz0") {
+            mpsi <- .per_psi_avg_shift(df_p)
+            paste0("psi = ", psi_val, " | avg shift_size = ",
+                   if (is.finite(mpsi)) formatC(mpsi, format = "f", digits = 3) else "NA")
+          } else {
+            paste0("psi = ", psi_val)
+          }
+
+          plot(NA, xlim = range(tick_seq), ylim = c(y_min, y_max),
+               xlab = "Tick", ylab = "dist_norm × Va0_sqrt", main = panel_title,
+               xaxt = "n")
+          axis(1, at = tick_seq)
+
+          s <- .compute_series(df_p, tick_seq)
+
+          if (length(s$reps)) {
+            for (r in seq_along(s$reps)) {
+              lines(tick_seq, s$reps[[r]], col = rep_col, lwd = 1)
+              points(tick_seq, s$reps[[r]], pch = 16, cex = 0.5, col = rep_col)
+            }
+          }
+          lines(tick_seq, s$mean, col = mean_col, lwd = 2)
+          points(tick_seq, s$mean, pch = 16, cex = 0.9, col = mean_col)
+
+          legend("topleft", inset = 0.02,
+                 legend = c("Replicate", "Across-rep mean"),
+                 col = c(rep_col, mean_col), lty = 1, lwd = c(1,2), pch = c(16,16),
+                 pt.cex = c(0.5,0.9), bty = "n", cex = 0.85)
+        }
+
+        mtext(paste0("Summary: dist_norm × Va0_sqrt over ticks | reg = ", reg_lab,
+                     " | n = ", n_val, " | ", title_suffix),
+              outer = TRUE, cex = 1.1, line = 1.2)
+
+        par(op)
+        dev.off()
       }
-
-      mtext(paste0("Summary: dist_norm × Va0_sqrt over ticks | n = ", n_val, " | ", title_suffix),
-            outer = TRUE, cex = 1.1, line = 1.2)
-
-      par(op)
-      dev.off()
     }
   }
 }
 
 # ---- Run ----
-plot_summary_multi_by_psi_ticks(summary_stat_df, out_subfolder = "summary_multi_by_psi_ticks")
+# Auto-detects regs from summary_stat_df$reg; or pass regimes = c("ave","fit")
+plot_summary_multi_by_psi_ticks(summary_stat_df,
+                                out_subfolder = "summary_multi_by_psi_ticks",
+                                regimes = c("ave","fit"))
+
+
 ```
 
 ## process ind data
