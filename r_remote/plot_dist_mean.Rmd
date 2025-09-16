@@ -8,10 +8,10 @@ output: pdf_document
 ```{r setup, include=FALSE}
 setwd("/workdir/zc524/collective_behavior_evo/r_remote")
 base_data_folder <- "../data/n_group_dist_mean(mislabel_reg)"
-base_plot_folder <- "../r_plots/n_group_dist_mean/after_shift"
+base_plot_folder <- "../r_plots/n_group_dist_mean/before_shift"
 target_psi <- c(0.0, 0.3, 0.5, 0.7, 0.9)
 regimes <- c("fit")  # "ave" = average, "fit" = fitness-based
-target_gen <- 10000
+target_gen <- 9999
 ```
 
 # load GENOTYPE data
