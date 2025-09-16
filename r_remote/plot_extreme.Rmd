@@ -1,0 +1,2246 @@
+---
+title: "plot genotype, phenotype and effect size data"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+setwd("/workdir/zc524/collective_behavior_evo/r_remote")
+base_data_folder <- "../data/group_extreme"
+base_plot_folder <- "../r_plots/group_extreme/after_shift"
+target_psi <- c(0.0, 0.3, 0.5, 0.7, 0.9)
+regimes <- c("ave")  # "ave" = average, "fit" = fitness-based
+target_gen <- 10000
+```
+
+# load GENOTYPE data
+```{r}
+# Set the top-level folder
+folder <- paste0(base_data_folder, "/genotype")
+
+# List all .tsv files recursively
+file_list <- list.files(
+  path = folder,
+  pattern = "\\.tsv$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Function to extract metadata from path
+# Matches: genotype/n_<n>_psi_<psi>_sz_<sz>_reg_<ave|fit>_<rep>.tsv
+extract_geno_metadata <- function(path) {
+  pat <- "genotype/n_(\\d+)_psi_(-?[0-9.]+)_sz_(\\d+)_reg_(ave|fit)_(\\d+)\\.tsv"
+  matches <- regexec(pat, path)
+  parts <- regmatches(path, matches)[[1]]
+
+  if (length(parts) != 6) {
+    warning("Could not extract metadata from path: ", path,
+            " with matches: ", paste(parts, collapse = ", "))
+    return(data.frame())
+  }
+
+  data.frame(
+    n    = as.integer(parts[2]),
+    psi  = as.numeric(parts[3]),
+    sz   = as.integer(parts[4]),
+    reg  = parts[5],             # "ave" or "fit"
+    rep  = as.integer(parts[6]),
+    stringsAsFactors = FALSE
+  )
+}
+
+# Helper: get shift_size from the companion "data" file (optimum at generation == 10001)
+get_shift_from_data <- function(geno_file, base_data_folder, opt_gen = 10001L) {
+  # Mirror the path: .../genotype/... -> .../data/...
+  data_path <- sub("/genotype/", "/data/", geno_file, fixed = TRUE)
+  if (!file.exists(data_path)) {
+    data_path <- file.path(base_data_folder, "data", basename(geno_file))
+  }
+
+  if (!file.exists(data_path)) {
+    warning("Data file not found for ", basename(geno_file), " (looked for: ", data_path, ")")
+    return(NA_real_)
+  }
+
+  d <- tryCatch(read.table(data_path, header = TRUE, sep = "\t"), error = function(e) NULL)
+  if (is.null(d)) {
+    warning("Failed to read data file: ", data_path)
+    return(NA_real_)
+  }
+  if (!("tick" %in% names(d)) || !("optimum" %in% names(d))) {
+    warning("Missing 'tick' or 'optimum' column in data file: ", data_path)
+    return(NA_real_)
+  }
+
+  row10001 <- d[d$tick == opt_gen, , drop = FALSE]
+  if (nrow(row10001) < 1) {
+    warning("No row with tick == ", opt_gen, " in ", data_path)
+    return(NA_real_)
+  }
+
+  val <- suppressWarnings(as.numeric(row10001$optimum[1]))
+  if (!is.finite(val)) {
+    warning("Non-numeric 'optimum' at generation ", opt_gen, " in ", data_path)
+    return(NA_real_)
+  }
+  val
+}
+
+# Read and combine all files
+opt_gen <- 10001L
+genotype_df <- do.call(rbind, lapply(file_list, function(file) {
+  df <- tryCatch(read.table(file, header = TRUE, sep = "\t"), error = function(e) NULL)
+  if (is.null(df)) {
+    warning("Failed to read genotype file: ", file)
+    return(NULL)
+  }
+
+  meta <- extract_geno_metadata(file)
+  if (nrow(meta) == 0) return(NULL)
+
+  # Attach metadata
+  df$rep        <- meta$rep
+  df$psi        <- meta$psi
+  df$n          <- meta$n
+  df$reg        <- meta$reg        # <- new column ("ave" or "fit")
+  df$sz_orig    <- meta$sz         # preserve original sz
+  df$shift_size <- if (meta$sz == 0L) get_shift_from_data(file, base_data_folder, opt_gen) else meta$sz
+  df$file_id    <- basename(file)
+  df
+}))
+
+```
+
+# plot GENOTYPE histogram
+```{r}
+library(RColorBrewer)
+# Assuming you want to focus on a specific generation (e.g., 10100)
+df <- subset(genotype_df, generation == target_gen)
+
+# Define histogram bins
+num_bins <- 120
+bin_breaks <- seq(-60, 60, length.out = num_bins + 1)
+bin_mids <- 0.5 * (head(bin_breaks, -1) + tail(bin_breaks, -1))
+
+# Color setup
+psi_vals <- target_psi
+colors <- rainbow(length(psi_vals))
+names(colors) <- as.character(psi_vals)
+```
+
+## plot average GENOTYPE for each psi
+```{r}
+# Assumes genotype_df already has: generation, n, psi, rep, shift_size, sz_orig, reg, X* columns
+# Also assumes you have: target_gen, num_bins, bin_breaks, bin_mids, base_plot_folder, regimes
+
+avg_curve_for_subset <- function(df_block) {
+  # df_block is already filtered to a single (panel × psi × reg) subset at target_gen
+  if (nrow(df_block) == 0) return(rep(NA_real_, length(bin_mids)))
+  counts_mat <- matrix(NA_real_, nrow = nrow(df_block), ncol = length(bin_mids))
+  x_cols <- grep("^X", names(df_block))
+  for (i in seq_len(nrow(df_block))) {
+    vals <- suppressWarnings(as.numeric(as.vector(unlist(df_block[i, x_cols]))))
+    vals <- vals[is.finite(vals)]
+    if (length(vals) == 0) next
+    h <- hist(vals, breaks = bin_breaks, plot = FALSE)
+    if (sum(h$counts) == 0) next
+    counts_mat[i, ] <- h$counts / sum(h$counts)
+  }
+  colMeans(counts_mat, na.rm = TRUE)
+}
+
+for (reg_lab in regimes) {
+  df_reg_all <- subset(genotype_df, generation == target_gen & reg == reg_lab)
+  if (nrow(df_reg_all) == 0) next
+
+  for (n_val in sort(unique(df_reg_all$n))) {
+    df_n <- subset(df_reg_all, n == n_val)
+    if (nrow(df_n) == 0) next
+
+    # Panels: one pooled panel for sz_orig==0, plus one per unique nonzero shift_size
+    has_sz0 <- any(df_n$sz_orig == 0, na.rm = TRUE)
+    shift_levels_nonzero <- sort(unique(df_n$shift_size[df_n$sz_orig != 0]))
+    panel_keys <- c(if (has_sz0) "pooled_sz0" else character(0),
+                    paste0("shift=", shift_levels_nonzero))
+
+    # Colors for psi (consistent across all panels in this n & reg)
+    psi_all <- sort(unique(df_n$psi))
+    colors <- hcl.colors(length(psi_all), palette = "Zissou 1")
+    names(colors) <- as.character(psi_all)
+
+    # Compute common ylim across panels (max_y)
+    max_y <- 0
+    for (pk in panel_keys) {
+      df_panel <- if (pk == "pooled_sz0") {
+        subset(df_n, sz_orig == 0)
+      } else {
+        sh <- as.numeric(sub("shift=", "", pk))
+        subset(df_n, sz_orig != 0 & shift_size == sh)
+      }
+      for (psi_val in psi_all) {
+        avg_counts <- avg_curve_for_subset(subset(df_panel, psi == psi_val))
+        max_y <- max(max_y, avg_counts, na.rm = TRUE)
+      }
+    }
+    if (!is.finite(max_y) || max_y <= 0) max_y <- 1
+
+    # Layout
+    K <- length(panel_keys)
+    ncol <- ceiling(sqrt(K))
+    nrow <- ceiling(K / ncol)
+    png_w <- 900 * ncol
+    png_h <- 700 * nrow
+    out_path <- file.path(
+      base_plot_folder,
+      paste0("genotype_hist_avg_reg_", reg_lab, "_n_", n_val, "_gen_", target_gen, ".png")
+    )
+    png(out_path, width = png_w, height = png_h)
+    op <- par(mfrow = c(nrow, ncol), mar = c(4, 4, 3.5, 1) + 0.1)
+
+    for (pk in panel_keys) {
+      df_panel <- if (pk == "pooled_sz0") {
+        subset(df_n, sz_orig == 0)
+      } else {
+        sh <- as.numeric(sub("shift=", "", pk))
+        subset(df_n, sz_orig != 0 & shift_size == sh)
+      }
+
+      # Title text
+      panel_title <- if (pk == "pooled_sz0") {
+        paste0("reg = ", reg_lab, " | n = ", n_val, " | sz=0 pooled (data-driven)")
+      } else {
+        paste0("reg = ", reg_lab, " | n = ", n_val, " | ", pk)
+      }
+
+      plot(NULL,
+           xlim = range(bin_breaks), ylim = c(0, max_y),
+           xlab = "Genotype Value", ylab = "Proportion",
+           main = panel_title)
+
+      # Draw average curves per psi
+      present_psis <- intersect(psi_all, sort(unique(df_panel$psi)))
+      for (psi_val in present_psis) {
+        avg_counts <- avg_curve_for_subset(subset(df_panel, psi == psi_val))
+        if (all(is.na(avg_counts))) next
+        lines(bin_mids, avg_counts, col = colors[as.character(psi_val)], lwd = 2)
+      }
+
+      # Gaussian overlay (scaled)
+      Vs <- sqrt(2000)
+      z_vals <- seq(min(bin_breaks), max(bin_breaks), length.out = 500)
+      W_z <- exp(- (z_vals^2) / (2 * Vs))
+      W_z_scaled <- W_z / max(W_z) * max_y
+      lines(z_vals, W_z_scaled, col = "black", lwd = 2, lty = 2)
+
+      legend("topright",
+             legend = paste0("psi=", present_psis),
+             col = colors[as.character(present_psis)],
+             lty = 1, lwd = 2, cex = 0.8, bg = "white")
+    }
+
+    par(op)
+    dev.off()
+  }
+}
+
+
+```
+
+
+# PLOT GENOTYPE OVER TIME
+```{r}
+# ---------------------------------------------
+# Multi-panel by psi (GENOTYPE) with gen-specific bins
+# Split by `reg` (values in `regimes`)
+# ---------------------------------------------
+
+# Derive a constant bin width from your reference breaks
+bin_width <- (max(bin_breaks) - min(bin_breaks)) / num_bins
+half_span <- (num_bins * bin_width) / 2
+
+.compute_center <- function(df_block) {
+  xcols <- grep("^X", names(df_block))
+  if (!length(xcols) || nrow(df_block) == 0) return(NA_real_)
+  vals <- suppressWarnings(as.numeric(unlist(df_block[, xcols])))
+  vals <- vals[is.finite(vals)]
+  if (!length(vals)) return(NA_real_)
+  mean(vals)
+}
+
+.avg_hist_curve_with_breaks <- function(df_block, breaks, num_bins) {
+  if (nrow(df_block) == 0) return(rep(NA_real_, num_bins))
+  xcols <- grep("^X", names(df_block))
+  reps  <- sort(unique(df_block$rep))
+  if (!length(xcols) || !length(reps)) return(rep(NA_real_, num_bins))
+  counts_mat <- matrix(NA_real_, nrow = length(reps), ncol = num_bins)
+  for (i in seq_along(reps)) {
+    row_i <- subset(df_block, rep == reps[i])[1, ]
+    vals <- suppressWarnings(as.numeric(as.vector(unlist(row_i[, xcols]))))
+    vals <- vals[is.finite(vals)]
+    if (!length(vals)) next
+    h <- hist(vals, breaks = breaks, plot = FALSE)
+    if (sum(h$counts) == 0) next
+    counts_mat[i, ] <- h$counts / sum(h$counts)
+  }
+  colMeans(counts_mat, na.rm = TRUE)
+}
+
+plot_genotype_multi_by_psi <- function(genotype_df,
+                                       out_subfolder = "genotype_multi_by_psi_genbins",
+                                       gen_seq = 10000:10005,
+                                       num_bins = num_bins,
+                                       bin_width = bin_width,
+                                       half_span = half_span,
+                                       regimes = regimes) {   # <--- added
+  gen_cols <- hcl.colors(length(gen_seq), palette = "Berlin")
+  names(gen_cols) <- as.character(gen_seq)
+
+  if (!("sz_orig" %in% names(genotype_df))) {
+    stop("genotype_df must include sz_orig (original sz) to pool data-driven shift runs.")
+  }
+
+  # Loop over regimes
+  for (reg_lab in regimes) {
+    df_reg <- subset(genotype_df, reg == reg_lab)
+    if (nrow(df_reg) == 0) next
+
+    # Separate subfolder per regime
+    out_dir <- file.path(base_plot_folder, out_subfolder, paste0("reg_", reg_lab))
+    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+    for (n_val in sort(unique(df_reg$n))) {
+      df_n <- subset(df_reg, n == n_val)
+      if (nrow(df_n) == 0) next
+
+      has_sz0 <- any(df_n$sz_orig == 0, na.rm = TRUE)
+      nonzero_shifts <- sort(unique(df_n$shift_size[df_n$sz_orig != 0]))
+      shift_keys <- c(if (has_sz0) "pooled_sz0" else character(0),
+                      if (length(nonzero_shifts)) paste0("shift=", nonzero_shifts) else character(0))
+
+      all_psis <- sort(unique(df_n$psi))
+
+      for (sk in shift_keys) {
+        df_group <- if (sk == "pooled_sz0") {
+          subset(df_n, sz_orig == 0)
+        } else {
+          sh <- as.numeric(sub("shift=", "", sk))
+          subset(df_n, sz_orig != 0 & shift_size == sh)
+        }
+        if (nrow(df_group) == 0) next
+
+        # Common y-limit and x-range across all psi & gens
+        max_y <- 0
+        x_min <- Inf; x_max <- -Inf
+        for (psi_val in all_psis) {
+          df_p <- subset(df_group, psi == psi_val)
+          if (nrow(df_p) == 0) next
+          present_gens <- intersect(gen_seq, sort(unique(df_p$generation)))
+          for (g in present_gens) {
+            df_pg <- subset(df_p, generation == g)
+            center <- .compute_center(df_pg)
+            if (!is.finite(center)) next
+            breaks_g <- seq(center - half_span, center + half_span, by = bin_width)
+            avg_counts <- .avg_hist_curve_with_breaks(df_pg, breaks_g, num_bins)
+            max_y <- max(max_y, avg_counts, na.rm = TRUE)
+            x_min <- min(x_min, min(breaks_g), na.rm = TRUE)
+            x_max <- max(x_max, max(breaks_g), na.rm = TRUE)
+          }
+        }
+        if (!is.finite(max_y) || max_y <= 0) max_y <- 1
+        if (!is.finite(x_min) || !is.finite(x_max) || x_min >= x_max) {
+          x_min <- -half_span; x_max <- half_span
+        }
+
+        # Layout
+        K <- length(all_psis)
+        ncol <- ceiling(sqrt(K))
+        nrow <- ceiling(K / ncol)
+        png_w <- 900 * ncol
+        png_h <- 700 * nrow
+
+        # Overall title: do NOT average across psi
+        title_suffix <- if (sk == "pooled_sz0") {
+          "pooled sz=0 (per-psi avg shift shown in panels)"
+        } else {
+          sh <- as.numeric(sub("shift=", "", sk))
+          paste0("shift_size = ", sh)
+        }
+
+        out_name <- paste0(
+          "genotype_multi_by_psi_reg_", reg_lab, "_n_", n_val, "_",
+          gsub("[ =]", "", title_suffix), ".png"
+        )
+        png(file.path(out_dir, out_name), width = png_w, height = png_h)
+        op <- par(mfrow = c(nrow, ncol), mar = c(4, 4, 3, 1) + 0.1, oma = c(0, 0, 3.5, 0))
+
+        for (psi_val in all_psis) {
+          df_p <- subset(df_group, psi == psi_val)
+
+          # Panel title: if pooled sz=0, show per-psi mean shift_size
+          panel_title <- if (sk == "pooled_sz0") {
+            mpsi <- mean(df_p$shift_size, na.rm = TRUE)
+            if (!is.finite(mpsi)) mpsi <- NA_real_
+            paste0("psi = ", psi_val, " | avg shift_size = ",
+                   if (is.na(mpsi)) "NA" else formatC(mpsi, format = "f", digits = 3))
+          } else {
+            paste0("psi = ", psi_val)
+          }
+
+          plot(NULL,
+               xlim = c(x_min, x_max), ylim = c(0, max_y),
+               xlab = "Genotype Value", ylab = "Proportion",
+               main = panel_title)
+
+          present_gens <- intersect(gen_seq, sort(unique(df_p$generation)))
+          for (g in present_gens) {
+            df_pg <- subset(df_p, generation == g)
+            center <- .compute_center(df_pg)
+            if (!is.finite(center)) next
+            breaks_g <- seq(center - half_span, center + half_span, by = bin_width)
+            mids_g   <- 0.5 * (breaks_g[-length(breaks_g)] + breaks_g[-1])
+            avg_counts <- .avg_hist_curve_with_breaks(df_pg, breaks_g, num_bins)
+            if (all(is.na(avg_counts))) next
+            lines(mids_g, avg_counts, col = gen_cols[as.character(g)], lwd = 2)
+          }
+
+          legend("topright",
+                 legend = paste0("gen ", present_gens),
+                 col = gen_cols[as.character(present_gens)],
+                 lty = 1, lwd = 2, cex = 0.8, bg = "white")
+        }
+
+        mtext(paste0("Genotype distributions (gen-specific bins) | reg = ", reg_lab,
+                     " | n = ", n_val, " | ", title_suffix),
+              outer = TRUE, cex = 1.1, line = 1.2)
+
+        par(op)
+        dev.off()
+      }
+    }
+  }
+}
+
+# ---- Run ----
+plot_genotype_multi_by_psi(
+  genotype_df,
+  out_subfolder = "genotype_multi_by_psi_genbins",
+  gen_seq = 10000:10005,
+  num_bins = num_bins,
+  bin_width = bin_width,
+  half_span = half_span,
+  regimes = regimes   # e.g., c("ave","fit")
+)
+
+```
+
+
+# load PHENOTYPE data
+```{r}
+pheno_folder <- file.path(base_data_folder, "phenotype")
+
+# List all phenotype files
+pheno_files <- list.files(
+  path = pheno_folder,
+  pattern = "\\.tsv$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Parse metadata from phenotype file path
+# Matches: phenotype/n_<n>_psi_<psi>_sz_<sz>_reg_<ave|fit>_<rep>.tsv
+extract_pheno_metadata <- function(path) {
+  m <- regexec("phenotype/n_(\\d+)_psi_(-?[0-9.]+)_sz_(\\d+)_reg_(ave|fit)_(\\d+)\\.tsv", path)
+  parts <- regmatches(path, m)[[1]]
+  if (length(parts) != 6) {
+    warning("Could not extract metadata from path: ", path, " parts: ", paste(parts, collapse=", "))
+    return(data.frame())
+  }
+  data.frame(
+    n   = as.integer(parts[2]),
+    psi = as.numeric(parts[3]),
+    sz  = as.integer(parts[4]),
+    reg = parts[5],                 # "ave" or "fit"
+    rep = as.integer(parts[6]),
+    stringsAsFactors = FALSE
+  )
+}
+
+# Get shift_size from companion "data" file (optimum at generation == 10001)
+pheno_get_shift_from_data <- function(pheno_file, base_data_folder, opt_gen = 10001L) {
+  # Mirror .../phenotype/... -> .../data/...
+  data_path <- sub("/phenotype/", "/data/", pheno_file, fixed = TRUE)
+  if (!file.exists(data_path)) {
+    data_path <- file.path(base_data_folder, "data", basename(pheno_file))
+  }
+  if (!file.exists(data_path)) {
+    warning("Data file not found for ", basename(pheno_file), " (looked for: ", data_path, ")")
+    return(NA_real_)
+  }
+
+  d <- tryCatch(read.table(data_path, header = TRUE, sep = "\t"), error = function(e) NULL)
+  if (is.null(d)) {
+    warning("Failed to read data file: ", data_path)
+    return(NA_real_)
+  }
+  if (!all(c("tick", "optimum") %in% names(d))) {
+    warning("Missing 'tick' or 'optimum' in data file: ", data_path)
+    return(NA_real_)
+  }
+
+  row10001 <- d[d$tick == opt_gen, , drop = FALSE]
+  if (nrow(row10001) < 1) {
+    warning("No row with tick == ", opt_gen, " in ", data_path)
+    return(NA_real_)
+  }
+
+  val <- suppressWarnings(as.numeric(row10001$optimum[1]))
+  if (!is.finite(val)) {
+    warning("Non-numeric 'optimum' at generation ", opt_gen, " in ", data_path)
+    return(NA_real_)
+  }
+  val
+}
+
+# -------- Load phenotype_df (no name collisions with genotype) --------
+opt_gen <- 10001L
+phenotype_df <- do.call(rbind, lapply(pheno_files, function(file) {
+  df <- tryCatch(read.table(file, header = TRUE, sep = "\t"), error = function(e) NULL)
+  if (is.null(df)) {
+    warning("Failed to read phenotype file: ", file)
+    return(NULL)
+  }
+
+  meta <- extract_pheno_metadata(file)
+  if (nrow(meta) == 0) return(NULL)
+
+  # Attach metadata (distinct columns; keep original sz for pooling)
+  df$rep        <- meta$rep
+  df$psi        <- meta$psi
+  df$n          <- meta$n
+  df$reg        <- meta$reg          # <- new column ("ave" or "fit")
+  df$sz_orig    <- meta$sz
+  df$shift_size <- if (meta$sz == 0L) pheno_get_shift_from_data(file, base_data_folder, opt_gen) else meta$sz
+  df$file_id    <- basename(file)
+  df
+}))
+
+```
+
+# plot PHENOTYPE histogram 
+```{r}
+# Assuming you want to focus on a specific generation (e.g., 10100)
+df <- subset(phenotype_df, generation == target_gen)
+
+# Define histogram bins
+num_bins <- 120
+bin_breaks <- seq(-60, 60, length.out = num_bins + 1)
+bin_mids <- 0.5 * (head(bin_breaks, -1) + tail(bin_breaks, -1))
+
+# Color setup
+psi_vals <- target_psi
+colors <- rainbow(length(psi_vals))
+names(colors) <- as.character(psi_vals)
+```
+
+## plot average PHENOTYPE histogram for each psi
+```{r}
+avg_curve_for_subset_pheno <- function(df_block, bin_breaks, bin_mids) {
+  if (nrow(df_block) == 0) return(rep(NA_real_, length(bin_mids)))
+  counts_mat <- matrix(NA_real_, nrow = nrow(df_block), ncol = length(bin_mids))
+  x_cols <- grep("^X", names(df_block))
+  for (i in seq_len(nrow(df_block))) {
+    vals <- suppressWarnings(as.numeric(as.vector(unlist(df_block[i, x_cols]))))
+    vals <- vals[is.finite(vals)]
+    if (length(vals) == 0) next
+    h <- hist(vals, breaks = bin_breaks, plot = FALSE)
+    if (sum(h$counts) == 0) next
+    counts_mat[i, ] <- h$counts / sum(h$counts)
+  }
+  colMeans(counts_mat, na.rm = TRUE)
+}
+
+# ---- Split by regime ----
+for (reg_lab in regimes) {
+  df_reg <- subset(phenotype_df, generation == target_gen & reg == reg_lab)
+  if (nrow(df_reg) == 0) next
+
+  # make a subfolder per regime
+  out_dir <- file.path(base_plot_folder, paste0("reg_", reg_lab))
+  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+  # Pool all sz_orig == 0 together; other panels by shift_size (nonzero)
+  for (n_val in sort(unique(df_reg$n))) {
+    df_n <- subset(df_reg, n == n_val)
+    if (nrow(df_n) == 0) next
+
+    has_sz0 <- any(df_n$sz_orig == 0, na.rm = TRUE)
+    shift_levels_nonzero <- sort(unique(df_n$shift_size[df_n$sz_orig != 0]))
+    panel_keys <- c(if (has_sz0) "pooled_sz0" else character(0),
+                    paste0("shift=", shift_levels_nonzero))
+
+    # Consistent psi colors across this n (within this reg)
+    psi_all <- sort(unique(df_n$psi))
+    psi_cols <- hcl.colors(length(psi_all), palette = "Zissou 1")
+    names(psi_cols) <- as.character(psi_all)
+
+    # Common ylim across panels
+    max_y <- 0
+    for (pk in panel_keys) {
+      df_panel <- if (pk == "pooled_sz0") {
+        subset(df_n, sz_orig == 0)
+      } else {
+        sh <- as.numeric(sub("shift=", "", pk))
+        subset(df_n, sz_orig != 0 & shift_size == sh)
+      }
+      for (psi_val in psi_all) {
+        avg_counts <- avg_curve_for_subset_pheno(subset(df_panel, psi == psi_val), bin_breaks, bin_mids)
+        max_y <- max(max_y, avg_counts, na.rm = TRUE)
+      }
+    }
+    if (!is.finite(max_y) || max_y <= 0) max_y <- 1
+
+    # Layout
+    K <- length(panel_keys)
+    ncol <- ceiling(sqrt(K))
+    nrow <- ceiling(K / ncol)
+    png_w <- 900 * ncol
+    png_h <- 700 * nrow
+
+    out_path <- file.path(out_dir, paste0("phenotype_hist_avg_reg_", reg_lab,
+                                          "_n_", n_val, "_gen_", target_gen, ".png"))
+    png(out_path, width = png_w, height = png_h)
+    op <- par(mfrow = c(nrow, ncol), mar = c(4, 4, 3.5, 1) + 0.1)
+
+    for (pk in panel_keys) {
+      df_panel <- if (pk == "pooled_sz0") {
+        subset(df_n, sz_orig == 0)
+      } else {
+        sh <- as.numeric(sub("shift=", "", pk))
+        subset(df_n, sz_orig != 0 & shift_size == sh)
+      }
+
+      panel_title <- if (pk == "pooled_sz0") {
+        paste0("reg = ", reg_lab, " | n = ", n_val, " | sz=0 pooled (data-driven)")
+      } else {
+        paste0("reg = ", reg_lab, " | n = ", n_val, " | ", pk)
+      }
+
+      plot(NULL,
+           xlim = range(bin_breaks), ylim = c(0, max_y),
+           xlab = "Phenotype Value", ylab = "Proportion",
+           main = panel_title)
+
+      present_psis <- intersect(psi_all, sort(unique(df_panel$psi)))
+      for (psi_val in present_psis) {
+        avg_counts <- avg_curve_for_subset_pheno(subset(df_panel, psi == psi_val), bin_breaks, bin_mids)
+        if (all(is.na(avg_counts))) next
+        lines(bin_mids, avg_counts, col = psi_cols[as.character(psi_val)], lwd = 2)
+      }
+
+      # Gaussian overlay
+      Vs <- sqrt(2000)
+      z_vals <- seq(min(bin_breaks), max(bin_breaks), length.out = 500)
+      W_z <- exp(-(z_vals^2) / (2 * Vs))
+      W_z_scaled <- W_z / max(W_z) * max_y
+      lines(z_vals, W_z_scaled, lwd = 2, lty = 2)
+
+      legend("topright",
+             legend = paste0("psi=", present_psis),
+             col = psi_cols[as.character(present_psis)],
+             lty = 1, lwd = 2, cex = 0.8, bg = "white")
+    }
+
+    par(op)
+    dev.off()
+  }
+}
+
+```
+
+# PLOT PHENOTYPE OVER TIME
+```{r}
+# ---- unchanged helpers above this line ----
+# (bin_width, half_span, .ph_compute_center, .ph_avg_hist_with_breaks)
+
+bin_width <- (max(bin_breaks) - min(bin_breaks)) / num_bins
+half_span <- (num_bins * bin_width) / 2
+
+plot_phenotype_multi_by_psi <- function(phenotype_df,
+                                        out_subfolder = "phenotype_multi_by_psi_genbins",
+                                        gen_seq = 10000:10005,
+                                        num_bins = num_bins,
+                                        bin_width = bin_width,
+                                        half_span = half_span,
+                                        regimes = regimes) {
+
+  gen_cols <- hcl.colors(length(gen_seq), palette = "Berlin")
+  names(gen_cols) <- as.character(gen_seq)
+
+  if (!("sz_orig" %in% names(phenotype_df))) {
+    stop("phenotype_df must include sz_orig (original sz) to pool data-driven shift runs.")
+  }
+  if (!("reg" %in% names(phenotype_df))) {
+    stop("phenotype_df must include 'reg' (e.g., 'ave' or 'fit').")
+  }
+
+  # Fixed Gaussian sd (requested)
+  gauss_sd <- sqrt(2000)
+
+  # Loop over regimes
+  for (reg_lab in regimes) {
+    df_reg <- subset(phenotype_df, reg == reg_lab)
+    if (nrow(df_reg) == 0) next
+
+    # Per-regime output dir
+    out_dir <- file.path(base_plot_folder, out_subfolder, paste0("reg_", reg_lab))
+    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+    for (n_val in sort(unique(df_reg$n))) {
+      df_n <- subset(df_reg, n == n_val)
+      if (nrow(df_n) == 0) next
+
+      has_sz0 <- any(df_n$sz_orig == 0, na.rm = TRUE)
+      nonzero_shifts <- sort(unique(df_n$shift_size[df_n$sz_orig != 0]))
+      shift_keys <- c(if (has_sz0) "pooled_sz0" else character(0),
+                      if (length(nonzero_shifts)) paste0("shift=", nonzero_shifts) else character(0))
+
+      all_psis <- sort(unique(df_n$psi))
+
+      for (sk in shift_keys) {
+        df_group <- if (sk == "pooled_sz0") {
+          subset(df_n, sz_orig == 0)
+        } else {
+          sh <- as.numeric(sub("shift=", "", sk))
+          subset(df_n, sz_orig != 0 & shift_size == sh)
+        }
+        if (nrow(df_group) == 0) next
+
+        # Pass 1: common y-limit and x-range across all psi & gens
+        max_y <- 0
+        x_min <- Inf; x_max <- -Inf
+        for (psi_val in all_psis) {
+          df_p <- subset(df_group, psi == psi_val)
+          if (nrow(df_p) == 0) next
+          present_gens <- intersect(gen_seq, sort(unique(df_p$generation)))
+          for (g in present_gens) {
+            df_pg <- subset(df_p, generation == g)
+            center <- .ph_compute_center(df_pg)
+            if (!is.finite(center)) next
+            breaks_g <- seq(center - half_span, center + half_span, by = bin_width)
+            avg_counts <- .ph_avg_hist_with_breaks(df_pg, breaks_g, num_bins)
+            max_y <- max(max_y, avg_counts, na.rm = TRUE)
+            x_min <- min(x_min, min(breaks_g), na.rm = TRUE)
+            x_max <- max(x_max, max(breaks_g), na.rm = TRUE)
+          }
+        }
+        if (!is.finite(max_y) || max_y <= 0) max_y <- 1
+        if (!is.finite(x_min) || !is.finite(x_max) || x_min >= x_max) {
+          x_min <- -half_span; x_max <- half_span
+        }
+
+        # Layout
+        K <- length(all_psis)
+        ncol <- ceiling(sqrt(K))
+        nrow <- ceiling(K / ncol)
+        png_w <- 900 * ncol
+        png_h <- 700 * nrow
+
+        title_suffix <- if (sk == "pooled_sz0") {
+          "pooled sz=0 (per-psi avg shift shown in panels)"
+        } else {
+          sh <- as.numeric(sub("shift=", "", sk))
+          paste0("shift_size = ", sh)
+        }
+
+        out_name <- paste0("phenotype_multi_by_psi_reg_", reg_lab,
+                           "_n_", n_val, "_", gsub("[ =]", "", title_suffix), ".png")
+        png(file.path(out_dir, out_name), width = png_w, height = png_h)
+        op <- par(mfrow = c(nrow, ncol), mar = c(4, 4, 3, 1) + 0.1, oma = c(0, 0, 3.5, 0))
+
+        for (psi_val in all_psis) {
+          df_p <- subset(df_group, psi == psi_val)
+
+          # Panel title: if pooled sz=0, show per-psi mean shift_size
+          panel_title <- if (sk == "pooled_sz0") {
+            mpsi <- mean(df_p$shift_size, na.rm = TRUE)
+            if (!is.finite(mpsi)) mpsi <- NA_real_
+            paste0("psi = ", psi_val, " | avg shift_size = ",
+                   if (is.na(mpsi)) "NA" else formatC(mpsi, format = "f", digits = 3))
+          } else {
+            paste0("psi = ", psi_val)
+          }
+
+          plot(NULL,
+               xlim = c(x_min, x_max), ylim = c(0, max_y),
+               xlab = "Phenotype Value", ylab = "Proportion",
+               main = panel_title)
+
+          present_gens <- intersect(gen_seq, sort(unique(df_p$generation)))
+          for (g in present_gens) {
+            df_pg <- subset(df_p, generation == g)
+            center <- .ph_compute_center(df_pg)
+            if (!is.finite(center)) next
+            breaks_g <- seq(center - half_span, center + half_span, by = bin_width)
+            mids_g   <- 0.5 * (breaks_g[-length(breaks_g)] + breaks_g[-1])
+            avg_counts <- .ph_avg_hist_with_breaks(df_pg, breaks_g, num_bins)
+            if (all(is.na(avg_counts))) next
+            lines(mids_g, avg_counts, col = gen_cols[as.character(g)], lwd = 2)
+          }
+
+          # ---- NEW: overlay Gaussian curve on same y-scale (probability per bin) ----
+          # Choose optimum (mu):
+          # - fixed-shift panels: the shift value in the key (equals sz_orig when sz_orig != 0)
+          # - pooled sz=0 panels: the per-psi mean shift_size (data-driven optimum)
+          mu <- if (sk == "pooled_sz0") {
+            mean(df_p$shift_size, na.rm = TRUE)
+          } else {
+            as.numeric(sub("shift=", "", sk))
+          }
+          if (!is.finite(mu)) mu <- 0  # fallback
+
+          # Draw a smooth Gaussian line across the panel, scaled by bin_width
+          xgrid <- seq(x_min, x_max, length.out = 1000)
+          ygrid <- dnorm(xgrid, mean = mu, sd = gauss_sd) * bin_width
+          lines(xgrid, ygrid, lty = 2, lwd = 2)  # default color so it stands out against gen lines
+
+          # Legend (include Gaussian entry)
+          leg_labels <- c(paste0("gen ", present_gens), paste0("Gaussian (μ=", formatC(mu, digits = 3, format = "f"),
+                                                               ", σ=√2000)"))
+          leg_cols   <- c(gen_cols[as.character(present_gens)], par("fg"))
+          leg_lty    <- c(rep(1, length(present_gens)), 2)
+          legend("topright", legend = leg_labels, col = leg_cols,
+                 lty = leg_lty, lwd = 2, cex = 0.8, bg = "white")
+        }
+
+        mtext(paste0("Phenotype distributions (gen-specific bins) | reg = ", reg_lab,
+                     " | n = ", n_val, " | ", title_suffix),
+              outer = TRUE, cex = 1.1, line = 1.2)
+
+        par(op)
+        dev.off()
+      }
+    }
+  }
+}
+
+# ---- Run ----
+plot_phenotype_multi_by_psi(
+  phenotype_df,
+  out_subfolder = "phenotype_multi_by_psi_genbins",
+  gen_seq = 10000:10005,
+  num_bins = num_bins,
+  bin_width = bin_width,
+  half_span = half_span,
+  regimes = regimes   # e.g., c("ave","fit")
+)
+```
+
+# load SUMMARY STATS data
+```{r}
+# Top-level folder
+folder <- file.path(base_data_folder, "data")
+
+# List all .tsv files recursively
+file_list <- list.files(
+  path = folder,
+  pattern = "\\.tsv$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Extract metadata from filename:
+#   data/n_<n>/psi_<psi>/sz_<shift_size>/_reg_<ave|fit>_<rep>.tsv
+extract_sum_metadata <- function(path) {
+  rx <- "data/n_(\\d+)_psi_(-?[0-9.]+)_sz_(\\d+)_reg_(ave|fit)_(\\d+)\\.tsv"
+  m  <- regexec(rx, path)
+  p  <- regmatches(path, m)[[1]]
+
+  if (length(p) != 6) {
+    warning("Could not extract metadata from path: ", path)
+    return(data.frame())
+  }
+
+  data.frame(
+    n          = as.integer(p[2]),
+    psi        = as.numeric(p[3]),
+    shift_size = as.integer(p[4]),
+    reg        = p[5],                 # "ave" or "fit"
+    rep        = as.integer(p[6]),
+    file_id    = basename(path),
+    stringsAsFactors = FALSE
+  )
+}
+
+# Read and combine all files
+summary_stat_df <- do.call(rbind, lapply(file_list, function(file) {
+  df <- tryCatch(read.table(file, header = TRUE, sep = "\t", check.names = FALSE),
+                 error = function(e) NULL)
+  if (is.null(df)) {
+    warning("Failed to read: ", file)
+    return(NULL)
+  }
+
+  meta <- extract_sum_metadata(file)
+  if (nrow(meta) == 0) return(NULL)
+
+  # Attach metadata columns
+  df$n          <- meta$n
+  df$psi        <- meta$psi
+  df$shift_size <- meta$shift_size
+  df$reg        <- meta$reg
+  df$rep        <- meta$rep
+  df$file_id    <- meta$file_id
+
+  df
+}))
+
+```
+
+## plot SUMMARY STATS (z_sd over n)
+```{r}
+# ------------------------------------------------------
+# Summary stats: z_sd vs n, panels = psi, per shift group
+# Base R only
+# ------------------------------------------------------
+
+# Tick window to average z_sd per (n, psi, rep)
+tick_seq <- 10000:10005
+
+rep_col  <- adjustcolor("gray30", alpha.f = 0.35)  # replicate points
+mean_col <- "black"                                # across-rep mean
+
+# Per-psi pooled shift label (prefer 'optimum' at tick==10001 if present)
+.per_psi_avg_shift <- function(df_panel) {
+  if ("optimum" %in% names(df_panel)) {
+    v <- df_panel$optimum[df_panel$tick == 10001]
+    v <- v[is.finite(v)]
+    if (length(v)) return(mean(v))
+  }
+  v <- df_panel$shift_size
+  v <- v[is.finite(v)]
+  if (!length(v)) return(NA_real_)
+  mean(v)
+}
+
+# For a given (shift group × psi), compute:
+# - x_n: sorted n values present
+# - rep_values: list, one numeric vector per n (replicate-avg z_sd across tick_seq)
+# - mean_values: across-rep means at each n
+.compute_zsd_vs_n <- function(df_panel, tick_seq) {
+  needed <- c("z_sd","n","psi","rep","tick")
+  if (!all(needed %in% names(df_panel))) {
+    return(list(x_n = numeric(0), rep_values = list(), mean_values = numeric(0)))
+  }
+  d <- df_panel
+  d$n    <- suppressWarnings(as.integer(d$n))
+  d$rep  <- suppressWarnings(as.integer(d$rep))
+  d$tick <- suppressWarnings(as.integer(d$tick))
+  d$z_sd <- suppressWarnings(as.numeric(d$z_sd))
+  d <- d[is.finite(d$z_sd) & is.finite(d$n) & is.finite(d$rep) & d$tick %in% tick_seq, , drop = FALSE]
+  if (!nrow(d)) return(list(x_n = numeric(0), rep_values = list(), mean_values = numeric(0)))
+
+  # Average z_sd across ticks per (n, rep)
+  agg <- aggregate(z_sd ~ n + rep, data = d, FUN = mean)
+
+  x_n <- sort(unique(agg$n))
+  rep_values <- lapply(x_n, function(nv) {
+    vals <- agg$z_sd[agg$n == nv]
+    vals[is.finite(vals)]
+  })
+
+  mean_values <- vapply(rep_values, function(v) {
+    if (!length(v)) return(NA_real_)
+    mean(v, na.rm = TRUE)
+  }, numeric(1))
+
+  list(x_n = x_n, rep_values = rep_values, mean_values = mean_values)
+}
+
+plot_zsd_vs_n_by_psi <- function(summary_stat_df,
+                                 out_subfolder = "summary_zsd_vs_n_by_psi",
+                                 tick_seq = tick_seq) {
+  out_dir <- file.path(base_plot_folder, out_subfolder)
+  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+  has_sz_orig <- "sz_orig" %in% names(summary_stat_df)
+  all_psis <- sort(unique(summary_stat_df$psi))
+
+  # One PNG per shift group: pooled 0 and each non-zero
+  for (shift_grouping in c("pooled", "fixed")) {
+
+    # Build groups to render
+    if (shift_grouping == "pooled") {
+      df_pool <- if (has_sz_orig) subset(summary_stat_df, sz_orig == 0)
+                 else subset(summary_stat_df, shift_size == 0)
+      if (nrow(df_pool) == 0) next
+      group_list <- list(list(key = "pooled_sz0", df = df_pool))
+    } else {
+      if (has_sz_orig) {
+        fixed_vals <- sort(unique(summary_stat_df$shift_size[summary_stat_df$sz_orig != 0]))
+        groups <- lapply(fixed_vals, function(sh) {
+          list(key = paste0("shift=", sh),
+               df = subset(summary_stat_df,
+                           ifelse(is.na(sz_orig), FALSE, sz_orig != 0) & shift_size == sh))
+        })
+      } else {
+        fixed_vals <- sort(unique(summary_stat_df$shift_size[summary_stat_df$shift_size != 0]))
+        groups <- lapply(fixed_vals, function(sh) {
+          list(key = paste0("shift=", sh),
+               df = subset(summary_stat_df, shift_size == sh))
+        })
+      }
+      group_list <- Filter(function(g) nrow(g$df) > 0, groups)
+      if (!length(group_list)) next
+    }
+
+    # Render each group
+    for (ginfo in group_list) {
+      df_group <- ginfo$df
+      skey     <- ginfo$key
+
+      # y-range across all psi panels
+      y_min <- Inf; y_max <- -Inf
+      x_all <- integer(0)
+      for (psi_val in all_psis) {
+        df_p <- subset(df_group, psi == psi_val)
+        s <- .compute_zsd_vs_n(df_p, tick_seq)
+        if (length(s$mean_values)) {
+          y_all <- c(unlist(s$rep_values, use.names = FALSE), s$mean_values)
+          y_all <- y_all[is.finite(y_all)]
+          if (length(y_all)) {
+            y_min <- min(y_min, y_all)
+            y_max <- max(y_max, y_all)
+          }
+        }
+        x_all <- sort(unique(c(x_all, s$x_n)))
+      }
+      if (!is.finite(y_min) || !is.finite(y_max) || y_min == y_max) { y_min <- 0; y_max <- 1 }
+      if (!length(x_all)) next
+
+      # Layout
+      K <- length(all_psis)
+      ncol <- ceiling(sqrt(K))
+      nrow <- ceiling(K / ncol)
+      png_w <- 900 * ncol
+      png_h <- 700 * nrow
+
+      title_suffix <- if (skey == "pooled_sz0") {
+        paste0("pooled sz=0 (per-psi avg shift shown in panels; ticks ",
+               min(tick_seq), "–", max(tick_seq), ")")
+      } else {
+        sh <- as.numeric(sub("shift=", "", skey))
+        paste0("shift_size = ", sh, " (ticks ", min(tick_seq), "–", max(tick_seq), ")")
+      }
+
+      out_name <- paste0("summary_zsd_vs_n_", gsub("[ =]", "", skey), ".png")
+      png(file.path(out_dir, out_name), width = png_w, height = png_h)
+      op <- par(mfrow = c(nrow, ncol), mar = c(4, 4, 3, 1) + 0.1, oma = c(0, 0, 3.5, 0))
+
+      for (psi_val in all_psis) {
+        df_p <- subset(df_group, psi == psi_val)
+
+        panel_title <- if (skey == "pooled_sz0") {
+          mpsi <- .per_psi_avg_shift(df_p)
+          paste0("psi = ", psi_val, " | avg shift_size = ",
+                 if (is.finite(mpsi)) formatC(mpsi, format = "f", digits = 3) else "NA")
+        } else {
+          paste0("psi = ", psi_val)
+        }
+
+        s <- .compute_zsd_vs_n(df_p, tick_seq)
+        x_n <- s$x_n
+
+        plot(NA, xlim = range(x_all), ylim = c(y_min, y_max),
+             xlab = "n", ylab = "z_sd (avg over ticks)", main = panel_title,
+             xaxt = "n")
+        axis(1, at = sort(unique(x_all)))
+
+        # Replicate points per n (jitter to reduce overplot)
+        if (length(s$rep_values)) {
+          for (i in seq_along(x_n)) {
+            nv <- x_n[i]
+            yy <- s$rep_values[[i]]
+            if (!length(yy)) next
+            xx <- jitter(rep(nv, length(yy)), amount = 0.15)
+            points(xx, yy, pch = 16, cex = 0.6, col = rep_col)
+          }
+        }
+
+        # Across-rep mean across n
+        if (length(s$mean_values) && length(x_n)) {
+          ord <- order(x_n)
+          lines(x_n[ord], s$mean_values[ord], col = mean_col, lwd = 2)
+          points(x_n[ord], s$mean_values[ord], pch = 16, cex = 0.9, col = mean_col)
+        }
+
+        legend("topleft", inset = 0.02,
+               legend = c("Replicate mean (over ticks)", "Across-rep mean"),
+               col = c(rep_col, mean_col), lty = c(0,1), pch = c(16,16),
+               pt.cex = c(0.6,0.9), lwd = c(NA,2), bty = "n", cex = 0.85)
+      }
+
+      mtext(paste0("z_sd vs n (avg over ticks ", min(tick_seq), "–", max(tick_seq), ") | ", title_suffix),
+            outer = TRUE, cex = 1.1, line = 1.2)
+
+      par(op)
+      dev.off()
+    }
+  }
+}
+
+# ---- Run ----
+plot_zsd_vs_n_by_psi(summary_stat_df, out_subfolder = "summary_zsd_vs_n_by_psi", tick_seq = 10000:10005)
+
+```
+
+### a_sd over n averaged
+```{r}
+# ------------------------------------------------------
+# Summary stats: a_sd vs n, panels = psi, per shift group
+# Base R only
+# ------------------------------------------------------
+
+# Tick window used to average a_sd per (n, psi, rep)
+tick_seq <- 10000:10005
+
+rep_col  <- adjustcolor("gray30", alpha.f = 0.35)  # replicate points
+mean_col <- "black"                                # across-rep mean
+
+# Per-psi pooled shift label (prefer 'optimum' at tick==10001 if present)
+.per_psi_avg_shift <- function(df_panel) {
+  if ("optimum" %in% names(df_panel)) {
+    v <- df_panel$optimum[df_panel$tick == 10001]
+    v <- v[is.finite(v)]
+    if (length(v)) return(mean(v))
+  }
+  v <- df_panel$shift_size
+  v <- v[is.finite(v)]
+  if (!length(v)) return(NA_real_)
+  mean(v)
+}
+
+# For a given (shift group × psi), compute:
+# - x_n: sorted n values present
+# - rep_values: list, one numeric vector per n (replicate-averaged a_sd across tick_seq)
+# - mean_values: numeric vector of across-rep means at each n
+.compute_asd_vs_n <- function(df_panel, tick_seq) {
+  needed <- c("a_sd","n","psi","rep","tick")
+  if (!all(needed %in% names(df_panel))) {
+    return(list(x_n = numeric(0), rep_values = list(), mean_values = numeric(0)))
+  }
+  # Coerce types, filter tick window
+  d <- df_panel
+  d$n    <- suppressWarnings(as.integer(d$n))
+  d$rep  <- suppressWarnings(as.integer(d$rep))
+  d$tick <- suppressWarnings(as.integer(d$tick))
+  d$a_sd <- suppressWarnings(as.numeric(d$a_sd))
+  d <- d[is.finite(d$a_sd) & is.finite(d$n) & is.finite(d$rep) & d$tick %in% tick_seq, , drop = FALSE]
+  if (!nrow(d)) return(list(x_n = numeric(0), rep_values = list(), mean_values = numeric(0)))
+
+  # Average a_sd across tick window per (n, rep)
+  agg <- aggregate(a_sd ~ n + rep, data = d, FUN = mean)
+
+  x_n <- sort(unique(agg$n))
+  rep_values <- lapply(x_n, function(nv) {
+    vals <- agg$a_sd[agg$n == nv]
+    vals[is.finite(vals)]
+  })
+
+  mean_values <- vapply(rep_values, function(v) {
+    if (!length(v)) return(NA_real_)
+    mean(v, na.rm = TRUE)
+  }, numeric(1))
+
+  list(x_n = x_n, rep_values = rep_values, mean_values = mean_values)
+}
+
+plot_asd_vs_n_by_psi <- function(summary_stat_df,
+                                 out_subfolder = "summary_asd_vs_n_by_psi",
+                                 tick_seq = tick_seq) {
+  out_dir <- file.path(base_plot_folder, out_subfolder)
+  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+  has_sz_orig <- "sz_orig" %in% names(summary_stat_df)
+  all_psis <- sort(unique(summary_stat_df$psi))
+
+  # We produce one PNG per shift group (pooled 0 and each non-zero)
+  # spanning ALL n values for that group
+  # (so we do NOT split by n here; x-axis is n)
+  for (shift_grouping in c("pooled", "fixed")) {
+
+    # Build list of groups to render
+    if (shift_grouping == "pooled") {
+      if (has_sz_orig) {
+        df_pool <- subset(summary_stat_df, sz_orig == 0)
+      } else {
+        df_pool <- subset(summary_stat_df, shift_size == 0)
+      }
+      if (nrow(df_pool) == 0) next
+      group_list <- list(list(key = "pooled_sz0", df = df_pool))
+    } else {
+      if (has_sz_orig) {
+        fixed_vals <- sort(unique(summary_stat_df$shift_size[summary_stat_df$sz_orig != 0]))
+        groups <- lapply(fixed_vals, function(sh) {
+          list(key = paste0("shift=", sh),
+               df = subset(summary_stat_df,
+                           ifelse(is.na(sz_orig), FALSE, sz_orig != 0) & shift_size == sh))
+        })
+      } else {
+        fixed_vals <- sort(unique(summary_stat_df$shift_size[summary_stat_df$shift_size != 0]))
+        groups <- lapply(fixed_vals, function(sh) {
+          list(key = paste0("shift=", sh),
+               df = subset(summary_stat_df, shift_size == sh))
+        })
+      }
+      # drop empties
+      group_list <- Filter(function(g) nrow(g$df) > 0, groups)
+      if (!length(group_list)) next
+    }
+
+    # Render each group to its own PNG
+    for (ginfo in group_list) {
+      df_group <- ginfo$df
+      skey     <- ginfo$key
+
+      # y-range across all psi panels in this group
+      y_min <- Inf; y_max <- -Inf
+      x_all <- integer(0)
+      for (psi_val in all_psis) {
+        df_p <- subset(df_group, psi == psi_val)
+        s <- .compute_asd_vs_n(df_p, tick_seq)
+        if (length(s$mean_values)) {
+          # Collect y-range from both replicate points and means
+          y_all <- c(unlist(s$rep_values, use.names = FALSE), s$mean_values)
+          y_all <- y_all[is.finite(y_all)]
+          if (length(y_all)) {
+            y_min <- min(y_min, y_all)
+            y_max <- max(y_max, y_all)
+          }
+        }
+        x_all <- sort(unique(c(x_all, s$x_n)))
+      }
+      if (!is.finite(y_min) || !is.finite(y_max) || y_min == y_max) { y_min <- 0; y_max <- 1 }
+      if (!length(x_all)) next
+
+      # layout
+      K <- length(all_psis)
+      ncol <- ceiling(sqrt(K))
+      nrow <- ceiling(K / ncol)
+      png_w <- 900 * ncol
+      png_h <- 700 * nrow
+
+      title_suffix <- if (skey == "pooled_sz0") {
+        paste0("pooled sz=0 (per-psi avg shift shown in panels; ticks ",
+               min(tick_seq), "–", max(tick_seq), ")")
+      } else {
+        sh <- as.numeric(sub("shift=", "", skey))
+        paste0("shift_size = ", sh, " (ticks ", min(tick_seq), "–", max(tick_seq), ")")
+      }
+
+      out_name <- paste0("summary_asd_vs_n_", gsub("[ =]", "", skey), ".png")
+      png(file.path(out_dir, out_name), width = png_w, height = png_h)
+      op <- par(mfrow = c(nrow, ncol), mar = c(4, 4, 3, 1) + 0.1, oma = c(0, 0, 3.5, 0))
+
+      for (psi_val in all_psis) {
+        df_p <- subset(df_group, psi == psi_val)
+
+        # Per-panel title
+        panel_title <- if (skey == "pooled_sz0") {
+          mpsi <- .per_psi_avg_shift(df_p)
+          paste0("psi = ", psi_val, " | avg shift_size = ",
+                 if (is.finite(mpsi)) formatC(mpsi, format = "f", digits = 3) else "NA")
+        } else {
+          paste0("psi = ", psi_val)
+        }
+
+        # Compute series for this psi
+        s <- .compute_asd_vs_n(df_p, tick_seq)
+        x_n <- s$x_n
+        plot(NA, xlim = range(x_all), ylim = c(y_min, y_max),
+             xlab = "n", ylab = "a_sd (avg over ticks)", main = panel_title,
+             xaxt = "n")
+        axis(1, at = sort(unique(x_all)))
+
+        # Replicate points at each n (slight jitter to reduce overplot)
+        if (length(s$rep_values)) {
+          for (i in seq_along(x_n)) {
+            nv <- x_n[i]
+            yy <- s$rep_values[[i]]
+            if (!length(yy)) next
+            xx <- jitter(rep(nv, length(yy)), amount = 0.15)
+            points(xx, yy, pch = 16, cex = 0.6, col = rep_col)
+          }
+        }
+
+        # Across-rep mean as a line across n
+        if (length(s$mean_values) && length(x_n)) {
+          ord <- order(x_n)
+          lines(x_n[ord], s$mean_values[ord], col = mean_col, lwd = 2)
+          points(x_n[ord], s$mean_values[ord], pch = 16, cex = 0.9, col = mean_col)
+        }
+
+        legend("topleft", inset = 0.02,
+               legend = c("Replicate mean (over ticks)", "Across-rep mean"),
+               col = c(rep_col, mean_col), lty = c(0,1), pch = c(16,16),
+               pt.cex = c(0.6,0.9), lwd = c(NA,2), bty = "n", cex = 0.85)
+      }
+
+      mtext(paste0("a_sd vs n (avg over ticks ", min(tick_seq), "–", max(tick_seq), ") | ", title_suffix),
+            outer = TRUE, cex = 1.1, line = 1.2)
+
+      par(op)
+      dev.off()
+    }
+  }
+}
+
+# ---- Run it ----
+plot_asd_vs_n_by_psi(summary_stat_df, out_subfolder = "summary_asd_vs_n_by_psi", tick_seq = 10000:10005)
+
+```
+
+## plot dist_norm over TIME
+```{r}
+# ------------------------------------------------------
+# Summary stats multipanel (x = tick, y = dist_norm * Va0_sqrt)
+# Panels = psi; one PNG per (n, shift-group), base R only
+# ------------------------------------------------------
+
+tick_seq <- 10000:10005
+rep_col  <- adjustcolor("gray30", alpha.f = 0.35)
+mean_col <- "black"
+
+# Per-psi pooled shift label: prefer 'optimum' at tick==10001 if present
+.per_psi_avg_shift <- function(df_panel) {
+  if ("optimum" %in% names(df_panel)) {
+    v <- df_panel$optimum[df_panel$tick == 10001]
+    v <- v[is.finite(v)]
+    if (length(v)) return(mean(v))
+  }
+  v <- df_panel$shift_size
+  v <- v[is.finite(v)]
+  if (!length(v)) return(NA_real_)
+  mean(v)
+}
+
+# Build per-rep series over tick_seq and across-rep mean
+.compute_series <- function(df_panel, tick_seq) {
+  needed <- c("dist_norm","Va0_sqrt","tick","rep")
+  if (!all(needed %in% names(df_panel))) {
+    return(list(reps = list(), mean = rep(NA_real_, length(tick_seq)), present_ticks = integer(0)))
+  }
+  df_sub <- df_panel
+  df_sub$y <- suppressWarnings(as.numeric(df_sub$dist_norm) * as.numeric(df_sub$Va0_sqrt))
+  df_sub$tick <- suppressWarnings(as.integer(df_sub$tick))
+  df_sub$rep  <- suppressWarnings(as.integer(df_sub$rep))
+  df_sub <- df_sub[is.finite(df_sub$y) & is.finite(df_sub$tick) & is.finite(df_sub$rep), , drop = FALSE]
+  if (!nrow(df_sub)) return(list(reps = list(), mean = rep(NA_real_, length(tick_seq)), present_ticks = integer(0)))
+
+  # If duplicates per (tick, rep), average them
+  agg <- aggregate(y ~ tick + rep, data = df_sub, FUN = mean)
+
+  reps <- sort(unique(agg$rep))
+  rep_series <- lapply(reps, function(r) {
+    yv <- rep(NA_real_, length(tick_seq))
+    rows <- agg[agg$rep == r & agg$tick %in% tick_seq, , drop = FALSE]
+    if (nrow(rows)) {
+      idx <- match(rows$tick, tick_seq)
+      yv[idx] <- rows$y
+    }
+    yv
+  })
+  names(rep_series) <- as.character(reps)
+
+  if (length(rep_series)) {
+    mat <- do.call(rbind, rep_series)  # reps x ticks
+    mean_series  <- apply(mat, 2L, function(col) mean(col, na.rm = TRUE))
+    present_ticks <- tick_seq[colSums(!is.na(mat)) > 0]
+  } else {
+    mean_series <- rep(NA_real_, length(tick_seq))
+    present_ticks <- integer(0)
+  }
+
+  list(reps = rep_series, mean = mean_series, present_ticks = present_ticks)
+}
+
+plot_summary_multi_by_psi_ticks <- function(summary_stat_df,
+                                            out_subfolder = "summary_multi_by_psi") {
+  out_dir <- file.path(base_plot_folder, out_subfolder)
+  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+  has_sz_orig <- "sz_orig" %in% names(summary_stat_df)
+
+  for (n_val in sort(unique(summary_stat_df$n))) {
+    df_n <- subset(summary_stat_df, n == n_val)
+    if (nrow(df_n) == 0) next
+
+    # Shift groups: pooled sz=0 + each nonzero shift
+    if (has_sz_orig) {
+      has_sz0 <- any(df_n$sz_orig == 0, na.rm = TRUE)
+      nonzero <- sort(unique(df_n$shift_size[df_n$sz_orig != 0]))
+      shift_keys <- c(if (has_sz0) "pooled_sz0" else character(0),
+                      if (length(nonzero)) paste0("shift=", nonzero) else character(0))
+    } else {
+      has_sz0 <- any(df_n$shift_size == 0, na.rm = TRUE)
+      nonzero <- sort(unique(df_n$shift_size[df_n$shift_size != 0]))
+      shift_keys <- c(if (has_sz0) "pooled_sz0" else character(0),
+                      if (length(nonzero)) paste0("shift=", nonzero) else character(0))
+    }
+
+    all_psis <- sort(unique(df_n$psi))
+
+    for (sk in shift_keys) {
+      df_group <- if (sk == "pooled_sz0") {
+        if (has_sz_orig) subset(df_n, sz_orig == 0) else subset(df_n, shift_size == 0)
+      } else {
+        sh <- as.numeric(sub("shift=", "", sk))
+        if (has_sz_orig) subset(df_n, ifelse(is.na(sz_orig), FALSE, sz_orig != 0) & shift_size == sh)
+        else subset(df_n, shift_size == sh)
+      }
+      if (nrow(df_group) == 0) next
+
+      # Y-limits across all psi panels
+      y_min <- Inf; y_max <- -Inf
+      for (psi_val in all_psis) {
+        df_p <- subset(df_group, psi == psi_val & tick %in% tick_seq)
+        s <- .compute_series(df_p, tick_seq)
+        y_all <- c(unlist(s$reps, use.names = FALSE), s$mean)
+        y_all <- y_all[is.finite(y_all)]
+        if (length(y_all)) {
+          y_min <- min(y_min, y_all)
+          y_max <- max(y_max, y_all)
+        }
+      }
+      if (!is.finite(y_min) || !is.finite(y_max) || y_min == y_max) {
+        y_min <- 0; y_max <- 1
+      }
+
+      # Layout
+      K <- length(all_psis)
+      ncol <- ceiling(sqrt(K))
+      nrow <- ceiling(K / ncol)
+      png_w <- 900 * ncol
+      png_h <- 700 * nrow
+
+      # Title
+      title_suffix <- if (sk == "pooled_sz0") {
+        "pooled sz=0 (per-psi avg shift shown in panels)"
+      } else {
+        sh <- as.numeric(sub("shift=", "", sk))
+        paste0("shift_size = ", sh)
+      }
+
+      out_name <- paste0("summary_multi_by_psi_ticks_n_", n_val, "_", gsub("[ =]", "", title_suffix), ".png")
+      png(file.path(out_dir, out_name), width = png_w, height = png_h)
+      op <- par(mfrow = c(nrow, ncol), mar = c(4, 4, 3, 1) + 0.1, oma = c(0, 0, 3.5, 0))
+
+      for (psi_val in all_psis) {
+        df_p <- subset(df_group, psi == psi_val & tick %in% tick_seq)
+
+        panel_title <- if (sk == "pooled_sz0") {
+          mpsi <- .per_psi_avg_shift(df_p)
+          paste0("psi = ", psi_val, " | avg shift_size = ",
+                 if (is.finite(mpsi)) formatC(mpsi, format = "f", digits = 3) else "NA")
+        } else {
+          paste0("psi = ", psi_val)
+        }
+
+        plot(NA, xlim = range(tick_seq), ylim = c(y_min, y_max),
+             xlab = "Tick", ylab = "dist_norm × Va0_sqrt", main = panel_title,
+             xaxt = "n")
+        axis(1, at = tick_seq)
+
+        s <- .compute_series(df_p, tick_seq)
+
+        # Rep series (gray)
+        if (length(s$reps)) {
+          for (r in seq_along(s$reps)) {
+            lines(tick_seq, s$reps[[r]], col = rep_col, lwd = 1)
+            points(tick_seq, s$reps[[r]], pch = 16, cex = 0.5, col = rep_col)
+          }
+        }
+        # Across-rep mean (black)
+        lines(tick_seq, s$mean, col = mean_col, lwd = 2)
+        points(tick_seq, s$mean, pch = 16, cex = 0.9, col = mean_col)
+
+        legend("topleft", inset = 0.02,
+               legend = c("Replicate", "Across-rep mean"),
+               col = c(rep_col, mean_col), lty = 1, lwd = c(1,2), pch = c(16,16),
+               pt.cex = c(0.5,0.9), bty = "n", cex = 0.85)
+      }
+
+      mtext(paste0("Summary: dist_norm × Va0_sqrt over ticks | n = ", n_val, " | ", title_suffix),
+            outer = TRUE, cex = 1.1, line = 1.2)
+
+      par(op)
+      dev.off()
+    }
+  }
+}
+
+# ---- Run ----
+plot_summary_multi_by_psi_ticks(summary_stat_df, out_subfolder = "summary_multi_by_psi_ticks")
+```
+
+## process ind data
+```{r}
+# -------------------------
+# BASE R IND-EFFECTS LOADER (fixed)
+# -------------------------
+
+# ---- CONFIG ----
+folder      <- file.path(base_data_folder, "ind")
+gen_filter  <- "10000"   # encoded in filenames to keep
+target_strs <- sprintf("psi_%s", formatC(target_psi, format = "f", digits = 1))  # e.g., psi_-0.3
+
+# ---- HELPERS ----
+
+# Filename: ind/n_{n}_psi_{psi}_sz_{shift}_reg_{ave|fit}_{rep}_gen{gen_filter}.tsv
+extract_effect_metadata <- function(path) {
+  rx <- paste0("ind/n_(\\d+)_psi_(-?[0-9.]+)_sz_(\\d+)_reg_(ave|fit)_(\\d+)_gen", gen_filter, "\\.tsv")
+  m  <- regexec(rx, path)
+  p  <- regmatches(path, m)[[1]]
+  if (length(p) != 6) {
+    warning("Could not extract metadata from path: ", path, " | parts: ", paste(p, collapse = ", "))
+    return(NULL)
+  }
+  list(
+    n          = as.integer(p[2]),
+    psi        = as.numeric(p[3]),
+    shift_size = as.integer(p[4]),
+    reg        = p[5],               # "ave" or "fit"
+    rep        = as.integer(p[6]),
+    file_id    = basename(path)
+  )
+}
+
+# Read variable-length TSV with base R; no headers; pad shorter rows
+read_variable_tsv_base <- function(file_path) {
+  lines <- readLines(file_path, warn = FALSE)
+  if (!length(lines)) return(NULL)
+  split_lines <- strsplit(lines, "\t", fixed = TRUE)
+  max_len <- max(vapply(split_lines, length, integer(1)))
+  padded <- lapply(split_lines, function(row) { length(row) <- max_len; row })
+  df <- as.data.frame(do.call(rbind, padded), stringsAsFactors = FALSE)
+  if (ncol(df) < 2) {
+    warning("File has fewer than 2 columns: ", file_path)
+    return(NULL)
+  }
+  names(df)[1:2] <- c("generation", "individual_id")
+  suppressWarnings({
+    df$generation    <- as.integer(df$generation)
+    df$individual_id <- as.integer(df$individual_id)
+  })
+  df
+}
+
+# Parse tokens like "mutID:effect" or just "effect" -> numeric effect
+tokens_to_effects <- function(x) {
+  if (is.null(x) || !length(x)) return(numeric(0))
+  x <- x[!is.na(x) & nzchar(x)]
+  if (!length(x)) return(numeric(0))
+  fx <- sub("^.*?:", "", x, perl = TRUE)   # keep substring after last ":" if present
+  suppressWarnings(as.numeric(fx))
+}
+
+# ---- LIST FILES ----
+file_list <- list.files(
+  path = folder,
+  pattern = paste0("_gen", gen_filter, "\\.tsv$"),
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# filter by psi string (1 decimal in filenames)
+file_list <- Filter(function(f) any(sapply(target_strs, function(p) grepl(p, f, fixed = TRUE))), file_list)
+
+# ---- READ ALL FILES ----
+df_list <- list()
+for (file in file_list) {
+  raw_df <- read_variable_tsv_base(file)
+  if (is.null(raw_df) || !nrow(raw_df)) next
+
+  meta <- extract_effect_metadata(file)
+  if (is.null(meta)) next
+
+  # attach metadata (vectorized per row)
+  raw_df$rep        <- meta$rep
+  raw_df$psi        <- meta$psi
+  raw_df$n          <- meta$n
+  raw_df$shift_size <- meta$shift_size
+  raw_df$reg        <- meta$reg
+  raw_df$file_id    <- meta$file_id
+
+  df_list[[length(df_list) + 1]] <- raw_df
+}
+if (!length(df_list)) stop("No files loaded. Check folder/filters/regex.")
+
+# ---- PROCESS: list-column 'effects' (robust against varying column counts) ----
+effects_rows <- lapply(df_list, function(df) {
+  # token columns = everything except the known core columns
+  core <- c("generation","individual_id","rep","psi","n","shift_size","reg","file_id")
+  tok_idx <- which(!(names(df) %in% core))
+
+  eff_list <- if (!length(tok_idx)) {
+    replicate(nrow(df), numeric(0), simplify = FALSE)
+  } else {
+    tmp <- apply(df[, tok_idx, drop = FALSE], 1L, tokens_to_effects)
+    if (!is.list(tmp)) as.list(tmp) else tmp
+  }
+
+  out <- data.frame(
+    generation    = df$generation,
+    individual_id = df$individual_id,
+    rep           = df$rep,
+    psi           = as.numeric(df$psi),
+    n             = as.integer(df$n),
+    shift_size    = as.integer(df$shift_size),
+    reg           = df$reg,
+    file_id       = df$file_id,
+    stringsAsFactors = FALSE
+  )
+  out$effects     <- eff_list
+  out$num_effects <- vapply(eff_list, length, integer(1))
+  out
+})
+
+effect_df_listcol <- do.call(rbind, effects_rows)
+
+# ---- OPTIONAL: also build a wide padded matrix (effect_1..K) ----
+make_wide <- TRUE
+if (make_wide) {
+  max_len <- if (nrow(effect_df_listcol)) max(effect_df_listcol$num_effects) else 0L
+  if (max_len > 0) {
+    effect_mat <- t(vapply(effect_df_listcol$effects, function(v) {
+      len <- length(v)
+      if (len < max_len) c(v, rep(NA_real_, max_len - len)) else v[seq_len(max_len)]
+    }, numeric(max_len)))
+    colnames(effect_mat) <- paste0("effect_", seq_len(ncol(effect_mat)))
+    effect_df_wide <- cbind(effect_df_listcol[ , !(names(effect_df_listcol) %in% c("effects")), drop=FALSE],
+                            as.data.frame(effect_mat, check.names = FALSE))
+  } else {
+    effect_df_wide <- effect_df_listcol[ , !(names(effect_df_listcol) %in% c("effects")), drop=FALSE]
+  }
+}
+
+# ---- SAVE ----
+saveRDS(effect_df_listcol, file = file.path(base_data_folder, paste0("ind/effect_df_gen", gen_filter, "_listcol.rds")))
+if (make_wide) {
+  saveRDS(effect_df_wide,    file = file.path(base_data_folder, paste0("ind/effect_df_gen", gen_filter, "_wide.rds")))
+}
+
+```
+
+# load IND data
+```{r}
+# Load the cleaned effect data
+effect_df_wide <- readRDS(
+  file.path(base_data_folder, paste0("ind/effect_df_gen", gen_filter, "_wide.rds"))
+)
+```
+
+## plot EFFECT SIZE histogram 
+```{r}
+# ---------------------------------------------------------
+# EFFECT DISTRIBUTIONS BY PSI (from effect_df_wide)
+# One PNG per (n, shift_size); averaged over individuals
+# Base R only
+# ---------------------------------------------------------
+plot_ind_effect_dists_by_psi <- function(effect_df_wide,
+                                         num_bins = 100,
+                                         bin_breaks = NULL,   # if NULL, compute from the group's pooled values
+                                         out_subfolder = "ind_effect_dists_by_psi",
+                                         regimes = regimes) {
+
+  if (!("reg" %in% names(effect_df_wide))) {
+    stop("effect_df_wide must include 'reg' (e.g., 'ave' or 'fit').")
+  }
+
+  # effect columns
+  xcols <- grep("^effect_", names(effect_df_wide), value = TRUE)
+  if (!length(xcols)) stop("No effect_* columns found in effect_df_wide.")
+
+  # helper: average normalized histogram over individuals for a given subset (single psi)
+  avg_curve_for_subset <- function(df_block, breaks, num_bins) {
+    if (nrow(df_block) == 0) return(rep(NA_real_, num_bins))
+    counts_mat <- matrix(NA_real_, nrow = nrow(df_block), ncol = num_bins)
+    for (i in seq_len(nrow(df_block))) {
+      vals <- suppressWarnings(as.numeric(unlist(df_block[i, xcols])))
+      vals <- vals[is.finite(vals)]
+      if (!length(vals)) next
+      h <- hist(vals, breaks = breaks, plot = FALSE)
+      if (sum(h$counts) == 0) next
+      counts_mat[i, ] <- h$counts / sum(h$counts)  # normalize per individual
+    }
+    colMeans(counts_mat, na.rm = TRUE)
+  }
+
+  # ---- loop by regime ----
+  for (reg_lab in regimes) {
+    df_reg <- subset(effect_df_wide, reg == reg_lab)
+    if (nrow(df_reg) == 0) next
+
+    # where to save (per regime)
+    out_dir <- file.path(base_plot_folder, out_subfolder, paste0("reg_", reg_lab))
+    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+    for (n_val in sort(unique(df_reg$n))) {
+      df_n <- subset(df_reg, n == n_val)
+      if (nrow(df_n) == 0) next
+
+      for (sh in sort(unique(df_n$shift_size))) {
+        df_group <- subset(df_n, shift_size == sh)
+        if (nrow(df_group) == 0) next
+
+        # all psi values in this (reg, n, shift) group
+        psi_vals <- sort(unique(df_group$psi))
+        cols <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+        names(cols) <- as.character(psi_vals)
+
+        # Choose bin breaks for THIS plot:
+        #   use provided bin_breaks; otherwise compute from pooled effects across all individuals here
+        if (is.null(bin_breaks)) {
+          pooled <- suppressWarnings(as.numeric(unlist(df_group[, xcols])))
+          pooled <- pooled[is.finite(pooled)]
+          if (!length(pooled)) next
+          rng <- range(pooled)
+          if (!is.finite(rng[1]) || !is.finite(rng[2]) || rng[1] == rng[2]) {
+            rng <- c(rng[1] - 0.5, rng[2] + 0.5)
+          }
+          breaks <- seq(rng[1], rng[2], length.out = num_bins + 1)
+        } else {
+          breaks <- bin_breaks
+          # (optional safety) enforce expected length
+          if (length(breaks) != num_bins + 1L) {
+            warning("Provided bin_breaks length != num_bins + 1; recalculating from range.")
+            pooled <- suppressWarnings(as.numeric(unlist(df_group[, xcols])))
+            pooled <- pooled[is.finite(pooled)]
+            if (!length(pooled)) next
+            rng <- range(pooled)
+            breaks <- seq(rng[1], rng[2], length.out = num_bins + 1)
+          }
+        }
+        mids <- 0.5 * (breaks[-length(breaks)] + breaks[-1])
+
+        # find a common y-limit across psi averages
+        max_y <- 0
+        for (psi_val in psi_vals) {
+          avg_counts <- avg_curve_for_subset(subset(df_group, psi == psi_val), breaks, num_bins)
+          max_y <- max(max_y, avg_counts, na.rm = TRUE)
+        }
+        if (!is.finite(max_y) || max_y <= 0) max_y <- 1
+
+        # nicer label for shift_size
+        title_shift <- if (is.finite(sh) && sh == 0) "data-driven" else paste0("shift_size = ", sh)
+        file_shift  <- if (is.finite(sh) && sh == 0) "dataDriven"  else paste0("shift_", sh)
+
+        # open PNG
+        fname <- paste0("ind_effect_dists_reg_", reg_lab, "_n_", n_val, "_", file_shift, ".png")
+        png(file.path(out_dir, fname), width = 1000, height = 700)
+        par(mar = c(4.5, 4.5, 3.5, 1) + 0.1)
+
+        # base empty plot
+        plot(NULL,
+             xlim = range(breaks), ylim = c(0, max_y),
+             xlab = "Effect size", ylab = "Proportion",
+             main = paste0("Effect distributions | reg = ", reg_lab,
+                           " | n = ", n_val, " | ", title_shift))
+
+        # draw one averaged curve per psi
+        for (psi_val in psi_vals) {
+          avg_counts <- avg_curve_for_subset(subset(df_group, psi == psi_val), breaks, num_bins)
+          if (all(is.na(avg_counts))) next
+          lines(mids, avg_counts, col = cols[as.character(psi_val)], lwd = 2)
+        }
+
+        legend("topright",
+               legend = paste0("psi=", psi_vals),
+               col = cols[as.character(psi_vals)],
+               lty = 1, lwd = 2, cex = 0.9, bg = "white")
+
+        dev.off()
+      }
+    }
+  }
+}
+
+# ---- Run it ----
+plot_ind_effect_dists_by_psi(
+  effect_df_wide,
+  num_bins = 40,
+  bin_breaks = seq(-4, 4, by = 0.2),  # 8 / 40 = 0.2
+  out_subfolder = "ind_effect_dists_by_psi",
+  regimes = regimes  # e.g., c("ave","fit")
+)
+```
+
+
+# load MUT data
+```{r}
+# ---------------------------------------------
+# MUT files → per-generation mutation counts
+# - no headers
+# - variable-length rows/columns
+# - odd rows: mutation IDs ... <gen>
+# - even rows: effect sizes (ignored)
+# ---------------------------------------------
+
+mut_folder <- file.path(base_data_folder, "mut")
+
+mut_files <- list.files(
+  path = mut_folder,
+  pattern = "\\.tsv$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Filename pattern (UPDATED):
+#   mut/n_{n}_psi_{psi}_sz_{shift}_reg_{ave|fit}_{rep}.tsv
+extract_mut_metadata <- function(path) {
+  rx <- "mut/n_(\\d+)_psi_(-?[0-9.]+)_sz_(\\d+)_reg_(ave|fit)_(\\d+)\\.tsv"
+  m  <- regexec(rx, path)
+  p  <- regmatches(path, m)[[1]]
+  if (length(p) != 6) {
+    warning("Could not extract metadata from path: ", path, " | parts: ", paste(p, collapse=", "))
+    return(NULL)
+  }
+  list(
+    n          = as.integer(p[2]),
+    psi        = as.numeric(p[3]),
+    shift_size = as.integer(p[4]),
+    reg        = p[5],                 # "ave" or "fit"
+    rep        = as.integer(p[6]),
+    file_id    = basename(path)
+  )
+}
+
+# Utility: find index of the last non-empty, purely-integer token
+.last_integer_token_idx <- function(tokens) {
+  if (!length(tokens)) return(NA_integer_)
+  nz <- which(nzchar(tokens))
+  if (!length(nz)) return(NA_integer_)
+  toks <- tokens[nz]
+  for (k in seq_along(toks)) {
+    idx <- length(toks) - k + 1L
+    if (grepl("^-?\\d+$", toks[idx])) {
+      return(nz[idx])  # map back to original position
+    }
+  }
+  NA_integer_
+}
+
+count_mutations_in_file <- function(file) {
+  lines <- readLines(file, warn = FALSE)
+  if (!length(lines)) return(NULL)
+
+  meta <- extract_mut_metadata(file)
+  if (is.null(meta)) return(NULL)
+
+  out <- vector("list", length = ceiling(length(lines) / 2))
+  oi <- 0L
+
+  # process odd rows only: 1,3,5,...
+  for (i in seq.int(1L, length(lines), by = 2L)) {
+    raw <- lines[i]
+    if (!nzchar(raw)) next
+
+    toks <- strsplit(raw, "\t", fixed = TRUE)[[1]]
+    toks <- trimws(toks, which = "both")
+
+    gen_pos <- .last_integer_token_idx(toks)
+    if (is.na(gen_pos)) {
+      warning("No numeric generation token found (odd row ", i, ") in: ", file)
+      next
+    }
+    gen <- suppressWarnings(as.integer(toks[gen_pos]))
+    if (!is.finite(gen)) next
+
+    # Everything before gen_pos are mutation IDs (variable count, may include blanks)
+    id_tokens <- if (gen_pos > 1L) toks[1:(gen_pos - 1L)] else character(0)
+    mut_count <- sum(nzchar(id_tokens))
+
+    oi <- oi + 1L
+    out[[oi]] <- data.frame(
+      n          = meta$n,
+      psi        = meta$psi,
+      shift_size = meta$shift_size,
+      reg        = meta$reg,
+      rep        = meta$rep,
+      file_id    = meta$file_id,
+      generation = gen,
+      mut_count  = mut_count,
+      stringsAsFactors = FALSE
+    )
+  }
+
+  if (oi == 0L) return(NULL)
+  do.call(rbind, out[seq_len(oi)])
+}
+
+# Run over all files
+mut_count_df <- do.call(rbind, lapply(mut_files, count_mutations_in_file))
+
+# Optional tidy-up
+if (!is.null(mut_count_df) && nrow(mut_count_df)) {
+  mut_count_df <- mut_count_df[order(mut_count_df$n,
+                                     mut_count_df$psi,
+                                     mut_count_df$reg,
+                                     mut_count_df$shift_size,
+                                     mut_count_df$rep,
+                                     mut_count_df$generation), ]
+}
+
+```
+
+## plot number of alleles over psi and n
+```{r}
+# ------------------------------------------------------
+# Mutations vs psi (gen = 10000), one PNG per (n, shift_size)
+# Base R only
+# ------------------------------------------------------
+plot_mut_counts_over_psi <- function(mut_count_df,
+                                     gen_target = 10000L,
+                                     out_subfolder = "mut_counts_by_psi",
+                                     regimes = regimes) {
+  if (!("reg" %in% names(mut_count_df))) {
+    stop("mut_count_df must include 'reg' (e.g., 'ave' or 'fit').")
+  }
+
+  rep_col  <- adjustcolor("steelblue", alpha.f = 0.35)
+  mean_col <- "steelblue4"
+
+  for (reg_lab in regimes) {
+    d_reg <- subset(mut_count_df, reg == reg_lab & generation == gen_target)
+    if (nrow(d_reg) == 0) {
+      warning("No rows at generation ", gen_target, " for reg=", reg_lab, " in mut_count_df.")
+      next
+    }
+
+    out_dir <- file.path(base_plot_folder, out_subfolder, paste0("reg_", reg_lab))
+    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+    for (n_val in sort(unique(d_reg$n))) {
+      d_n <- subset(d_reg, n == n_val)
+      if (nrow(d_n) == 0) next
+
+      for (sh in sort(unique(d_n$shift_size))) {
+        d <- subset(d_n, shift_size == sh)
+        if (nrow(d) == 0) next
+
+        psi_grid <- sort(unique(d$psi))
+        reps     <- sort(unique(d$rep))
+
+        rep_series <- lapply(reps, function(r) {
+          yv <- rep(NA_real_, length(psi_grid))
+          rows <- d[d$rep == r, c("psi","mut_count")]
+          if (nrow(rows)) {
+            rows$psi <- as.numeric(rows$psi)
+            agg <- aggregate(mut_count ~ psi, data = rows, FUN = mean)
+            idx <- match(agg$psi, psi_grid)
+            yv[idx] <- agg$mut_count
+          }
+          yv
+        })
+        names(rep_series) <- as.character(reps)
+
+        if (length(rep_series)) {
+          mat <- do.call(rbind, rep_series)
+          mean_series <- apply(mat, 2L, function(col) mean(col, na.rm = TRUE))
+        } else {
+          mean_series <- rep(NA_real_, length(psi_grid))
+        }
+
+        y_all <- c(unlist(rep_series, use.names = FALSE), mean_series)
+        y_all <- y_all[is.finite(y_all)]
+        if (!length(y_all)) next
+        y_min <- min(y_all); y_max <- max(y_all)
+        if (y_min == y_max) { y_min <- y_min - 0.5; y_max <- y_max + 0.5 }
+
+        # nicer label for shift_size
+        title_shift <- if (is.finite(sh) && sh == 0) "data-driven" else paste0("shift_size = ", sh)
+        file_shift  <- if (is.finite(sh) && sh == 0) "dataDriven"  else paste0("shift_", sh)
+
+        fname <- paste0("mut_count_over_psi_reg_", reg_lab,
+                        "_n_", n_val, "_", file_shift, "_gen", gen_target, ".png")
+        png(file.path(out_dir, fname), width = 1000, height = 700)
+        par(mar = c(4.5, 4.5, 3.5, 1) + 0.1)
+
+        plot(NA,
+             xlim = range(psi_grid), ylim = c(y_min, y_max),
+             xlab = expression(psi), ylab = "Mutation count",
+             main = paste0("Mutations vs psi | reg = ", reg_lab,
+                           " | n = ", n_val, " | ", title_shift,
+                           " | gen = ", gen_target),
+             xaxt = "n")
+        axis(1, at = psi_grid, labels = formatC(psi_grid, format = "f", digits = 1))
+
+        if (length(rep_series)) {
+          for (i in seq_along(rep_series)) {
+            yv <- rep_series[[i]]
+            lines(psi_grid, yv, col = rep_col, lwd = 1)
+            points(psi_grid, yv, pch = 16, cex = 0.7, col = rep_col)
+          }
+        }
+
+        lines(psi_grid, mean_series, col = mean_col, lwd = 2.5)
+        points(psi_grid, mean_series, pch = 16, cex = 1, col = mean_col)
+
+        legend("topleft", inset = 0.02,
+               legend = c("Replicate", "Across-rep mean"),
+               col = c(rep_col, mean_col), lty = c(1,1),
+               lwd = c(1, 2.5), pch = c(16,16),
+               pt.cex = c(0.7, 1.0), bty = "n", cex = 0.9)
+
+        dev.off()
+      }
+    }
+  }
+}
+
+# ---- Run ----
+plot_mut_counts_over_psi(
+  mut_count_df,
+  gen_target = 10000L,
+  out_subfolder = "mut_counts_by_psi",
+  regimes = regimes  # e.g., c("ave","fit")
+)
+
+```
+
+## plot population level mut distribution
+```{r}
+# --- Config (bins) ---
+num_bins   <- 40
+bin_breaks <- seq(-4, 4, length.out = num_bins + 1)
+bin_mids   <- 0.5 * (bin_breaks[-1] + bin_breaks[-length(bin_breaks)])
+
+# --- Files ---
+mut_folder <- file.path(base_data_folder, "mut")
+mut_files <- list.files(mut_folder, pattern = "\\.tsv$", full.names = TRUE, recursive = TRUE)
+
+# --- Filename metadata (UPDATED):
+# mut/n_{n}_psi_{psi}_sz_{shift}_reg_{ave|fit}_{rep}.tsv
+extract_mut_metadata <- function(path) {
+  rx <- "mut/n_(\\d+)_psi_(-?[0-9.]+)_sz_(\\d+)_reg_(ave|fit)_(\\d+)\\.tsv"
+  m  <- regexec(rx, path)
+  p  <- regmatches(path, m)[[1]]
+  if (length(p) != 6) return(NULL)
+  list(
+    n          = as.integer(p[2]),
+    psi        = as.numeric(p[3]),
+    shift_size = as.integer(p[4]),
+    reg        = p[5],                 # "ave" or "fit"
+    rep        = as.integer(p[6]),
+    file_id    = basename(path)
+  )
+}
+
+# --- Helpers to parse lines with variable length & no headers ---
+.last_integer_token_idx <- function(tokens) {
+  if (!length(tokens)) return(NA_integer_)
+  nz <- which(nzchar(tokens))
+  if (!length(nz)) return(NA_integer_)
+  toks <- tokens[nz]
+  for (k in seq_along(toks)) {
+    idx <- length(toks) - k + 1L
+    if (grepl("^-?\\d+$", toks[idx])) return(nz[idx])
+  }
+  NA_integer_
+}
+
+# --- Build per-rep LONG table of normalized histograms ---
+# One row per (file × generation × bin)
+# Columns: n, psi, shift_size, reg, rep, file_id, generation, bin_mid, prop
+mut_hist_long <- (function() {
+  out <- vector("list", length(mut_files))
+  oi  <- 0L
+
+  for (file in mut_files) {
+    meta <- extract_mut_metadata(file)
+    if (is.null(meta)) next
+
+    lines <- readLines(file, warn = FALSE)
+    if (!length(lines)) next
+
+    # Walk odd/even pairs
+    for (i in seq.int(1L, length(lines), by = 2L)) {
+      # ---- odd row: IDs ----
+      ids_row <- lines[i]
+      if (!nzchar(ids_row)) next
+      ids_toks <- strsplit(ids_row, "\t", fixed = TRUE)[[1]]
+      ids_toks <- trimws(ids_toks)
+      gen_pos1 <- .last_integer_token_idx(ids_toks)
+      if (is.na(gen_pos1)) next
+      gen1 <- suppressWarnings(as.integer(ids_toks[gen_pos1]))
+      if (!is.finite(gen1)) next
+
+      # ---- even row: effects ----
+      if (i + 1L > length(lines)) next
+      eff_row <- lines[i + 1L]
+      eff_toks <- strsplit(eff_row, "\t", fixed = TRUE)[[1]]
+      eff_toks <- trimws(eff_toks)
+      gen_pos2 <- .last_integer_token_idx(eff_toks)
+      gen2 <- if (!is.na(gen_pos2)) suppressWarnings(as.integer(eff_toks[gen_pos2])) else NA_integer_
+      # prefer even-row gen if valid; else use odd-row gen
+      gen <- if (is.finite(gen2)) gen2 else gen1
+      if (!is.finite(gen)) next
+
+      # effect tokens are everything before the gen token on the even row
+      eff_tokens <- if (!is.na(gen_pos2) && gen_pos2 > 1L) eff_toks[1:(gen_pos2 - 1L)] else character(0)
+      # fallback: if even row malformed, try IDs row length
+      if (!length(eff_tokens) && gen_pos1 > 1L) eff_tokens <- ids_toks[1:(gen_pos1 - 1L)]
+
+      eff_vals <- suppressWarnings(as.numeric(eff_tokens))
+      eff_vals <- eff_vals[is.finite(eff_vals)]
+      if (!length(eff_vals)) next  # no effects → skip this generation for this rep
+
+      h <- hist(eff_vals, breaks = bin_breaks, plot = FALSE)
+      if (sum(h$counts) == 0) next
+      prop <- h$counts / sum(h$counts)
+
+      # add long rows (one per bin)
+      df_piece <- data.frame(
+        n          = meta$n,
+        psi        = meta$psi,
+        shift_size = meta$shift_size,
+        reg        = meta$reg,
+        rep        = meta$rep,
+        file_id    = meta$file_id,
+        generation = gen,
+        bin_mid    = bin_mids,
+        prop       = prop,
+        stringsAsFactors = FALSE
+      )
+
+      oi <- oi + 1L
+      out[[oi]] <- df_piece
+    }
+  }
+  if (oi == 0L) return(data.frame())
+  do.call(rbind, out[seq_len(oi)])
+})()
+
+# --- Average across reps (mean proportion per bin) ---
+# Gives one row per (n, psi, shift_size, reg, generation, bin_mid)
+if (nrow(mut_hist_long)) {
+  mut_hist_mean <- aggregate(
+    prop ~ n + psi + shift_size + reg + generation + bin_mid,
+    data = mut_hist_long,
+    FUN = function(x) mean(x, na.rm = TRUE)
+  )
+  # (optional) how many reps contributed to each mean
+  mut_hist_n <- aggregate(
+    prop ~ n + psi + shift_size + reg + generation + bin_mid,
+    data = mut_hist_long,
+    FUN = function(x) sum(is.finite(x))
+  )
+  names(mut_hist_n)[names(mut_hist_n) == "prop"] <- "n_reps"
+  mut_hist_mean <- merge(
+    mut_hist_mean, mut_hist_n,
+    by = c("n","psi","shift_size","reg","generation","bin_mid"),
+    all.x = TRUE, sort = FALSE
+  )
+} else {
+  mut_hist_mean <- data.frame()
+}
+
+```
+
+```{r}
+# ---------------------------------------------
+# Plot averaged mut effect-size hists for gen 10000 and 10005
+# One PNG per (n, shift_size, generation); lines = psi
+# ---------------------------------------------
+plot_mut_hist_two_gens <- function(mut_hist_mean,
+                                   gens = c(10000, 10005),
+                                   out_subfolder = "mut_effect_hist_avg_two_gens",
+                                   regimes = regimes) {
+  if (!nrow(mut_hist_mean)) {
+    warning("mut_hist_mean is empty.")
+    return(invisible(NULL))
+  }
+  if (!("reg" %in% names(mut_hist_mean))) {
+    stop("mut_hist_mean must include 'reg' (e.g., 'ave' or 'fit').")
+  }
+
+  for (reg_lab in regimes) {
+    df_reg <- subset(mut_hist_mean, reg == reg_lab)
+    if (nrow(df_reg) == 0) next
+
+    out_dir <- file.path(base_plot_folder, out_subfolder, paste0("reg_", reg_lab))
+    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+    for (n_val in sort(unique(df_reg$n))) {
+      df_n <- subset(df_reg, n == n_val)
+      if (nrow(df_n) == 0) next
+
+      for (sh in sort(unique(df_n$shift_size))) {
+        df_ns <- subset(df_n, shift_size == sh)
+        if (nrow(df_ns) == 0) next
+
+        # Nice label/filename piece for shift_size
+        title_shift <- if (is.finite(sh) && sh == 0) "data-driven" else paste0("shift_size = ", sh)
+        file_shift  <- if (is.finite(sh) && sh == 0) "dataDriven"  else paste0("shift_", sh)
+
+        for (g in gens) {
+          d <- subset(df_ns, generation == g)
+          if (nrow(d) == 0) next
+
+          psi_vals <- sort(unique(d$psi))
+          cols <- hcl.colors(length(psi_vals), palette = "Zissou 1")
+          names(cols) <- as.character(psi_vals)
+
+          # y-limit from data
+          y_max <- max(d$prop, na.rm = TRUE)
+          if (!is.finite(y_max) || y_max <= 0) y_max <- 1
+
+          # x-limits from bin mids (expand slightly if we can estimate bin width)
+          mids_all <- sort(unique(d$bin_mid))
+          if (length(mids_all) > 1) {
+            bw <- min(diff(mids_all))
+            xlim <- c(min(mids_all) - 0.5 * bw, max(mids_all) + 0.5 * bw)
+          } else {
+            xlim <- range(mids_all)
+          }
+
+          # File + device
+          fname <- paste0("mut_avg_hist_reg_", reg_lab, "_n_", n_val, "_", file_shift, "_gen", g, ".png")
+          png(file.path(out_dir, fname), width = 1000, height = 700)
+          par(mar = c(4.5, 4.5, 3.5, 1) + 0.1)
+
+          plot(NULL, xlim = xlim, ylim = c(0, y_max),
+               xlab = "Effect size", ylab = "Proportion",
+               main = paste0("Unique-mutation effects (avg over reps)\n",
+                             "reg = ", reg_lab, " | n = ", n_val, " | ",
+                             title_shift, " | gen = ", g))
+
+          # Draw one averaged curve per psi
+          for (psi_val in psi_vals) {
+            dd <- d[d$psi == psi_val, ]
+            dd <- dd[order(dd$bin_mid), ]
+            if (!nrow(dd)) next
+            lines(dd$bin_mid, dd$prop, col = cols[as.character(psi_val)], lwd = 2)
+          }
+
+          legend("topright",
+                 legend = paste0("psi=", psi_vals),
+                 col = cols[as.character(psi_vals)],
+                 lty = 1, lwd = 2, cex = 0.9, bg = "white")
+
+          dev.off()
+        }
+      }
+    }
+  }
+}
+
+# Run
+plot_mut_hist_two_gens(
+  mut_hist_mean,
+  gens = c(10000, 10005),
+  out_subfolder = "mut_effect_hist_avg_two_gens",
+  regimes = regimes  # e.g., c("ave","fit")
+)
+
+```
