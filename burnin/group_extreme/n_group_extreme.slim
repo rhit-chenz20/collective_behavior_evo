@@ -137,45 +137,54 @@ shift_time-30 late(){
 
 shift_time late(){
 	print("shift time");
+    a=p1.individuals.sumOfMutationsOfType(m2)+2*sum(sim.substitutions.selectionCoeff);
 	if (shift_size == 0){
-		shift_size1 = 4*sqrt(var(p1.individuals.tagF));
+		shift_size1 = 4*sqrt(var(a));
 		defineGlobal("optimum", optimum+shift_size1);
 	}else{
 		defineGlobal("optimum", optimum+shift_size);
 	}
 	print("new opt is " + optimum);
-	defineGlobal("Va0_sqrt", sqrt(var(p1.individuals.tagF)));
+	defineGlobal("Va0_sqrt", sqrt(var(a)));
 	calculate_phenotype(p1);
+	sim.outputFull(filePath=pop_output, binary=T, pedigreeIDs=T, objectTags=T, substitutions=T); 
 }
 
 
-(shift_time-5):(shift_time+30) late(){
+(shift_time-5):(shift_time+10) late(){
 	print("recoding at cycle "+sim.cycle);
-	if (sim.cycle != shift_time+30){
-		record_phenotype(p1);
-		record_genotype(p1);
-	}else{
-		if (record_phenotype(p1, write = T)){
-			print("written phenotype to "+phenotype_fn);
-		}
-		if (record_genotype(p1, write = T)){
-			print("written genotype to "+genotype_fn);
-		}
+	record_phenotype(p1);
+	record_genotype(p1);
+}
+
+seq(shift_time+10, end_time, by=5) late(){
+	print("recoding at cycle "+sim.cycle);
+	record_phenotype(p1);
+	record_genotype(p1);
+}
+
+(shift_time-2):(shift_time+5) late(){
+	print("recoding at cycle "+sim.cycle);
+	record_effectsize(p1);
+}
+
+seq(shift_time+5, end_time, by=10) late(){
+	print("recoding at cycle "+sim.cycle);
+	record_effectsize(p1);
+}
+
+end_time late() 
+{
+	if (record_phenotype(p1, write = T)){
+		print("written phenotype to "+phenotype_fn);
+	}
+	if (record_genotype(p1, write = T)){
+		print("written genotype to "+genotype_fn);
+	}
+	if (record_effectsize(p1, write = T)){
+		print("written effectsize to file "+ind_fn);
 	}
 }
-
-(shift_time-5):(shift_time+5) late(){
-	print("recoding at cycle "+sim.cycle);
-	if (sim.cycle != shift_time+10){
-		record_effectsize(p1);
-	}else{
-		if (record_effectsize(p1, write = T)){
-			print("written effectsize to file "+ind_fn);
-		}
-	}
-}
-
-end_time late() { }
 
 function (logical) record_effectsize(o<Subpopulation>$ p, [logical$ write = F]){
 	if (write) {
@@ -245,7 +254,6 @@ function (logical) record_genotype(o<Subpopulation>$ p, [logical$ write = F]){
       	return T;
 	}
 }
-
 function (void) calculate_phenotype(o<Subpopulation>$ p){
 	e = rnorm(N, mean=0, sd=0);
 	
@@ -265,11 +273,7 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 		dist = abs(as-mean_a);
 		extreme_i = whichMax(dist);
 		extreme_a = as[extreme_i];
-
-        for (j in groups){
-            a1 = a[j.index];
-            phenotype[j.index] = (1-psi) * a1 + psi * extreme_a;
-        }
+		phenotype[groups.index] = (1-psi) * as + psi * extreme_a;
 	}
 	
 	abs_fitness = dnorm(phenotype, optimum, sqrt(Vs));

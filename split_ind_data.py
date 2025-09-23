@@ -82,4 +82,5 @@ def split_all_ind_files_by_generation(root_folder: str) -> None:
                 print(f"Processed {file_path}: total={total_lines}; no valid generation lines found.")
 
 # Example:
-split_all_ind_files_by_generation("data/n_group_translational/ind")
+split_all_ind_files_by_generation("data/n_group_extreme/ind")
+split_all_ind_files_by_generation("data/n_group_var_model/ind")
