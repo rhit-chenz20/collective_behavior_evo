@@ -2639,8 +2639,8 @@ plot_mut_counts_over_beta(
 ## plot population level mut distribution
 ```{r}
 # --- Config (bins) ---
-num_bins   <- 1000
-bin_breaks <- seq(-100, 1000, length.out = num_bins + 1)
+num_bins   <- 20
+bin_breaks <- seq(-10, 10, length.out = num_bins + 1)
 bin_mids   <- 0.5 * (bin_breaks[-1] + bin_breaks[-length(bin_breaks)])
 
 # --- Files ---
@@ -2866,7 +2866,7 @@ plot_mut_hist_two_gens <- function(mut_hist_mean,
 # Run
 plot_mut_hist_two_gens(
   mut_hist_mean,
-  gens = c(9999, 10005, 10015),
+  gens = c(9999),
   out_subfolder = "mut_effect_pop",
   regimes = regimes  # e.g., c("ave","fit")
 )
