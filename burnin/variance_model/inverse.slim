@@ -303,9 +303,9 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 		a_best_index = groups[whichMax(as)].index;
 
 		groups.tag = a_best_index;
-		groups.tagF = a_var;
+		groups.tagF = 1/(1+a_var);
 
-		vars[asInteger(i/n)] = a_var;
+		vars[asInteger(i/n)] = 1/(1+a_var);
 	}
 	
 	abs_fitness = dnorm(phenotype, optimum, sqrt(Vs));

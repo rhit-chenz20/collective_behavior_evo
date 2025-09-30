@@ -2639,8 +2639,8 @@ plot_mut_counts_over_beta(
 ## plot population level mut distribution
 ```{r}
 # --- Config (bins) ---
-num_bins   <- 40
-bin_breaks <- seq(-4, 4, length.out = num_bins + 1)
+num_bins   <- 1000
+bin_breaks <- seq(-100, 1000, length.out = num_bins + 1)
 bin_mids   <- 0.5 * (bin_breaks[-1] + bin_breaks[-length(bin_breaks)])
 
 # --- Files ---
@@ -2650,7 +2650,7 @@ mut_files <- list.files(mut_folder, pattern = "\\.tsv$", full.names = TRUE, recu
 # --- Filename metadata (UPDATED):
 # mut/n_{n}_beta_{beta}_sz_{shift}_reg_{ave|fit}_{rep}.tsv
 extract_mut_metadata <- function(path) {
-  rx <- "mut/n_(\\d+)_beta_(-?[0-9.]+)_sz_(\\d+)_reg_(ave|fit)_(\\d+)\\.tsv"
+  rx <- "mut/n_(\\d+)_beta_(-?[0-9.]+)_sz_(\\d+)_reg_(ave|best|inv)_(\\d+)\\.tsv"
   m  <- regexec(rx, path)
   p  <- regmatches(path, m)[[1]]
   if (length(p) != 6) return(NULL)
@@ -2781,7 +2781,7 @@ if (nrow(mut_hist_long)) {
 # One PNG per (n, shift_size, generation); lines = beta
 # ---------------------------------------------
 plot_mut_hist_two_gens <- function(mut_hist_mean,
-                                   gens = c(10000, 10005),
+                                   gens = c(9999, 10005),
                                    out_subfolder = "mut_effect_hist_avg_two_gens",
                                    regimes = regimes) {
   if (!nrow(mut_hist_mean)) {
@@ -2866,8 +2866,8 @@ plot_mut_hist_two_gens <- function(mut_hist_mean,
 # Run
 plot_mut_hist_two_gens(
   mut_hist_mean,
-  gens = c(10000, 10005, 10015),
-  out_subfolder = "mut_effect_hist_avg_two_gens",
+  gens = c(9999, 10005, 10015),
+  out_subfolder = "mut_effect_pop",
   regimes = regimes  # e.g., c("ave","fit")
 )
 

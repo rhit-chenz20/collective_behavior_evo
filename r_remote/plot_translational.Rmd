@@ -1553,19 +1553,16 @@ compute_decay_table <- function(df, tick_seq) {
   do.call(rbind, out)
 }
 
-```
-
-### plot first gen jump (need func compute_series)
-```{r}
-compute_jump <- function(df, tick_seq = 9999:10000) {
+compute_jump <- function(df, tick_seq = 9999:10000, relative=TRUE) {
   s <- .compute_series(df, tick_seq)
   yvals <- s$mean
   if (length(yvals) < 2 || any(!is.finite(yvals))) return(NA_real_)
   # jump = y(9999) - y(10000)/opt
-  return((yvals[1] - yvals[2])/df$optimum[df$tick == 10000][1])
+  if (!relative) return(yvals[1] - yvals[2])
+  else return((yvals[1] - yvals[2])/df$optimum[df$tick == 10000][1])
 }
 
-compute_jump_table <- function(df) {
+compute_jump_table <- function(df, relative=TRUE) {
   out <- list()
   for (reg_val in sort(unique(df$reg))) {
     df_reg <- subset(df, reg == reg_val)
@@ -1577,7 +1574,7 @@ compute_jump_table <- function(df) {
         for (psi_val in sort(unique(df_sk$psi))) {
           df_p <- subset(df_sk, psi == psi_val & tick %in% 9999:10000)
           if (!nrow(df_p)) next
-          j <- compute_jump(df_p)
+          j <- compute_jump(df_p, relative=relative)
           out[[length(out)+1]] <- data.frame(
             reg = reg_val, n = n_val, shift_size = sk,
             psi = psi_val, jump = j
@@ -1588,6 +1585,11 @@ compute_jump_table <- function(df) {
   }
   do.call(rbind, out)
 }
+
+```
+
+### plot first gen jump (need func compute_series)
+```{r}
 jump_tbl <- compute_jump_table(summary_stat_df)
 
 plot_jump_by_shift <- function(jump_tbl, out_subfolder = "dist_1st_gen") {
@@ -1864,7 +1866,7 @@ plot_decay_heatmap_per_shift <- function(decay_tbl,
 
   invisible(NULL)
 }
-# decay_tbl <- compute_decay_table(summary_stat_df, tick_seq)
+decay_tbl <- compute_decay_table(summary_stat_df, tick_seq)
 # decay_tbl <- decay_tbl[decay_tbl$reg != "ext",]
 plot_decay_heatmap_per_shift(decay_tbl, metric = "k", out_subfolder = "decay_k")
 ```
@@ -1936,7 +1938,7 @@ plot_jump_heatmap <- function(jump_tbl,
     total_w <- ncol * panel_w + legend_w
     total_h <- nrow * panel_h + 0.5
 
-    pdf_path <- file.path(out_dir, paste0("jump_heatmap_shift_", gsub("[^0-9.-]", "", sh), "_relative_opt.pdf"))
+    pdf_path <- file.path(out_dir, paste0("jump_heatmap_shift_", gsub("[^0-9.-]", "", sh), ".pdf"))
     if (capabilities("cairo")) {
       grDevices::cairo_pdf(file = pdf_path, width = total_w, height = total_h, family = "sans")
     } else {
@@ -2000,7 +2002,7 @@ plot_jump_heatmap <- function(jump_tbl,
 
   invisible(NULL)
 }
-# jump_tbl <- compute_jump_table(summary_stat_df)
+jump_tbl <- compute_jump_table(summary_stat_df, relative = FALSE)
 # jump_tbl <- jump_tbl[jump_tbl$reg %in% c("fit", "ave"),]  # optional filter
 # Using your existing jump_tbl:
 plot_jump_heatmap(jump_tbl,
