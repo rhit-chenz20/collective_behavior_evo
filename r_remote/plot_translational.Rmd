@@ -10,7 +10,7 @@ setwd("/workdir/zc524/collective_behavior_evo/r_remote")
 base_data_folder <- "../data/n_group_translational"
 base_plot_folder <- "../r_plots/n_group_translational"
 target_psi <- c(0.0, 0.3, 0.5, 0.7, 0.9)
-regimes <- c("fit", "ave")  # "ave" = average, "fit" = fitness-based
+regimes <- c("fit", "ave", "ext")  # "ave" = average, "fit" = fitness-based
 ```
 
 # load GENOTYPE data
@@ -876,7 +876,7 @@ file_list <- list.files(
 # Extract metadata from filename:
 #   data/n_<n>/psi_<psi>/sz_<shift_size>/_reg_<ave|fit>_<rep>.tsv
 extract_sum_metadata <- function(path) {
-  rx <- "data/n_(\\d+)_psi_(-?[0-9.]+)_sz_(\\d+)_reg_(ave|fit)_(\\d+)\\.tsv"
+  rx <- "data/n_(\\d+)_psi_(-?[0-9.]+)_sz_(\\d+)_reg_(ave|fit|ext)_(\\d+)\\.tsv"
   m  <- regexec(rx, path)
   p  <- regmatches(path, m)[[1]]
 
@@ -907,6 +907,9 @@ summary_stat_df <- do.call(rbind, lapply(file_list, function(file) {
 
   meta <- extract_sum_metadata(file)
   if (nrow(meta) == 0) return(NULL)
+  if (meta$shift_size == 0) {
+    return(NULL)
+  }
 
   # Attach metadata columns
   df$n          <- meta$n
@@ -1101,7 +1104,7 @@ plot_seg_site_by_tick(summary_stat_df,
 
 ```
 
-## plot dist_norm over TIME
+## plot dist_norm helper
 ```{r}
 # --------------------------------------------
 # Summary stats multipanel with exp-decay fits
@@ -1429,6 +1432,10 @@ plot_summary_multi_by_psi_ticks <- function(summary_stat_df,
   }
 }
 
+```
+
+```{r}
+
 # ---- Run ----
 plot_summary_multi_by_psi_ticks(summary_stat_df,
                                 out_subfolder = "distanct_from_opt_overtime",
@@ -1436,6 +1443,7 @@ plot_summary_multi_by_psi_ticks(summary_stat_df,
 
 ```
 
+## EXPONENTIAL-DECAY FITTING helper
 ```{r}
 # --------- 1) Collect decay metrics per (reg, shift_key, n, psi) ----------
 # Choose which speed metric to compare:
@@ -1545,63 +1553,461 @@ compute_decay_table <- function(df, tick_seq) {
   do.call(rbind, out)
 }
 
+```
+
+### plot first gen jump (need func compute_series)
+```{r}
+compute_jump <- function(df, tick_seq = 9999:10000) {
+  s <- .compute_series(df, tick_seq)
+  yvals <- s$mean
+  if (length(yvals) < 2 || any(!is.finite(yvals))) return(NA_real_)
+  # jump = y(9999) - y(10000)/opt
+  return((yvals[1] - yvals[2])/df$optimum[df$tick == 10000][1])
+}
+
+compute_jump_table <- function(df) {
+  out <- list()
+  for (reg_val in sort(unique(df$reg))) {
+    df_reg <- subset(df, reg == reg_val)
+    for (n_val in sort(unique(df_reg$n))) {
+      df_n <- subset(df_reg, n == n_val)
+      for (sk in sort(unique(df_n$shift_size))) {
+        if (sk == 0) next
+        df_sk <- subset(df_n, shift_size == sk)
+        for (psi_val in sort(unique(df_sk$psi))) {
+          df_p <- subset(df_sk, psi == psi_val & tick %in% 9999:10000)
+          if (!nrow(df_p)) next
+          j <- compute_jump(df_p)
+          out[[length(out)+1]] <- data.frame(
+            reg = reg_val, n = n_val, shift_size = sk,
+            psi = psi_val, jump = j
+          )
+        }
+      }
+    }
+  }
+  do.call(rbind, out)
+}
+jump_tbl <- compute_jump_table(summary_stat_df)
+
+plot_jump_by_shift <- function(jump_tbl, out_subfolder = "dist_1st_gen") {
+  out_dir <- file.path(base_plot_folder, out_subfolder)
+  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+  # pick distinct colors per reg
+  regs <- sort(unique(jump_tbl$reg))
+  reg_cols <- setNames(c("steelblue", "tomato", "darkgreen", "orange")[seq_along(regs)], regs)
+
+  for (sk in sort(unique(jump_tbl$shift_size))) {
+    df_sk <- subset(jump_tbl, shift_size == sk)
+    if (!nrow(df_sk)) next
+
+    ns <- sort(unique(df_sk$n))
+    ncol <- ceiling(sqrt(length(ns)))
+    nrow <- ceiling(length(ns)/ncol)
+
+    pdf(file.path(out_dir, paste0("jump_", gsub("[ =]", "", sk), "_relative.pdf")),
+        width = 9*ncol, height = 6*nrow)
+    op <- par(mfrow = c(nrow,ncol), mar = c(5,5,3,1)+0.1, oma=c(0,0,3,0))
+
+    for (n_val in ns) {
+      df_n <- subset(df_sk, n == n_val)
+      if (!nrow(df_n)) { plot.new(); next }
+
+      # assign color by reg
+      bar_cols <- reg_cols[as.character(df_n$reg)]
+
+      barplot(height = df_n$jump,
+              names.arg = paste0("psi=", df_n$psi, "\nreg=", df_n$reg),
+              col = bar_cols,
+              las = 2, main = paste0("n = ", n_val, " | shift=", sk),
+              ylab = "first gen phenotype jump (% to opt)", cex.names = 0.7)
+    }
+
+    # global title + legend
+    mtext(paste0("Jump from tick 9999-10000 | shift=", sk),
+          outer=TRUE, cex=1.1, line=1)
+    legend("topright", legend = names(reg_cols), fill = reg_cols, bty = "n")
+
+    par(op); dev.off()
+  }
+}
+
+plot_jump_by_shift(jump_tbl)
+
+```
+
+### plot decay variable (need compute_decay_table)
+```{r}
+# Plot fitted decay metric (k or half-life) vs psi, grouped by shift_key == "shift=..."
+# Expects columns: reg, n, shift_key, psi, and either k or t_half
+plot_decay_metric_by_shiftkey <- function(decay_tbl,
+                                          metric = c("k","t_half")[1],
+                                          out_subfolder = "decay_by_shiftkey",
+                                          log_y = FALSE) {
+  metric <- match.arg(metric)
+  stopifnot(all(c("reg","n","shift_key","psi",metric) %in% names(decay_tbl)))
+
+  # Keep finite metric rows
+  df <- decay_tbl[is.finite(decay_tbl[[metric]]), , drop = FALSE]
+  if (!nrow(df)) { warning("No finite values for metric = ", metric); return(invisible(NULL)) }
+
+  # Keep only keys like "shift=..." (skip pooled_sz0 etc.)
+  keys <- as.character(df$shift_key)
+  is_shift <- grepl("^shift=", keys)
+  shift_size_num <- suppressWarnings(as.numeric(sub("^shift=", "", keys)))
+  df <- df[is_shift & is.finite(shift_size_num), , drop = FALSE]
+  if (!nrow(df)) { warning("No rows with shift_key of the form 'shift=...'"); return(invisible(NULL)) }
+  df$shift_size <- shift_size_num[is_shift & is.finite(shift_size_num)]
+
+  # Output folder
+  out_dir <- file.path(base_plot_folder, out_subfolder)
+  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+  # Colors/markers for reg
+  regs <- sort(unique(df$reg))
+  reg_cols <- setNames(c("steelblue","tomato","darkgreen","orange","purple","gray40")[seq_along(regs)], regs)
+  reg_pch  <- setNames(19 + seq_along(regs) - 1L, regs)  # 19,20,...
+
+  ylab <- if (metric == "k") "Decay rate k (1/ticks)" else "Half-life t1/2 (ticks)"
+
+  for (sk in sort(unique(df$shift_size))) {
+    df_sk <- df[df$shift_size == sk, , drop = FALSE]
+    if (!nrow(df_sk)) next
+
+    ns <- sort(unique(df_sk$n))
+    K  <- length(ns)
+    ncol <- ceiling(sqrt(K)); nrow <- ceiling(K / ncol)
+
+    # Shared y-limits across panels (unless log scale)
+    y_all <- df_sk[[metric]]
+    if (!log_y) {
+      ylim <- range(y_all[is.finite(y_all)], na.rm = TRUE)
+      if (!all(is.finite(ylim))) ylim <- c(0, 1)
+      if (diff(ylim) == 0) ylim <- ylim + c(-0.5, 0.5)
+    }
+
+    pdf(file.path(out_dir, paste0("decay_", metric, "_shift_", gsub("[^0-9.-]", "", as.character(sk)), ".pdf")),
+        width = 9*ncol, height = 6*nrow)
+    op <- par(mfrow = c(nrow, ncol), mar = c(5,5,3,1)+0.1, oma = c(0,0,3,0), family = "sans")
+
+    for (n_val in ns) {
+      dp <- df_sk[df_sk$n == n_val, , drop = FALSE]
+      if (!nrow(dp)) { plot.new(); next }
+
+      psis <- sort(unique(dp$psi))
+
+      if (log_y) {
+        yl <- range(dp[[metric]][is.finite(dp[[metric]])], na.rm = TRUE)
+        min_pos <- suppressWarnings(min(dp[[metric]][dp[[metric]] > 0], na.rm = TRUE))
+        if (!is.finite(min_pos)) { plot.new(); next }
+        yl[1] <- max(yl[1], min_pos/2)
+        plot(NA, xlim = range(psis), ylim = yl, log = "y",
+             xlab = "psi", ylab = ylab,
+             main = paste0("n = ", n_val, "  |  shift = ", sk))
+      } else {
+        plot(NA, xlim = range(psis), ylim = ylim,
+             xlab = "psi", ylab = ylab,
+             main = paste0("n = ", n_val, "  |  shift = ", sk))
+      }
+
+      # One line per reg across psi
+      for (rg in regs) {
+        dpr <- dp[dp$reg == rg, , drop = FALSE]
+        if (!nrow(dpr)) next
+        ord <- order(dpr$psi)
+        x <- dpr$psi[ord]; y <- dpr[[metric]][ord]
+        lines(x, y, lwd = 2, col = reg_cols[[rg]])
+        points(x, y, pch = reg_pch[[rg]], col = reg_cols[[rg]], cex = 1.1)
+      }
+
+      abline(h = pretty(par("usr")[3:4]), col = "gray90", lty = 3)
+      abline(v = pretty(par("usr")[1:2]), col = "gray95", lty = 3)
+    }
+
+    mtext(paste0("Fitted exponential decay (", metric, ") vs psi  |  shift = ", sk),
+          outer = TRUE, cex = 1.1, line = 1)
+    legend("topright", legend = names(reg_cols), col = reg_cols, pch = reg_pch,
+           lwd = 2, bty = "n", inset = 0.02, title = "reg")
+
+    par(op); dev.off()
+  }
+
+  invisible(NULL)
+}
 decay_tbl <- compute_decay_table(summary_stat_df, tick_seq)
-# Filter usable rows
-decay_tbl <- subset(decay_tbl, is.finite(t_half))
+plot_decay_metric_by_shiftkey(decay_tbl, metric = "k", out_subfolder = "decay_rate")
 
-# --------- 2A) Forest / dot plot of half-life by parameter set ----------
-plot_decay_forest <- function(decay_tbl,
-                              by = c("reg","shift_key"),  # facet keys
-                              x_metric = c("t_half","k")[1],
-                              out_name = "decay_forest.pdf") {
-  xlab <- if (x_metric == "t_half") "Half-life (ticks)" else "Rate k (1/ticks)"
-  x    <- decay_tbl[[x_metric]]
-  ord  <- order(x, decreasing = FALSE)
+```
 
-  # Label each row compactly
-  row_lab <- with(decay_tbl,
-                  paste0("psi=", psi, " | n=", n, " | ", shift_key, " | ", reg))
+### plot decay variable as heatmap
+```{r}
+plot_decay_heatmap_per_shift <- function(decay_tbl,
+                                         metric = "k",
+                                         out_subfolder = "decay_heatmaps_per_shift",
+                                         global_scale = TRUE,
+                                         panel_w = 4.0,   # inches per panel (wider -> no margin error)
+                                         panel_h = 3.3,   # inches per panel (taller -> no margin error)
+                                         legend_w = 1.1   # inches for legend column
+) {
+  metric <- match.arg(metric)
+  need <- c("reg","n","psi","shift_key", metric)
+  stopifnot(all(need %in% names(decay_tbl)))
 
-  # Compute 95% CI for k if available; transform to t_half CI if needed
-  x_lo <- x_hi <- rep(NA_real_, length(x))
-  if (x_metric == "k" && "k_se" %in% names(decay_tbl) && any(is.finite(decay_tbl$k_se))) {
-    x_lo <- decay_tbl$k - 1.96*decay_tbl$k_se
-    x_hi <- decay_tbl$k + 1.96*decay_tbl$k_se
-  } else if (x_metric == "t_half" && "k_se" %in% names(decay_tbl) && any(is.finite(decay_tbl$k_se))) {
-    # delta method on t_half = log(2)/k → se(t_half) ≈ | -log(2)/k^2 | * se(k)
-    se_t <- abs(log(2) / (decay_tbl$k^2)) * decay_tbl$k_se
-    x_lo <- x - 1.96*se_t
-    x_hi <- x + 1.96*se_t
+  # keep finite metric
+  df <- decay_tbl[is.finite(decay_tbl[[metric]]), , drop = FALSE]
+  if (!nrow(df)) { warning("No finite rows for metric."); return(invisible(NULL)) }
+
+  # keep only shift=... keys
+  df <- df[grepl("^shift=", df$shift_key), , drop = FALSE]
+  if (!nrow(df)) { warning("No rows with shift_key like 'shift=...'."); return(invisible(NULL)) }
+  df$shift_size <- suppressWarnings(as.numeric(sub("^shift=", "", df$shift_key)))
+  df <- df[is.finite(df$shift_size), , drop = FALSE]
+  if (!nrow(df)) { warning("No numeric shift sizes parsed from shift_key."); return(invisible(NULL)) }
+
+  psis_all <- sort(unique(df$psi))
+  ns_all   <- sort(unique(df$n))
+
+  # global color limits (shared across all shifts if requested)
+  if (isTRUE(global_scale)) {
+    zlim <- range(df[[metric]], na.rm = TRUE)
+    if (!all(is.finite(zlim)) || diff(zlim) == 0) zlim <- zlim + c(-0.5, 0.5)
   }
 
-  pdf(file.path(base_plot_folder, out_name), width = 10, height = 12)
-  op <- par(mar = c(4, 12, 3, 1) + 0.1)
+  
+  ncols_pal <- 120
+  cols <- grDevices::colorRampPalette(c("#ffffff","#fdae61","#d7191c"))(ncols_pal)
+  # cols <- col_fun(ncols_pal)
 
-  dotchart(x[ord],
-           labels = row_lab[ord],
-           xlab = xlab, main = paste0("Exponential decay comparison (", x_metric, ")"),
-           pch = 19, cex = 0.8)
+  out_dir <- file.path(base_plot_folder, out_subfolder)
+  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
-  # Add CIs if we have them
-  has_ci <- is.finite(x_lo[ord]) & is.finite(x_hi[ord])
-  if (any(has_ci)) {
-    y <- seq_along(x[ord])[has_ci]
-    segments(x0 = x_lo[ord][has_ci], y0 = y, x1 = x_hi[ord][has_ci], y1 = y, lwd = 2)
+  # panel/filler/legend margins (smaller to avoid the error)
+  panel_mar  <- c(3, 3, 2, 1) + 0.1
+  filler_mar <- c(0, 0, 0, 0)
+  legend_mar <- c(3, 1, 2, 3) + 0.1
+
+  for (sh in sort(unique(df$shift_size))) {
+    dp_shift <- df[df$shift_size == sh, , drop = FALSE]
+    if (!nrow(dp_shift)) next
+
+    regs <- sort(unique(dp_shift$reg))
+    R <- length(regs)
+    ncol <- ceiling(sqrt(R))
+    nrow <- ceiling(R / ncol)
+
+    # per-shift zlim if needed
+    if (!isTRUE(global_scale)) {
+      zlim <- range(dp_shift[[metric]], na.rm = TRUE)
+      if (!all(is.finite(zlim)) || diff(zlim) == 0) zlim <- zlim + c(-0.5, 0.5)
+    }
+
+    # layout: reg panels + legend column
+    lay <- cbind(matrix(1:(nrow*ncol), nrow = nrow, ncol = ncol, byrow = TRUE),
+                 rep(nrow*ncol + 1L, nrow))
+    total_w <- ncol * panel_w + legend_w
+    total_h <- nrow * panel_h
+
+    pdf_path <- file.path(out_dir, paste0("decay_", metric, "_shift_", gsub("[^0-9.-]", "", sh), ".pdf"))
+    if (capabilities("cairo")) {
+      grDevices::cairo_pdf(file = pdf_path, width = total_w, height = total_h, family = "sans")
+    } else {
+      grDevices::pdf(file = pdf_path, width = total_w, height = total_h, family = "sans", useDingbats = FALSE)
+    }
+
+    layout(lay, widths = c(rep(1, ncol), legend_w / panel_w))  # legend width scaled to panel units
+
+    # ---- panels by reg ----
+    for (idx in seq_len(nrow*ncol)) {
+      if (idx <= R) {
+        rg <- regs[idx]
+        par(mar = panel_mar)
+        dpr <- dp_shift[dp_shift$reg == rg, , drop = FALSE]
+
+        # build psi × n matrix (mean if duplicates)
+        M <- matrix(NA_real_, nrow = length(psis_all), ncol = length(ns_all),
+                    dimnames = list(paste0("psi=", psis_all), paste0("n=", ns_all)))
+        if (nrow(dpr)) {
+          for (i in seq_along(psis_all)) {
+            for (j in seq_along(ns_all)) {
+              v <- dpr[dpr$psi == psis_all[i] & dpr$n == ns_all[j], metric, drop = TRUE]
+              if (length(v)) M[i, j] <- mean(v, na.rm = TRUE)
+            }
+          }
+        }
+
+        image(x = seq_along(ns_all), y = seq_along(psis_all), z = t(M),
+              xaxt = "n", yaxt = "n", xlab = "n", ylab = "psi",
+              col = cols, zlim = zlim)
+        axis(1, at = seq_along(ns_all), labels = ns_all)
+        axis(2, at = seq_along(psis_all), labels = psis_all, las = 1)
+        box()
+        title(main = paste0("reg = ", rg))
+      } else {
+        # filler cell to complete the grid
+        par(mar = filler_mar)
+        plot.new()
+      }
+    }
+
+    # ---- legend column ----
+    par(mar = legend_mar)
+    zseq <- seq(zlim[1], zlim[2], length.out = ncols_pal)
+    image(x = 1, y = zseq, z = matrix(zseq, nrow = 1),
+          xaxt = "n", yaxt = "n", xlab = "", ylab = "", col = cols)
+    axis(4, at = pretty(zlim), labels = formatC(pretty(zlim), digits = 3), las = 1)
+    mtext(if (metric == "k") "k (1/ticks)" else "t1/2 (ticks)", side = 4, line = 3)
+    box()
+
+    dev.off()
   }
 
-  par(op); dev.off()
+  invisible(NULL)
 }
+# decay_tbl <- compute_decay_table(summary_stat_df, tick_seq)
+# decay_tbl <- decay_tbl[decay_tbl$reg != "ext",]
+plot_decay_heatmap_per_shift(decay_tbl, metric = "k", out_subfolder = "decay_k")
+```
 
-for (sk in sort(unique(decay_tbl$shift_key))) {
-  for (reg_val in sort(unique(decay_tbl$reg))) {
-    df_sub <- subset(decay_tbl, shift_key == sk & reg == reg_val)
-    if (!nrow(df_sub)) next
+### plot first gen jump heatmap
+```{r}
+# One heatmap PDF per shift size; panels = reg; cells = jump (9999→10000)
+plot_jump_heatmap <- function(jump_tbl,
+                                        out_subfolder = "jump_heatmaps_per_shift",
+                                        global_scale = TRUE,   # share color scale across all shifts
+                                        center_zero  = FALSE,  # make zlim symmetric around 0 (nice if jumps can be +/-)
+                                        panel_w = 4.2, panel_h = 3.4, legend_w = 1.2) {
 
-    out_name <- paste0("decay_forest_half_life_", reg_val, "_", gsub("[ =]", "", sk), ".pdf")
-    plot_decay_forest(df_sub, out_name = out_name)
+  need <- c("reg","n","psi","shift_size","jump")
+  stopifnot(all(need %in% names(jump_tbl)))
+
+  df <- jump_tbl[is.finite(jump_tbl$jump) & is.finite(jump_tbl$shift_size), , drop = FALSE]
+  if (!nrow(df)) { warning("No finite jump values to plot."); return(invisible(NULL)) }
+
+  # Use common psi/n grids so panels align
+  psis_all <- sort(unique(df$psi))
+  ns_all   <- sort(unique(df$n))
+
+  # Global color limits (optional)
+  if (isTRUE(global_scale)) {
+    zlim <- range(df$jump, na.rm = TRUE)
+    if (isTRUE(center_zero)) {
+      maxabs <- max(abs(zlim), na.rm = TRUE)
+      zlim <- c(-maxabs, maxabs)
+    } else if (!all(is.finite(zlim)) || diff(zlim) == 0) {
+      zlim <- zlim + c(-0.5, 0.5)
+    }
   }
-}
 
+  # Palette: grayscale by default; diverging if centered at zero
+  ncols_pal <- 120
+  cols <- grDevices::colorRampPalette(c("#ffffff","#fdae61","#d7191c"))(ncols_pal)
+  
+
+  out_dir <- file.path(base_plot_folder, out_subfolder)
+  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+  panel_mar  <- c(3, 3, 2, 1) + 0.1
+  filler_mar <- c(0, 0, 0, 0)
+  legend_mar <- c(3, 1, 2, 3) + 0.1
+
+  for (sh in sort(unique(df$shift_size))) {
+    dp_shift <- df[df$shift_size == sh, , drop = FALSE]
+    if (!nrow(dp_shift)) next
+
+    regs <- sort(unique(dp_shift$reg))
+    R <- length(regs)
+    ncol <- ceiling(sqrt(R)); nrow <- ceiling(R / ncol)
+
+    # Per-shift color limits if not global
+    if (!isTRUE(global_scale)) {
+      zlim <- range(dp_shift$jump, na.rm = TRUE)
+      if (isTRUE(center_zero)) {
+        maxabs <- max(abs(zlim), na.rm = TRUE)
+        zlim <- c(-maxabs, maxabs)
+      } else if (!all(is.finite(zlim)) || diff(zlim) == 0) {
+        zlim <- zlim + c(-0.5, 0.5)
+      }
+    }
+
+    # Layout: reg panels + legend
+    lay <- cbind(matrix(1:(nrow*ncol), nrow = nrow, ncol = ncol, byrow = TRUE),
+                 rep(nrow*ncol + 1L, nrow))
+    total_w <- ncol * panel_w + legend_w
+    total_h <- nrow * panel_h + 0.5
+
+    pdf_path <- file.path(out_dir, paste0("jump_heatmap_shift_", gsub("[^0-9.-]", "", sh), "_relative_opt.pdf"))
+    if (capabilities("cairo")) {
+      grDevices::cairo_pdf(file = pdf_path, width = total_w, height = total_h, family = "sans")
+    } else {
+      grDevices::pdf(file = pdf_path, width = total_w, height = total_h, family = "sans", useDingbats = FALSE)
+    }
+
+    layout(lay, widths = c(rep(1, ncol), legend_w / panel_w))
+
+    # ---- panels by reg ----
+    for (idx in seq_len(nrow*ncol)) {
+      if (idx <= R) {
+        rg <- regs[idx]
+        par(mar = panel_mar)
+        dpr <- dp_shift[dp_shift$reg == rg, , drop = FALSE]
+
+        # Build psi × n matrix; average if duplicate rows exist
+        M <- matrix(NA_real_, nrow = length(psis_all), ncol = length(ns_all),
+                    dimnames = list(paste0("psi=", psis_all), paste0("n=", ns_all)))
+        if (nrow(dpr)) {
+          for (i in seq_along(psis_all)) {
+            for (j in seq_along(ns_all)) {
+              v <- dpr[dpr$psi == psis_all[i] & dpr$n == ns_all[j], "jump", drop = TRUE]
+              if (length(v)) M[i, j] <- mean(v, na.rm = TRUE)
+            }
+          }
+        }
+
+        image(x = seq_along(ns_all), y = seq_along(psis_all), z = t(M),
+              xaxt = "n", yaxt = "n", xlab = "n", ylab = "psi",
+              col = cols, zlim = zlim)
+        axis(1, at = seq_along(ns_all), labels = ns_all)
+        axis(2, at = seq_along(psis_all), labels = psis_all, las = 1)
+        box()
+        title(main = paste0("reg = ", rg))
+      } else {
+        par(mar = filler_mar); plot.new()
+      }
+    }
+        # ---- legend column (with numeric ticks) ----
+    par(mar = legend_mar)
+    zseq <- seq(zlim[1], zlim[2], length.out = ncols_pal)
+
+    # draw vertical color bar
+    image(x = 1, y = zseq, z = matrix(zseq, nrow = 1),
+          xaxt = "n", yaxt = "n", xlab = "", ylab = "",
+          col = cols, zlim = zlim)
+
+    # pretty tick marks within zlim
+    ticks <- pretty(zlim, n = 6)
+    ticks <- ticks[ticks >= zlim[1] & ticks <= zlim[2]]
+
+    # numeric labels on the right side of the bar
+    axis(4, at = ticks, labels = formatC(ticks, format = "fg", digits = 3), las = 1)
+    # label + optional title
+    mtext("first_gen jump (9999-10000)", side = 4, line = 3)
+    title(main = paste0("shift = ", sh))
+    box()
+
+    dev.off()
+  }
+
+  invisible(NULL)
+}
+# jump_tbl <- compute_jump_table(summary_stat_df)
+# jump_tbl <- jump_tbl[jump_tbl$reg %in% c("fit", "ave"),]  # optional filter
+# Using your existing jump_tbl:
+plot_jump_heatmap(jump_tbl,
+                            out_subfolder = "jump_heatmaps_per_shift",
+                            global_scale = TRUE,   # comparable colors across shifts
+                            center_zero  = FALSE,   # diverging colors centered at 0
+                            panel_w = 4.2, panel_h = 3.4, legend_w = 1.0)
 
 ```
 
