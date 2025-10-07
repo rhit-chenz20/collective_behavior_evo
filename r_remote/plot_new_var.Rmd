@@ -9,7 +9,7 @@ output: pdf_document
 setwd("/workdir/zc524/collective_behavior_evo/r_remote")
 base_data_folder <- "../data/new_variance"
 base_plot_folder <- "../r_plots/new_var_plots2"
-target_beta <- c(0.0, 0.05, 0.3, 0.5, 0.7, 0.9, 1.0)
+target_beta <- c(0.0, 0.01, 0.03, 0.05, 0.07, 0.3, 0.5, 0.7, 0.9, 1.0)
 regimes <- c("inv", "var")  # "inv" = inverse_variance, "var" = variance
 ```
 
@@ -417,8 +417,8 @@ plot_genotype_multi_by_beta <- function(genotype_df,
   }
 }
 
-num_bins <- 400
-bin_breaks <- seq(-200, 200, length.out = num_bins + 1)
+num_bins <- 100
+bin_breaks <- seq(-50, 50, length.out = num_bins + 1)
 
 # Derive a constant bin width from your reference breaks
 bin_width <- (max(bin_breaks) - min(bin_breaks)) / num_bins
@@ -438,7 +438,7 @@ plot_genotype_multi_by_beta(
   num_bins = num_bins,
   bin_width = bin_width,
   half_span = half_span,
-  regimes = c("inv", "var")
+  regimes = c("inv")
 )
 
 ```
@@ -831,8 +831,8 @@ names(gen_cols) <- as.character(gen_seq)
   }
 }
 
-num_bins <- 120
-bin_breaks <- seq(-60, 60, length.out = num_bins + 1)
+num_bins <- 100
+bin_breaks <- seq(-50, 50, length.out = num_bins + 1)
 
 # Derive constant bin width from your current breaks
 bin_width <- (max(bin_breaks) - min(bin_breaks)) / num_bins
@@ -1648,7 +1648,7 @@ plot_decay_metric_by_shiftkey <- function(decay_tbl,
   stopifnot(all(c("reg","n","shift_key","beta",metric) %in% names(decay_tbl)))
 
   # Keep finite metric rows
-  df <- decay_tbl[is.finite(decay_tbl[[metric]]), , drop = FALSE]
+  df <- decay_tbl[is.finite(decay_tbl[[metric]]) & decay_tbl$k < 10, , drop = FALSE]
   if (!nrow(df)) { warning("No finite values for metric = ", metric); return(invisible(NULL)) }
 
   # Keep only keys like "shift=..." (skip pooled_sz0 etc.)
