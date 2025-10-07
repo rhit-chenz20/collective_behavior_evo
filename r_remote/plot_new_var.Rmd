@@ -1754,7 +1754,7 @@ plot_decay_heatmap_per_shift <- function(decay_tbl,
   stopifnot(all(need %in% names(decay_tbl)))
 
   # keep finite metric
-  df <- decay_tbl[is.finite(decay_tbl[[metric]]) & decay_tbl$k < 10 & decay_tbl$n > 2, , drop = FALSE]
+  df <- decay_tbl[is.finite(decay_tbl[[metric]]) & decay_tbl$k < 10 & decay_tbl$n > 19, , drop = FALSE]
   if (!nrow(df)) { warning("No finite rows for metric."); return(invisible(NULL)) }
 
   # keep only shift=... keys
@@ -1865,7 +1865,7 @@ plot_decay_heatmap_per_shift <- function(decay_tbl,
 }
 decay_tbl <- compute_decay_table(summary_stat_df, tick_seq)
 # decay_tbl <- decay_tbl[decay_tbl$reg != "ext",]
-plot_decay_heatmap_per_shift(decay_tbl, metric = "k", out_subfolder = "decay_k_heatmaps_exc")
+plot_decay_heatmap_per_shift(decay_tbl, metric = "k", out_subfolder = "decay_k_heatmaps_n50")
 ```
 
 ### plot first gen jump heatmap
