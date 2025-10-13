@@ -511,7 +511,7 @@ pheno_get_shift_from_data <- function(pheno_file, base_data_folder, opt_gen = 10
   val
 }
 
-# -------- Load phenotype_df (no name collisions with genotype) --------
+# -------- Load phenotype_df (no name collisions with vars) --------
 opt_gen <- 10001L
 phenotype_df <- do.call(rbind, lapply(pheno_files, function(file) {
   df <- tryCatch(read.table(file, header = TRUE, sep = "\t"), error = function(e) NULL)
@@ -2769,6 +2769,277 @@ plot_mut_hist_two_gens(
   gens = c(10000, 10005, 10015),
   out_subfolder = "mut_effect_hist_pop",
   regimes = regimes  # e.g., c("ave","fit")
+)
+
+```
+
+
+
+# load group variance data (not working)
+```{r}
+# Set the top-level folder
+folder <- paste0(base_data_folder, "/vars")
+
+# List all .tsv files recursively
+file_list <- list.files(
+  path = folder,
+  pattern = "\\.tsv$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+# Function to extract metadata from path
+# Matches: vars/n_<n>_beta_<beta>_sz_<sz>_reg_<inv|var>_<rep>.tsv
+extract_geno_metadata <- function(path) {
+  pat <- "vars/n_(\\d+)_beta_(-?[0-9.]+)_sz_(\\d+)_reg_(inv|var)_(\\d+)\\.tsv"
+  matches <- regexec(pat, path)
+  parts <- regmatches(path, matches)[[1]]
+
+  if (length(parts) != 6) {
+    warning("Could not extract metadata from path: ", path,
+            " with matches: ", paste(parts, collapse = ", "))
+    return(data.frame())
+  }
+
+  data.frame(
+    n    = as.integer(parts[2]),
+    beta  = as.numeric(parts[3]),
+    sz   = as.integer(parts[4]),
+    reg  = parts[5],             # "ave" or "fit"
+    rep  = as.integer(parts[6]),
+    stringsAsFactors = FALSE
+  )
+}
+
+# Helper: get shift_size from the companion "data" file (optimum at generation == 10001)
+get_shift_from_data <- function(geno_file, base_data_folder, opt_gen = 10001L) {
+  # Mirror the path: .../vars/... -> .../data/...
+  data_path <- sub("/vars/", "/data/", geno_file, fixed = TRUE)
+  if (!file.exists(data_path)) {
+    data_path <- file.path(base_data_folder, "data", basename(geno_file))
+  }
+
+  if (!file.exists(data_path)) {
+    warning("Data file not found for ", basename(geno_file), " (looked for: ", data_path, ")")
+    return(NA_real_)
+  }
+
+  d <- tryCatch(read.table(data_path, header = TRUE, sep = "\t"), error = function(e) NULL)
+  if (is.null(d)) {
+    warning("Failed to read data file: ", data_path)
+    return(NA_real_)
+  }
+  if (!("tick" %in% names(d)) || !("optimum" %in% names(d))) {
+    warning("Missing 'tick' or 'optimum' column in data file: ", data_path)
+    return(NA_real_)
+  }
+
+  row10001 <- d[d$tick == opt_gen, , drop = FALSE]
+  if (nrow(row10001) < 1) {
+    warning("No row with tick == ", opt_gen, " in ", data_path)
+    return(NA_real_)
+  }
+
+  val <- suppressWarnings(as.numeric(row10001$optimum[1]))
+  if (!is.finite(val)) {
+    warning("Non-numeric 'optimum' at generation ", opt_gen, " in ", data_path)
+    return(NA_real_)
+  }
+  val
+}
+
+# Read and combine all files
+opt_gen <- 10001L
+vars_df <- do.call(rbind, lapply(file_list, function(file) {
+  df <- tryCatch(read.table(file, header = TRUE, sep = "\t"), error = function(e) NULL)
+  if (is.null(df)) {
+    warning("Failed to read vars file: ", file)
+    return(NULL)
+  }
+
+  meta <- extract_geno_metadata(file)
+  if (nrow(meta) == 0) return(NULL)
+
+  # Attach metadata
+  df$rep        <- meta$rep
+  df$beta        <- meta$beta
+  df$n          <- meta$n
+  df$reg        <- meta$reg        # <- new column ("ave" or "fit")
+  df$sz_orig    <- meta$sz         # preserve original sz
+  df$shift_size <- if (meta$sz == 0L) get_shift_from_data(file, base_data_folder, opt_gen) else meta$sz
+  df$file_id    <- basename(file)
+  df
+}))
+
+```
+
+# plot vars histogram
+```{r}
+library(RColorBrewer)
+# Assuming you want to focus on a specific generation (e.g., 10100)
+target_gen <- 9999
+df <- subset(group_var_df, generation == target_gen)
+
+# Define histogram bins
+num_bins <- 400
+bin_breaks <- seq(-1, 400, length.out = num_bins + 1)
+bin_mids <- 0.5 * (head(bin_breaks, -1) + tail(bin_breaks, -1))
+
+# Color setup
+beta_vals <- target_beta
+colors <- rainbow(length(beta_vals))
+names(colors) <- as.character(beta_vals)
+
+print(max(group_var_long$value, na.rm=TRUE))
+print(min(group_var_long$value, na.rm=TRUE))
+```
+
+## plot average vars for each beta
+```{r}
+.open_pdf <- function(path, width, height, family = "sans") {
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  if (capabilities("cairo")) {
+    grDevices::cairo_pdf(file = path, width = width, height = height, family = family)
+  } else {
+    grDevices::pdf(file = path, width = width, height = height, family = family, useDingbats = FALSE)
+  }
+}
+
+
+plot_group_var_hists_long <- function(group_var_long,
+                                      regimes,
+                                      target_gen,
+                                      include_pooled_sz0 = FALSE,
+                                      ref_sd = sqrt(2000),
+                                      out_subfolder = "group_var_from_long_pdf",
+                                      panel_w = 4.5, panel_h = 3.5,
+                                      exclude_out_range = FALSE) {
+  out_folder <- file.path(base_plot_folder, out_subfolder)
+  if (!dir.exists(out_folder)) dir.create(out_folder, recursive = TRUE)
+
+  time_col <- if ("generation" %in% names(group_var_long)) "generation" else "tick"
+
+  avg_curve_for_subset_long <- function(df_block) {
+    if (!nrow(df_block)) return(rep(NA_real_, length(bin_mids)))
+    vals_all <- suppressWarnings(as.numeric(df_block$value))
+    if (!any(is.finite(vals_all))) return(rep(NA_real_, length(bin_mids)))
+    reps <- if ("rep" %in% names(df_block)) sort(unique(df_block$rep)) else NA_integer_
+    counts_mat <- matrix(NA_real_, nrow = length(reps), ncol = length(bin_mids))
+    for (i in seq_along(reps)) {
+      vals <- if (!is.na(reps[i])) suppressWarnings(as.numeric(df_block$value[df_block$rep == reps[i]])) else vals_all
+      vals <- vals[is.finite(vals)]
+      if (!length(vals)) next
+      if (exclude_out_range) { 
+        vals=vals[vals >= min(bin_breaks) & vals <= max(bin_breaks) ]
+      }
+      
+      h <- hist(vals, breaks = bin_breaks, plot = FALSE)
+      tot <- sum(h$counts); if (tot <= 0) next
+      counts_mat[i, ] <- h$counts / tot
+    }
+    good <- which(rowSums(is.finite(counts_mat)) > 0)
+    if (!length(good)) return(rep(NA_real_, length(bin_mids)))
+    colMeans(counts_mat[good, , drop = FALSE], na.rm = TRUE)
+  }
+
+  for (reg_lab in regimes) {
+    # >>> FIX: use base indexing, not .data <<<
+    keep <- (group_var_long[[time_col]] == target_gen) & (group_var_long$reg == reg_lab)
+    df_reg_all <- group_var_long[keep, , drop = FALSE]
+    if (!nrow(df_reg_all)) next
+
+    for (n_val in sort(unique(df_reg_all$n))) {
+      df_n <- df_reg_all[df_reg_all$n == n_val, , drop = FALSE]
+      if (!nrow(df_n)) next
+
+      has_sz0 <- "sz_orig" %in% names(df_n) && any(df_n$sz_orig == 0, na.rm = TRUE)
+      nonzero <- sort(unique(df_n$shift_size[if ("sz_orig" %in% names(df_n)) df_n$sz_orig != 0 else TRUE]))
+      nonzero <- nonzero[is.finite(nonzero)]
+      panel_keys <- c(if (include_pooled_sz0 && has_sz0) "pooled_sz0" else character(0),
+                      if (length(nonzero)) paste0("shift=", nonzero) else character(0))
+      if (!length(panel_keys)) next
+
+      beta_all <- sort(unique(df_n$beta))
+      colors <- hcl.colors(length(beta_all), palette = "Zissou 1")
+      names(colors) <- as.character(beta_all)
+
+      max_y <- 0
+      for (pk in panel_keys) {
+        df_panel <- if (pk == "pooled_sz0") {
+          df_n[!is.na(df_n$sz_orig) & df_n$sz_orig == 0, , drop = FALSE]
+        } else {
+          sh <- as.numeric(sub("shift=", "", pk))
+          df_n[df_n$shift_size == sh & (if ("sz_orig" %in% names(df_n)) df_n$sz_orig != 0 else TRUE), , drop = FALSE]
+        }
+        if (exclude_out_range) {
+          df_panel <- df_panel[df_panel$value >= min(bin_breaks) & df_panel$value <= max(bin_breaks), , drop = FALSE]
+        }
+
+        if (!nrow(df_panel)) next
+        for (beta_val in beta_all) {
+          avg_counts <- avg_curve_for_subset_long(df_panel[df_panel$beta == beta_val, , drop = FALSE])
+          if (any(is.finite(avg_counts))) max_y <- max(max_y, avg_counts, na.rm = TRUE)
+        }
+      }
+      if (!is.finite(max_y) || max_y <= 0) max_y <- 1
+
+      K <- length(panel_keys)
+      ncol <- ceiling(sqrt(K)); nrow <- ceiling(K / ncol)
+      out_path <- file.path(out_folder, sprintf("group_var_hist_avg_reg_%s_n_%s_gen_%s_%s-%s.pdf",
+                                                reg_lab, n_val, target_gen, min(bin_breaks), max(bin_breaks)))
+      .open_pdf(out_path, width = ncol * panel_w, height = nrow * panel_h)
+      op <- par(mfrow = c(nrow, ncol), mar = c(4, 4, 3.5, 1) + 0.1, family = "sans")
+
+      for (pk in panel_keys) {
+        if (pk == "pooled_sz0") {
+          df_panel <- df_n[!is.na(df_n$sz_orig) & df_n$sz_orig == 0, , drop = FALSE]
+          sh_current <- NA_real_
+        } else {
+          sh_current <- as.numeric(sub("shift=", "", pk))
+          df_panel <- df_n[df_n$shift_size == sh_current & (if ("sz_orig" %in% names(df_n)) df_n$sz_orig != 0 else TRUE),
+                           , drop = FALSE]
+        }
+
+        panel_title <- if (is.na(sh_current)) {
+          sprintf("reg=%s | n=%s | sz=0 pooled", reg_lab, n_val)
+        } else {
+          sprintf("reg=%s | n=%s | shift=%s", reg_lab, n_val, sh_current)
+        }
+
+        plot(NULL, xlim = range(bin_breaks), ylim = c(0, max_y),
+             xlab = "Group variance", ylab = "Proportion", main = panel_title)
+
+        if (is.finite(sh_current)) curve(dnorm(x, mean = sh_current, sd = ref_sd), add = TRUE, col = "black", lty = 2, lwd = 2)
+        curve(dnorm(x, mean = 0, sd = ref_sd), add = TRUE, col = "black", lty = 3, lwd = 2)
+
+        present_betas <- intersect(beta_all, sort(unique(df_panel$beta)))
+        for (beta_val in present_betas) {
+          avg_counts <- avg_curve_for_subset_long(df_panel[df_panel$beta == beta_val, , drop = FALSE])
+          if (all(is.na(avg_counts))) next
+          lines(bin_mids, avg_counts, col = colors[as.character(beta_val)], lwd = 2)
+        }
+        if (length(present_betas)) {
+          legend("topright", legend = paste0("beta=", present_betas),
+                 col = colors[as.character(present_betas)], lty = 1, lwd = 2, cex = 0.85, bg = "white")
+        }
+      }
+
+      par(op); dev.off()
+      message("Wrote: ", out_path)
+    }
+  }
+}
+
+# ---- Run ----
+plot_group_var_hists_long(
+  group_var_long,
+  regimes = regimes,
+  target_gen = target_gen,
+  include_pooled_sz0 = FALSE,
+  ref_sd = sqrt(2000),
+  out_subfolder = "group_var_from_long_pdf",
+  panel_w = 4.5, panel_h = 3.5,
+  exclude_out_range=TRUE
 )
 
 ```

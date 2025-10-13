@@ -1,0 +1,100 @@
+---
+title: "plot genotype data for multiple models"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+# parameters for plotting
+```{r setup, include=FALSE}
+wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
+setwd(wd_path)
+base_plot_folder <- "plots"
+hcl_color_palette <- "Dark 2" # color pattern for lines 
+```
+
+# load genotype data
+```{r}
+geno_df <- readRDS("genotype_data.rds")
+fit_geno <- geno_df[geno_df$reg == "fit", ]
+inv_geno <- geno_df[geno_df$reg == "inv", ]
+```
+
+# parameter space for data
+## all psi values to plot for fittest model
+psi <- c(0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0) 
+## all beta values to plot for inverse-variance model
+beta <- c(0.0, 0.01, 0.03, 0.05, 0.07, 0.3, 0.5, 0.7, 0.9, 1.0)
+## speficy the model to plot; "inv" = inverse variance model, "fit" = fittest individual model
+regimes <- c("inv", "fit")
+## all group sizes
+plot_n <- c(2, 8, 20, 50)
+## all shift sizes 
+plot_shift_sizes <- c(40,80,120) 
+## all generations
+gen_seq = c(seq(9999, 10010, by = 1), seq(10010, 10100, by=10)) # generations to plot
+
+# change parameters here for plotting a subset of the data
+## PARAMETER: single panel single generation plot
+```{r}
+param_val <- c(0.0, 0.9) # can be psi or beta
+plot_n <- c(50)
+plot_shift_sizes <- c(120)
+regimes <- c("fit")
+num_bins <- 140 # 140 recommended for fittest model, 100 for inverse-variance model
+gen_seq = seq(9999, 9999, by = 1)
+single_panel <- TRUE
+```
+
+## PARAMETER: single panel multi generation plot
+```{r}
+param_val <- c(0.0, 0.5)
+plot_n <- c(50)
+plot_shift_sizes <- c(120)
+regimes <- c("fit")
+num_bins <- 140
+gen_seq = c(9999, seq(10000, 10030, by = 10))
+single_panel <- TRUE
+```
+
+# PARAMETER: multi panel multi generation plot
+```{r}
+param_val <- c(0.0, 0.9)
+plot_n <- c(50)
+plot_shift_sizes <- c(120)
+regimes <- c("fit")
+num_bins <- 140
+gen_seq = seq(9999, 10010, by = 1)
+single_panel <- FALSE
+```
+
+# RUN PLOTTING after change the parameters above
+```{r}
+min_bin <- -as.integer(num_bins/2)
+max_bin <- as.integer(num_bins/2)
+bin_breaks <- seq(min_bin, max_bin, length.out = num_bins + 1)
+
+# Derive a constant bin width from your reference breaks
+bin_width <- (max(bin_breaks) - min(bin_breaks)) / num_bins
+half_span <- (num_bins * bin_width) / 2
+
+if (regimes == "fit") {
+  data_df <- fit_geno
+  plot_psi <- param_val
+} else {
+  data_df <- inv_geno
+  plot_beta <- param_val
+}
+
+# ---- Run ----
+plot_genotype_multi_by_beta(
+  data_df,
+  out_subfolder = paste0("genotype_overtime_", paste0(c(min(gen_seq), max(gen_seq)), collapse = ":")),
+  gen_seq = gen_seq,
+  num_bins = num_bins,
+  bin_width = bin_width,
+  half_span = half_span,
+  regimes = regimes,
+    single_panel = single_panel
+)
+```

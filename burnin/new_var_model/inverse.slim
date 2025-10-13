@@ -21,7 +21,7 @@ initialize() {
 	defineGlobal("muts", Dictionary());
 	defineGlobal("mut_lines", NULL);
 	defineGlobal("varsLines", NULL);
-	defineGlobal("group_vars", float(asInteger(N/n)));
+	defineGlobal("group_vars", float(N));
 	
 //	defineConstant("ID", "-2");
 //	defineConstant("folder", "tsv_output/social_new/temp/");
@@ -310,10 +310,6 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 		defineGlobal("group_vars", inds.tagF);
 	}
 
-//	for(i in 0:(length(adj_fitness)-1)){
-//		if (adj_fitness[i] < 0) 
-//			adj_fitness[i]=0.0;
-//	}
 	inds.fitnessScaling = adj_fitness;
 	inds.tagF = phenotype;
 }

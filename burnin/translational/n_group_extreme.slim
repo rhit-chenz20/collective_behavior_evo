@@ -20,6 +20,8 @@ initialize() {
 	defineGlobal("ind_lines", NULL);
 	defineGlobal("muts", Dictionary());
 	defineGlobal("mut_lines", NULL);
+	defineGlobal("varsLines", NULL);
+	defineGlobal("group_vars", float(N));
 	
 //	defineConstant("ID", "-2");
 //	defineConstant("folder", "tsv_output/social_new/temp/");
@@ -121,10 +123,11 @@ shift_time-30 late(){
 	log.addCustomColumn("dif_z_opt", "optimum-mean(p1.individuals.tagF);");
 	log.addCustomColumn("Va0_sqrt", "Va0_sqrt;");
 	log.addCustomColumn("Vs", "Vs;");
-	log.addCustomColumn("dist_norm", "(optimum-mean(p1.individuals.tagF))/Va0_sqrt;");
+	log.addCustomColumn("dist_norm", "optimum-mean(p1.individuals.tagF);");
 	
 	log.addMeanSDColumns("a", "p1.individuals.sumOfMutationsOfType(m2)+2*sum(sim.substitutions.selectionCoeff);");
 	log.addCustomColumn("optimum", "optimum;");
+	log.addMeanSDColumns("group_vars", "group_vars;");
 	log.addCustomColumn("dz1", " mean(p1.individuals.tagF) - mean(last_gen_z);");
 	log.addCustomColumn("par_gen_meanz", "mean(last_gen_z);");
 	log.addCustomColumn("par_mean", "mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]);");
@@ -133,6 +136,8 @@ shift_time-30 late(){
 	log.addCustomColumn("dz1_pred", "parent_mean=mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]); var(last_gen_g)/var(last_gen_z)*(parent_mean-mean(last_gen_z));");
 	log.addCustomColumn("rep", "ID;");
 	log.addCustomColumn("psi", "psi;");
+	log.addCustomColumn("beta", "beta;");
+
 }
 
 shift_time late(){
@@ -155,12 +160,14 @@ shift_time late(){
 	print("recoding at cycle "+sim.cycle);
 	record_phenotype(p1);
 	record_genotype(p1);
+	record_vars(p1);
 }
 
 seq(shift_time+10, end_time, by=5) late(){
 	print("recoding at cycle "+sim.cycle);
 	record_phenotype(p1);
 	record_genotype(p1);
+	record_vars(p1);
 }
 
 (shift_time-2):(shift_time+5) late(){
@@ -183,6 +190,9 @@ end_time late()
 	}
 	if (record_effectsize(p1, write = T)){
 		print("written effectsize to file "+ind_fn);
+	}
+	if (record_vars(p1, write = T)){
+		print("written vars to file "+ind_fn);
 	}
 }
 
@@ -254,6 +264,24 @@ function (logical) record_genotype(o<Subpopulation>$ p, [logical$ write = F]){
       	return T;
 	}
 }
+
+function (logical) record_vars(o<Subpopulation>$ p, [logical$ write = F]){
+	if(!exists("vars_fn")){ 
+		defineConstant("vars_fn", "varstype_"+ID+".tsv");
+		print("no vars_fn supplied. using default filename: " + vars_fn);
+	} 
+	if (write) {
+		line = paste(sim.cycle, group_vars, sep = "\t");
+      	defineGlobal("varsLines", c(varsLines, line));
+    	header = paste(c("generation", seq(1, asInteger(N/n))), sep="\t");
+    	return writeFile(vars_fn, header + "\n"+ paste(varsLines, sep="\n"), append=F);
+	}else{
+		line = paste(sim.cycle, group_vars, sep = "\t");
+      	defineGlobal("varsLines", c(varsLines, line));
+      	return T;
+	}
+}
+
 function (void) calculate_phenotype(o<Subpopulation>$ p){
 	e = rnorm(N, mean=0, sd=0);
 	
@@ -264,6 +292,7 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 	
 	shuffled = sample(inds, N, replace=F);
 	phenotype = float(N);
+	vars = float(N);
 	
 	for (i in seq(0, N-n, by=n)) {
 		groups = shuffled[i:(i+n-1)];
@@ -274,9 +303,15 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 		extreme_i = whichMax(dist);
 		extreme_a = as[extreme_i];
 		phenotype[groups.index] = (1-psi) * as + psi * extreme_a;
+
+		vars[groups.index] = var(as);
 	}
 	
 	abs_fitness = dnorm(phenotype, optimum, sqrt(Vs));
 	inds.fitnessScaling = abs_fitness;
 	inds.tagF = phenotype;
+	
+	if(community.tick >= shift_time-30){
+		defineGlobal("group_vars", vars);
+	}
 }
