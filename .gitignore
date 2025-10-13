@@ -4,11 +4,7 @@
 .Ruserdata
 .snakemake
 .vscode
-slim/tsv_output/*
-slim/log
-slim/data
-slim/r_remote/workspace.RData
-slim/pop
 *_data
 data/
 *DS_Store
+figure/*rds
