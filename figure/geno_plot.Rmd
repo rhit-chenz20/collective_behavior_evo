@@ -16,8 +16,6 @@ hcl_color_palette <- "Dark 2" # color pattern for lines
 # load genotype data
 ```{r}
 geno_df <- readRDS("genotype_data.rds")
-fit_geno <- geno_df[geno_df$reg == "fit", ]
-inv_geno <- geno_df[geno_df$reg == "inv", ]
 ```
 
 # parameter space for data
@@ -42,8 +40,9 @@ plot_n <- c(50)
 plot_shift_sizes <- c(120)
 regimes <- c("fit")
 num_bins <- 140 # 140 recommended for fittest model, 100 for inverse-variance model
-gen_seq = seq(9999, 9999, by = 1)
+gen_seq = seq(10000, 10000, by = 10)
 single_panel <- TRUE
+include_pre_selection <- TRUE # whether to include pre-selection distribution in the plot
 ```
 
 ## PARAMETER: single panel multi generation plot
@@ -53,19 +52,51 @@ plot_n <- c(50)
 plot_shift_sizes <- c(120)
 regimes <- c("fit")
 num_bins <- 140
-gen_seq = c(9999, seq(10000, 10030, by = 10))
+gen_seq = seq(10010, 10030, by = 10)
+include_pre_selection <- TRUE
 single_panel <- TRUE
 ```
 
 # PARAMETER: multi panel multi generation plot
-```{r}
-param_val <- c(0.0, 0.9)
-plot_n <- c(50)
-plot_shift_sizes <- c(120)
-regimes <- c("fit")
+```{r setup, include=FALSE}
+param_val <- c(0.0, 0.01, 0.03, 0.05, 0.07, 0.3, 0.5, 0.7, 0.9, 1.0) # all beta values to plot for inverse-variance model
+plot_n <- c(2, 8, 20, 50) # group sizes to plot for both models
+plot_shift_sizes <- c(40,80,120) # shift sizes to plot for both models
+regimes <- c("inv")  # "inv" = inverse variance model, "fit" = fittest individual model
+single_panel <- TRUE  
+include_pre_selection <- TRUE
+num_bins <- 100
+gen_seq = c(9999, seq(10010, 10030, by = 10))
+```
+
+```{r setup, include=FALSE}
+param_val <- c(0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0) 
+plot_n <- c(2, 8, 20, 50) # group sizes to plot for both models
+plot_shift_sizes <- c(40,80,120) # shift sizes to plot for both models
+regimes <- c("fit")  # "inv" = inverse variance model, "fit" = fittest individual model
+single_panel <- TRUE  
+num_bins <- 160
+gen_seq = c(9999, seq(10000, 10030, by = 10))
+```
+
+```{r setup, include=FALSE}
+param_val <- c(0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0) 
+plot_n <- c(2, 8, 20, 50) # group sizes to plot for both models
+plot_shift_sizes <- c(40,80,120) # shift sizes to plot for both models
+regimes <- c("ave")  # "inv" = inverse variance model, "fit" = fittest individual model
+single_panel <- TRUE  
 num_bins <- 140
-gen_seq = seq(9999, 10010, by = 1)
-single_panel <- FALSE
+gen_seq = c(9999, seq(10000, 10030, by = 10))
+```
+
+```{r setup, include=FALSE}
+param_val <- c(0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0) 
+plot_n <- c(2, 8, 20, 50) # group sizes to plot for both models
+plot_shift_sizes <- c(40,80,120) # shift sizes to plot for both models
+regimes <- c("ext")  # "inv" = inverse variance model, "fit" = fittest individual model
+single_panel <- TRUE  
+num_bins <- 140
+gen_seq = seq(10010, 10030, by = 10)
 ```
 
 # RUN PLOTTING after change the parameters above
@@ -78,23 +109,22 @@ bin_breaks <- seq(min_bin, max_bin, length.out = num_bins + 1)
 bin_width <- (max(bin_breaks) - min(bin_breaks)) / num_bins
 half_span <- (num_bins * bin_width) / 2
 
-if (regimes == "fit") {
-  data_df <- fit_geno
+if (regimes != "inv") {
   plot_psi <- param_val
 } else {
-  data_df <- inv_geno
   plot_beta <- param_val
 }
 
 # ---- Run ----
 plot_genotype_multi_by_beta(
-  data_df,
-  out_subfolder = paste0("genotype_overtime_", paste0(c(min(gen_seq), max(gen_seq)), collapse = ":")),
-  gen_seq = gen_seq,
-  num_bins = num_bins,
-  bin_width = bin_width,
-  half_span = half_span,
-  regimes = regimes,
-    single_panel = single_panel
+    geno_df,
+    out_subfolder = paste0("genotype_overtime_", paste0(c(min(gen_seq), max(gen_seq)), collapse = ":")),
+    gen_seq = gen_seq,
+    num_bins = num_bins,
+    bin_width = bin_width,
+    half_span = half_span,
+    regimes = regimes,
+    single_panel = single_panel,
+    include_pre_selection = include_pre_selection
 )
 ```

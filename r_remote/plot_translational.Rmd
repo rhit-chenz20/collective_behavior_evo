@@ -7,9 +7,9 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 setwd("/workdir/zc524/collective_behavior_evo/r_remote")
-base_data_folder <- "../data/n_group_translational"
-base_plot_folder <- "../r_plots/n_group_translational"
-target_psi <- c(0.0, 0.3, 0.5, 0.7, 0.9)
+base_data_folder <- "../data/multi_model"
+base_plot_folder <- "../r_plots/multi_model"
+target_psi <- c(0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0)
 regimes <- c("fit", "ave", "ext")  # "ave" = average, "fit" = fitness-based
 ```
 
@@ -933,7 +933,7 @@ summary_stat_df <- do.call(rbind, lapply(file_list, function(file) {
 # Inside each panel: x = tick 9999..10005, y = seg_site
 # ---------------------------------------------------------
 
-tick_window <- 9999:10005
+tick_window <- 9999:10100
 rep_col  <- adjustcolor("gray30", alpha.f = 0.35)
 mean_col <- "black"
 
@@ -1100,7 +1100,7 @@ plot_seg_site_by_tick <- function(df,
 # Will create base_plot_folder/seg_site_by_tick_panels/reg_ave and reg_fit, etc.
 plot_seg_site_by_tick(summary_stat_df,
                       out_root = "seg_site_by_tick_panels",
-                      regimes = c("ave","fit"))
+                      regimes = c("ave","fit","ext"))
 
 ```
 
@@ -2329,7 +2329,7 @@ mut_files <- list.files(
 # Filename pattern (UPDATED):
 #   mut/n_{n}_psi_{psi}_sz_{shift}_reg_{ave|fit}_{rep}.tsv
 extract_mut_metadata <- function(path) {
-  rx <- "mut/n_(\\d+)_psi_(-?[0-9.]+)_sz_(\\d+)_reg_(ave|fit)_(\\d+)\\.tsv"
+  rx <- "mut/n_(\\d+)_psi_(-?[0-9.]+)_sz_(\\d+)_reg_(ave|fit|ext)_(\\d+)\\.tsv"
   m  <- regexec(rx, path)
   p  <- regmatches(path, m)[[1]]
   if (length(p) != 6) {

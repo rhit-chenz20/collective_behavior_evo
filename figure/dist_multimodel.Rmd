@@ -1,0 +1,99 @@
+---
+title: "plot genotype data for multiple models"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+# parameters for plotting
+```{r setup, include=FALSE}
+wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
+setwd(wd_path)
+base_plot_folder <- "plots"
+hcl_color_palette <- "Dark 2" # color pattern for lines 
+```
+
+# load genotype data
+```{r}
+geno_df <- readRDS("genotype_data.rds")
+```
+
+```{r}
+pheno_df <- readRDS("phenotype_data.rds")
+```
+
+
+# multimodel distribution plot
+```{r}
+plot_psi <- c(0.0, 0.3)
+plot_beta <- c(0.0, 0.03)
+plot_n <- c( 2, 8, 20, 50)
+plot_shift_sizes <- c(40, 80, 120)
+regimes <- c("ave", "ext", "fit")
+num_bins <- 140
+gen_seq = seq(10020, 10100, by = 20)
+include_pre_selection <- TRUE
+
+min_bin <- -as.integer(num_bins/2)
+max_bin <- as.integer(num_bins/2)
+bin_breaks <- seq(min_bin, max_bin, length.out = num_bins + 1)
+
+# Derive a constant bin width from your reference breaks
+bin_width <- (max(bin_breaks) - min(bin_breaks)) / num_bins
+half_span <- (num_bins * bin_width) / 2
+
+base_plot_folder <- "plots"
+
+# ---- Run ----
+plot_distribution_multi_model(
+    geno_df,
+    # out_subfolder = paste0("genotype_overtime_", paste0(c(min(gen_seq), max(gen_seq)), collapse = ":")),
+    out_subfolder = paste0("dist_model_", paste(regimes, collapse = "_"), "_psi_", paste(plot_psi, collapse="_"), "_beta_", paste(plot_beta, collapse="_")),
+    gen_seq = gen_seq,
+    num_bins = num_bins,
+    bin_width = bin_width,
+    half_span = half_span,
+    regimes = regimes,
+    include_pre_selection = include_pre_selection,
+    custom_vals = NULL,
+    value_label = "Genotype"
+)
+```
+
+```{r}
+plot_psi <- c(0.0, 0.7)
+plot_beta <- c(0.0, 0.07)
+plot_n <- c( 2, 8, 20, 50)
+plot_shift_sizes <- c(40, 80, 120)
+regimes <- c("ave", "ext", "fit")
+
+gen_seq = seq(10000, 10006, by = 2)
+include_pre_selection <- FALSE
+
+num_bins <- 100
+
+min_bin <- -as.integer(num_bins/2)
+max_bin <- as.integer(num_bins/2)
+bin_breaks <- seq(min_bin, max_bin, length.out = num_bins + 1)
+
+# Derive a constant bin width from your reference breaks
+bin_width <- (max(bin_breaks) - min(bin_breaks)) / num_bins
+half_span <- (num_bins * bin_width) / 2
+
+base_plot_folder <- "plots"
+
+# ---- Run ----
+plot_distribution_multi_model(
+    pheno_df,
+    out_subfolder = paste0("dist_model_", paste(regimes, collapse = "_"), "_psi_", paste(plot_psi, collapse="_"), "_beta_", paste(plot_beta, collapse="_")),
+    gen_seq = gen_seq,
+    num_bins = num_bins,
+    bin_width = bin_width,
+    half_span = half_span,
+    regimes = regimes,
+    include_pre_selection = include_pre_selection,
+    custom_vals = NULL,
+    value_label = "Phenotype"
+)
+```
+

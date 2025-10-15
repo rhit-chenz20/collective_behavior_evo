@@ -1,0 +1,665 @@
+---
+title: "plot genotype, phenotype data for multiple models"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
+setwd(wd_path)
+base_data_folders <- c("../data/new_variance", "../data/multi_model")
+base_plot_folder <- "plots"
+target_psi <- c(0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0)
+target_beta <- c(0.0, 0.01, 0.03, 0.05, 0.07, 0.3, 0.5, 0.7, 0.9, 1.0)
+regimes <- c("inv", "fit", "ave", "ext")  # "inv" = inverse_variance, "var" = variance
+```
+
+
+# load SUMMARY STATS data
+```{r}
+# Top-level folder
+# base_data_folders <- c("../data/new_variance_ext")
+folders <- file.path(base_data_folders, "data")
+
+extract_sum_metadata <- function(path) {
+    rx <- "data/n_(\\d+)_(beta|psi)_(-?[0-9.]+)_sz_(\\d+)_reg_(inv|fit|ext|ave)_(\\d+)\\.tsv"
+    m  <- regexec(rx, path)
+    p  <- regmatches(path, m)[[1]]
+
+    if (length(p) != 7) {
+        # Try to extract the reg part manually (for logging or skipping)
+        reg_match <- sub(".*_reg_([a-zA-Z0-9]+)_\\d+\\.tsv$", "\\1", path)
+        
+        # If the reg is not one of the regimes you care about, just skip silently
+        if (!reg_match %in% regimes) return(data.frame())
+
+        # Otherwise, keep the warning for genuine regex mismatches
+        warning("Could not extract metadata from path: ", path,
+                " with match: ", paste(p, collapse = ", "))
+        return(data.frame())
+    }
+
+    data.frame(
+        n          = as.integer(p[2]),
+        variable   = p[3],               # "beta" or "psi"
+        value      = as.numeric(p[4]),
+        shift_size = as.integer(p[5]),
+        reg        = p[6],               # "inv" or "fit"
+        rep        = as.integer(p[7]),
+        file_id    = basename(path),
+        stringsAsFactors = FALSE
+    )
+}
+
+dfs <- lapply(folders, function(folder) {
+    if (!dir.exists(folder)) {
+        warning("Folder does not exist: ", folder)
+        next
+    }
+
+    file_list <- list.files(
+        path = folder,
+        pattern = "\\.tsv$",
+        full.names = TRUE,
+        recursive = TRUE
+    )
+
+    # Read and combine all files
+    stat_df <- do.call(rbind, lapply(file_list, function(file) {
+        df <- tryCatch(read.table(file, header = TRUE, sep = "\t", check.names = FALSE),
+                    error = function(e) NULL)
+        if (is.null(df)) {
+            warning("Failed to read: ", file)
+            return(NULL)
+        }
+
+        meta <- extract_sum_metadata(file)
+        if (nrow(meta) == 0) return(NULL)
+        if (meta$shift_size == 0) {
+            return(NULL)
+        }
+
+        # # Attach metadata columns
+        df$n          <- meta$n
+        if (meta$variable == "psi") {
+            df$psi <- meta$value
+            df$beta <- NA_real_
+        } else if (meta$variable == "beta") {
+            df$beta <- meta$value
+            df$psi <- NA_real_
+        } else {
+            warning("Unknown variable type in file: ", file)
+        return(NULL)
+        }
+        df$shift_size <- meta$shift_size
+        df$reg        <- meta$reg
+        df$rep        <- meta$rep
+        df$file_id    <- meta$file_id
+
+        df
+    }))
+    return(stat_df)
+})
+
+summary_stat_df <- do.call(rbind, dfs)
+```
+
+```{r}
+data_df <- subset(
+  summary_stat_df,
+  shift_size != 0,
+  select = c(tick, dif_z_opt, psi, beta, shift_size, reg, n, rep, optimum, z_mean)
+)
+
+data_df <- data_df[data_df$tick >= 9999 & data_df$tick <= 10100, ]
+```
+
+```{r}
+data_df <- subset(
+  summary_stat_df,
+  select = c(tick, dif_z_opt, psi, beta, shift_size, reg, n, rep, optimum, z_mean)
+)
+
+data_df <- data_df[data_df$tick >= 10099, ]
+```
+
+```{r}
+# Save
+saveRDS(data_df, file = "data_summary.rds")
+# saveRDS(data_df, file = "var_ext.rds")
+```
+
+```{r}
+# Later (or on another machine)
+data_df <- readRDS("data_summary.rds")
+```
+
+```{r}
+print(unique(summary_stat_df$reg))
+```
+
+# plotting functions for trajectory plots (multipanel plot)
+```{r}
+# tick_seq <- 9999:10100
+# rep_col  <- adjustcolor("gray30", alpha.f = 0.35)
+# mean_col <- "black"
+
+# plot_summary_multi_by_beta_ticks(
+#   data_df,
+#   out_subfolder = "trajectory_full_multi_panel",
+#   regimes = regimes
+# )
+
+# .compute_series <- function(df_panel, tick_seq) {
+#     df_sub <- df_panel
+
+#     # Coerce
+#     dif_z_opt_num <- suppressWarnings(as.numeric(df_sub$dif_z_opt))
+#     z_mean_num    <- suppressWarnings(as.numeric(df_sub$z_mean))
+#     df_sub$tick   <- suppressWarnings(as.integer(df_sub$tick))
+#     df_sub$rep    <- suppressWarnings(as.integer(df_sub$rep))
+
+#     # Base y from dif_z_opt
+#     y <- dif_z_opt_num
+
+#     # ----- Dynamic special-case at tick 9999: y <- opt_rep_at_10000 - z_mean_9999 -----
+#     # Use per-rep optimum at tick 10000 if available; otherwise skip replacement for that rep
+#     if ("optimum" %in% names(df_sub)) {
+#         opt_num <- suppressWarnings(as.numeric(df_sub$optimum))
+#         # collect per-rep optimum at tick 10000
+#         rows_opt <- is.finite(opt_num) & is.finite(df_sub$rep) & (df_sub$tick == 10000)
+#         if (any(rows_opt)) {
+#             opt_tab <- tapply(opt_num[rows_opt], df_sub$rep[rows_opt], function(v) mean(v, na.rm = TRUE))
+#             # map per-row rep -> optimum
+#             rep_ids   <- as.integer(names(opt_tab))
+#             match_idx <- match(df_sub$rep, rep_ids)
+#             rep_opt   <- rep(NA_real_, nrow(df_sub))
+#             good_m    <- !is.na(match_idx)
+#             rep_opt[good_m] <- as.numeric(opt_tab)[match_idx[good_m]]
+
+#             # apply at tick 9999 where we have z_mean and rep_opt
+#             idx_9999 <- (df_sub$tick == 9999) & is.finite(z_mean_num) & is.finite(rep_opt)
+#             y[idx_9999] <- rep_opt[idx_9999] - z_mean_num[idx_9999]
+#         }
+#     }
+
+#     df_sub$y <- y
+
+#     # Keep finite rows
+#     df_sub <- df_sub[is.finite(df_sub$y) & is.finite(df_sub$tick) & is.finite(df_sub$rep), , drop = FALSE]
+#     if (!nrow(df_sub)) return(list(reps = list(), mean = rep(NA_real_, length(tick_seq)), present_ticks = integer(0)))
+
+#     # Aggregate by tick,rep
+#     agg <- aggregate(y ~ tick + rep, data = df_sub, FUN = mean)
+#     reps <- sort(unique(agg$rep))
+
+#     rep_series <- lapply(reps, function(r) {
+#         yv <- rep(NA_real_, length(tick_seq))
+#         rows <- agg[agg$rep == r & agg$tick %in% tick_seq, , drop = FALSE]
+#         if (nrow(rows)) {
+#             idx <- match(rows$tick, tick_seq)
+#             yv[idx] <- rows$y
+#         }
+#         yv
+#     })
+#     names(rep_series) <- as.character(reps)
+
+#     if (length(rep_series)) {
+#         mat <- do.call(rbind, rep_series)
+#         mean_series  <- apply(mat, 2L, function(col) mean(col, na.rm = TRUE))
+#         present_ticks <- tick_seq[colSums(!is.na(mat)) > 0]
+#     } else {
+#         mean_series <- rep(NA_real_, length(tick_seq))
+#         present_ticks <- integer(0)
+#     }
+
+#     list(reps = rep_series, mean = mean_series, present_ticks = present_ticks)
+# }
+
+# # ---------- Exponential-decay fit helpers ----------
+# # Model: y(x) = c0 + c1 * exp( -k * (x - t0) ), with t0 = min(x) fixed
+# .fit_exp_decay <- function(x, y) {
+#     x <- as.numeric(x); y <- as.numeric(y)
+#     ok <- is.finite(x) & is.finite(y)
+#     x <- x[ok]; y <- y[ok]
+#     if (length(x) < 5) {
+#         return(list(success = FALSE, params = NA, x_fit = x, y_fit = rep(NA_real_, length(x)), r2 = NA_real_))
+#     }
+#     ord <- order(x); x <- x[ord]; y <- y[ord]
+#     t0 <- min(x)
+
+#     tail_n <- max(5L, ceiling(0.2 * length(y)))
+#     c0_guess <- median(tail(y, tail_n), na.rm = TRUE)
+#     c1_guess <- max(1e-8, y[1] - c0_guess)
+#     k_guess  <- 0.01
+
+#     y_shift <- pmax(y - c0_guess, 1e-8)
+#     lm_fit <- try(suppressWarnings(lm(log(y_shift) ~ I(x - t0))), silent = TRUE)
+#     if (!inherits(lm_fit, "try-error")) {
+#         k_guess  <- max(1e-6, -coef(lm_fit)[2])
+#         c1_guess <- max(1e-8, exp(coef(lm_fit)[1]))
+#     }
+
+#     df <- data.frame(x = x, y = y)
+#     nls_fit <- try(
+#         suppressWarnings(
+#         nls(y ~ c0 + c1 * exp(-k * (x - t0)),
+#             data = df,
+#             start = list(c0 = c0_guess, c1 = c1_guess, k = k_guess),
+#             control = list(maxiter = 200, warnOnly = TRUE))
+#         ),
+#         silent = TRUE
+#     )
+
+#     if (inherits(nls_fit, "try-error")) {
+#         if (is.finite(k_guess) && is.finite(c1_guess) && is.finite(c0_guess)) {
+#             c0 <- c0_guess; c1 <- c1_guess; k <- k_guess
+#             y_hat <- c0 + c1 * exp(-k * (x - t0))
+#             sse <- sum((y - y_hat)^2, na.rm = TRUE)
+#             sst <- sum((y - mean(y, na.rm = TRUE))^2, na.rm = TRUE)
+#             r2  <- if (sst > 0) 1 - sse/sst else NA_real_
+#             return(list(success = TRUE, params = c(c0 = c0, c1 = c1, k = k, t0 = t0),
+#                         x_fit = x, y_fit = y_hat, r2 = r2))
+#         } else {
+#             return(list(success = FALSE, params = NA, x_fit = x, y_fit = rep(NA_real_, length(x)), r2 = NA_real_))
+#         }
+#     }
+
+#     co <- coef(nls_fit)
+#     c0 <- unname(co["c0"]); c1 <- unname(co["c1"]); k <- unname(co["k"])
+#     y_hat <- c0 + c1 * exp(-k * (x - t0))
+#     sse <- sum((y - y_hat)^2, na.rm = TRUE)
+#     sst <- sum((y - mean(y, na.rm = TRUE))^2, na.rm = TRUE)
+#     r2  <- if (sst > 0) 1 - sse/sst else NA_real_
+
+#     list(success = TRUE, params = c(c0 = c0, c1 = c1, k = k, t0 = t0),
+#         x_fit = x, y_fit = y_hat, r2 = r2)
+# }
+
+# .fmt <- function(x, d = 3) formatC(x, format = "f", digits = d)
+
+# # ---------- Main plotting function ----------
+# plot_summary_multi_by_beta_ticks <- function(summary_stat_df,
+#                                             out_subfolder = "summary_multi_by_beta_ticks",
+#                                             regimes = NULL) {
+#     if (!dir.exists(file.path(base_plot_folder, out_subfolder))) {
+#         dir.create(file.path(base_plot_folder, out_subfolder), recursive = TRUE)
+#     }
+
+#     for (reg_lab in regimes) {
+#         df_reg <- subset(summary_stat_df, reg == reg_lab)
+#         if (nrow(df_reg) == 0) next
+
+#         out_dir <- file.path(base_plot_folder, out_subfolder, paste0("model_", reg_lab))
+#         if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+#         for (n_val in plot_n) {
+#             df_n <- subset(df_reg, n == n_val)
+#             if (nrow(df_n) == 0) next
+
+#             shift_keys <- c(paste0("shift=", plot_shift_sizes))
+#             all_vals <- if (all(is.na(df_n$beta))) plot_psi else plot_beta
+#             variable_type <- if (all(is.na(df_n$beta))) "psi" else "beta"
+
+#             for (sk in shift_keys) {
+#                 df_group <- subset(df_n, shift_size == as.numeric(sub("shift=", "", sk)))
+                
+#                 if (nrow(df_group) == 0) next
+
+#                 # Y-limits across panels
+#                 y_min <- Inf; y_max <- -Inf
+#                 for (val in all_vals) {
+#                     df_p <- if (variable_type == "beta") {
+#                         subset(df_group, beta == val & tick %in% tick_seq)
+#                     } else {
+#                         subset(df_group, psi == val & tick %in% tick_seq)
+#                     }
+#                     if (nrow(df_p) == 0) next
+#                     s <- .compute_series(df_p, tick_seq)
+#                     y_all <- c(unlist(s$reps, use.names = FALSE), s$mean)
+#                     y_all <- y_all[is.finite(y_all)]
+#                     if (length(y_all)) {
+#                         y_min <- min(y_min, y_all)
+#                         y_max <- max(y_max, y_all)
+#                     }
+#                 }
+#                 if (!is.finite(y_min) || !is.finite(y_max) || y_min == y_max) {
+#                     y_min <- 0; y_max <- 1
+#                 }
+
+#                 K <- length(all_vals)
+#                 ncol <- ceiling(sqrt(K))
+#                 nrow <- ceiling(K / ncol)
+#                 pdf_w <- 9 * ncol   # inches
+#                 pdf_h <- 7 * nrow   # inches
+
+#                 title_suffix <- paste0("shift_size = ", as.numeric(sub("shift=", "", sk)))
+
+#                 out_name <- paste0("n_", n_val, "_", gsub("[ =]", "", title_suffix), ".pdf")
+
+#                 pdf(file.path(out_dir, out_name), width = pdf_w, height = pdf_h)
+#                 op <- par(mfrow = c(nrow, ncol), mar = c(4, 4, 3, 1) + 0.1, oma = c(0, 0, 3.5, 0))
+
+#                 for (val in all_vals) {
+#                     df_p <- if (variable_type == "beta") {
+#                         subset(df_group, beta == val & tick %in% tick_seq)
+#                     } else {
+#                         subset(df_group, psi == val & tick %in% tick_seq)
+#                     }
+#                     if (nrow(df_p) == 0) next
+#                     panel_title <- if (variable_type == "psi") {
+#                         paste0("psi = ", val)
+#                     } else {
+#                         paste0("beta = ", val)
+#                     }
+
+#                     plot(NA, xlim = range(tick_seq), ylim = c(y_min, y_max),
+#                         xlab = "Tick", ylab = "Distance to Optimum", main = panel_title,
+#                         xaxt = "n")
+#                     axis(1, at = tick_seq)
+
+#                     s <- .compute_series(df_p, tick_seq)
+
+#                     # Replicate series
+#                     if (plot_reps & length(s$reps)) {
+#                         for (r in seq_along(s$reps)) {
+#                             lines(tick_seq, s$reps[[r]], col = rep_col, lwd = 1)
+#                             points(tick_seq, s$reps[[r]], pch = 16, cex = 0.5, col = rep_col)
+#                         }
+#                     }
+#                     # Across-rep mean (already with dynamic 9999 substitution)
+#                     lines(tick_seq, s$mean, col = mean_col, lwd = 2)
+#                     points(tick_seq, s$mean, pch = 16, cex = 0.9, col = mean_col)
+
+#                     # ---- Exponential-decay fit (exclude tick 9999 from fitting) ----
+#                     if (plot_exp_fit & is.finite(min(s$mean, na.rm = TRUE)) && is.finite(max(s$mean, na.rm = TRUE))) {
+#                         present <- is.finite(s$mean) & (tick_seq != 9999)
+#                         x_fit <- tick_seq[present]
+#                         y_fit <- s$mean[present]
+#                         if (length(x_fit) >= 5 && diff(range(y_fit)) > 0) {
+#                             fit <- .fit_exp_decay(x_fit, y_fit)
+#                             if (isTRUE(fit$success)) {
+#                                 lines(fit$x_fit, fit$y_fit, col = "red", lwd = 2, lty = 2)
+
+#                                 k <- fit$params["k"]
+#                                 tau <- if (is.finite(k) && k > 0) 1/k else NA_real_
+#                                 t_half <- if (is.finite(k) && k > 0) log(2)/k else NA_real_
+
+#                                 legend("topright", inset = 0.02,
+#                                     legend = c(
+#                                         "Exp fit: y = c0 + c1*e^{-k(x - t0)}",
+#                                         paste0("c0=", .fmt(fit$params["c0"]), ", c1=", .fmt(fit$params["c1"])),
+#                                         paste0("k=", .fmt(k), "  (tau= ", .fmt(tau), ", t1/2= ", .fmt(t_half), ")"),
+#                                         paste0("R^2=", .fmt(fit$r2)),
+#                                         "Note: tick 9999 excluded from fit"
+#                                     ),
+#                                     col = c(NA, "red", "red", "red", NA),
+#                                     lty = c(NA, 2, 2, 2, NA), lwd = c(NA, 2, 2, 2, NA),
+#                                     bty = "n", cex = 0.78, text.col = c("black","red","red","red","black"))
+#                             }
+#                         }
+#                     }
+#                     if (plot_reps & plot_exp_fit) {
+#                         legend("bottomleft", inset = 0.02,
+#                                 legend = c("Replicate", "Across-rep mean", "Exp. decay fit"),
+#                                 col    = c(rep_col, mean_col, "red"),
+#                                 lty    = c(1,       1,        2),
+#                                 lwd    = c(1,       2,        2),
+#                                 pch    = c(16,      16,       NA),
+#                                 pt.cex = c(0.5,     0.9,      NA),
+#                                 bty = "n", cex = 0.85)
+#                     } else if (plot_reps & !plot_exp_fit) {
+#                         legend("bottomleft", inset = 0.02,
+#                                 legend = c("Replicate", "Across-rep mean"),
+#                                 col    = c(rep_col, mean_col),
+#                                 lty    = c(1,       1),
+#                                 lwd    = c(1,       2),
+#                                 pch    = c(16,      16),
+#                                 pt.cex = c(0.5,     0.9),
+#                                 bty = "n", cex = 0.85)
+#                     } else if (!plot_reps & plot_exp_fit) {
+#                         legend("bottomleft", inset = 0.02,
+#                                 legend = c("Across-rep mean", "Exp. decay fit"),
+#                                 col    = c(mean_col, "red"),
+#                                 lty    = c(1,        2),
+#                                 lwd    = c(2,        2),
+#                                 pch    = c(16,       NA),
+#                                 pt.cex = c(0.9,      NA),
+#                                 bty = "n", cex = 0.85)
+#                     }
+#                 }
+
+#                 mtext(paste0("Summary: Distance from the shifted optimum over 100 generations | model = ",
+#                             reg_lab, " | n = ", n_val, " | ", title_suffix),
+#                     outer = TRUE, cex = 1.05, line = 1.2)
+
+#                 par(op)
+#                 dev.off()
+#             }
+#         }
+#     }
+# }
+
+```
+
+
+# load genotype data
+```{r}
+# Set the top-level folder
+folders <- file.path(base_data_folders, "genotype")
+
+# List all .tsv files recursively
+file_list <- list.files(
+    path = folder,
+    pattern = "\\.tsv$",
+    full.names = TRUE,
+    recursive = TRUE
+)
+
+# Function to extract metadata from path
+# Matches: genotype/n_<n>_beta_<beta>_sz_<sz>_reg_<inv|var>_<rep>.tsv
+extract_geno_metadata <- function(path) {
+    pat <- "genotype/n_(\\d+)_(beta|psi)_(-?[0-9.]+)_sz_(\\d+)_reg_(inv|fit|ext|ave)_(\\d+)\\.tsv"
+    matches <- regexec(pat, path)
+    parts <- regmatches(path, matches)[[1]]
+
+    if (length(parts) != 7) {
+        # Try to extract the reg part manually (for logging or skipping)
+        reg_match <- sub(".*_reg_([a-zA-Z0-9]+)_\\d+\\.tsv$", "\\1", path)
+        
+        # If the reg is not one of the regimes you care about, just skip silently
+        if (!reg_match %in% regimes) return(data.frame())
+
+        warning("Could not extract metadata from path: ", path,
+                " with matches: ", paste(parts, collapse = ", "))
+        return(data.frame())
+    }
+
+    data.frame(
+        n    = as.integer(parts[2]),
+        variable = parts[3],         # "beta" or "psi"
+        value = as.numeric(parts[4]),
+        shift_size   = as.integer(parts[5]),
+        reg  = parts[6],             # "inv" or "fit"
+        rep  = as.integer(parts[7]),
+        file_id    = basename(path),
+        stringsAsFactors = FALSE
+    )
+}
+
+dfs <- lapply(folders, function(folder) {
+    if (!dir.exists(folder)) {
+        warning("Folder does not exist: ", folder)
+        next
+    }
+
+    file_list <- list.files(
+        path = folder,
+        pattern = "\\.tsv$",
+        full.names = TRUE,
+        recursive = TRUE
+    )
+
+    # Read and combine all files
+    geno_df <- do.call(rbind, lapply(file_list, function(file) {
+        df <- tryCatch(read.table(file, header = TRUE, sep = "\t", check.names = FALSE),
+                    error = function(e) NULL)
+        if (is.null(df)) {
+        warning("Failed to read: ", file)
+        return(NULL)
+        }
+
+        meta <- extract_geno_metadata(file)
+        if (nrow(meta) == 0) return(NULL)
+
+        # Attach metadata columns
+        df$n          <- meta$n
+        if (meta$variable == "psi") {
+            df$psi <- meta$value
+            df$beta <- NA_real_
+        } else if (meta$variable == "beta") {
+            df$beta <- meta$value
+            df$psi <- NA_real_
+        } else {
+            warning("Unknown variable type in file: ", file)
+            return(NULL)
+        }
+        df$shift_size <- meta$shift_size
+        df$reg        <- meta$reg
+        df$rep        <- meta$rep
+        df$file_id    <- meta$file_id
+
+        df
+    }))
+    return(geno_df)
+})
+
+genotype_df <- do.call(rbind, dfs)
+```
+
+# save genotype data
+```{r}
+geno_df <- genotype_df[genotype_df$generation >= 9999 & genotype_df$generation <= 10100, ]
+saveRDS(geno_df, file = "genotype_data.rds")
+```
+
+```{r}
+# Later (or on another machine)
+geno_df <- readRDS("genotype_data.rds")
+```
+
+```{r}
+fit_geno <- geno_df[geno_df$reg == "fit", ]
+inv_geno <- geno_df[geno_df$reg == "inv", ]
+```
+
+
+
+# load phenotype data
+```{r}
+base_data_folders <- c("../data/multi_model")
+regimes <- c("fit", "ave", "ext")  # only non-variacne model has phenotype data
+
+# Set the top-level folder
+folders <- file.path(base_data_folders, "phenotype")
+
+# List all .tsv files recursively
+file_list <- list.files(
+    path = folder,
+    pattern = "\\.tsv$",
+    full.names = TRUE,
+    recursive = TRUE
+)
+
+# Function to extract metadata from path
+# Matches: genotype/n_<n>_beta_<beta>_sz_<sz>_reg_<inv|var>_<rep>.tsv
+extract_geno_metadata <- function(path) {
+    pat <- "phenotype/n_(\\d+)_(beta|psi)_(-?[0-9.]+)_sz_(\\d+)_reg_(fit|ext|ave)_(\\d+)\\.tsv"
+    matches <- regexec(pat, path)
+    parts <- regmatches(path, matches)[[1]]
+
+    if (length(parts) != 7) {
+        # Try to extract the reg part manually (for logging or skipping)
+        reg_match <- sub(".*_reg_([a-zA-Z0-9]+)_\\d+\\.tsv$", "\\1", path)
+        
+        # If the reg is not one of the regimes you care about, just skip silently
+        if (!reg_match %in% regimes) return(data.frame())
+
+        warning("Could not extract metadata from path: ", path,
+                " with matches: ", paste(parts, collapse = ", "))
+        return(data.frame())
+    }
+
+    data.frame(
+        n    = as.integer(parts[2]),
+        variable = parts[3],         # "beta" or "psi"
+        value = as.numeric(parts[4]),
+        shift_size   = as.integer(parts[5]),
+        reg  = parts[6],             # "inv" or "fit"
+        rep  = as.integer(parts[7]),
+        file_id    = basename(path),
+        stringsAsFactors = FALSE
+    )
+}
+
+dfs <- lapply(folders, function(folder) {
+    if (!dir.exists(folder)) {
+        warning("Folder does not exist: ", folder)
+        next
+    }
+
+    file_list <- list.files(
+        path = folder,
+        pattern = "\\.tsv$",
+        full.names = TRUE,
+        recursive = TRUE
+    )
+
+    # Read and combine all files
+    pheno_df <- do.call(rbind, lapply(file_list, function(file) {
+        df <- tryCatch(read.table(file, header = TRUE, sep = "\t", check.names = FALSE),
+                    error = function(e) NULL)
+        if (is.null(df)) {
+            warning("Failed to read: ", file)
+            return(NULL)
+        }
+
+        meta <- extract_geno_metadata(file)
+        if (nrow(meta) == 0) return(NULL)
+
+        # Attach metadata columns
+        df$n          <- meta$n
+        if (meta$variable == "psi") {
+            df$psi <- meta$value
+            df$beta <- NA_real_
+        } else if (meta$variable == "beta") {
+            df$beta <- meta$value
+            df$psi <- NA_real_
+        } else {
+            warning("Unknown variable type in file: ", file)
+            return(NULL)
+        }
+        df$shift_size <- meta$shift_size
+        df$reg        <- meta$reg
+        df$rep        <- meta$rep
+        df$file_id    <- meta$file_id
+
+        df
+    }))
+    return(pheno_df)
+})
+
+phenotype_df <- do.call(rbind, dfs)
+```
+
+# save genotype data
+```{r}
+pheno_df <- phenotype_df[phenotype_df$generation >= 9999 & phenotype_df$generation <= 10100, ]
+saveRDS(pheno_df, file = "phenotype_data.rds")
+```
+
+```{r}
+# Later (or on another machine)
+pheno_df <- readRDS("phenotype_data.rds")
+```

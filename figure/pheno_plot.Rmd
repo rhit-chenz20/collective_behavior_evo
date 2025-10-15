@@ -11,7 +11,7 @@ wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
 setwd(wd_path)
 base_plot_folder <- "plots"
 hcl_color_palette <- "Dark 2" # color pattern for lines 
-regimes <- c("fit")  # only fittest model has phenotype
+regimes <- c("fit", "ext", "ave")  # only fittest model has phenotype
 num_bins <- 120 # number of bins for histogram (bin range from -num_bins/2 to num_bins/2)
 gen_seq = seq(10000, 10100, by = 10) # generations to plot
 single_panel <- FALSE # single plot with multiple psi values, only works for single generation plotting
@@ -45,13 +45,44 @@ single_panel <- TRUE
 ```
 
 ## PARAMETER: single panel multi generation plot
-```{r}
-plot_psi <- c(0.0, 0.5)
-plot_n <- c(50)
-plot_shift_sizes <- c(120)
-num_bins <- 120
+```{r setup, include=FALSE}
+param_val <- c(0.0, 0.01, 0.03, 0.05, 0.07, 0.3, 0.5, 0.7, 0.9, 1.0) # all beta values to plot for inverse-variance model
+plot_n <- c(2, 8, 20, 50) # group sizes to plot for both models
+plot_shift_sizes <- c(40,80,120) # shift sizes to plot for both models
+regimes <- c("inv")  # "inv" = inverse variance model, "fit" = fittest individual model
+single_panel <- TRUE  
+num_bins <- 100
 gen_seq = c(9999, seq(10000, 10030, by = 10))
-single_panel <- TRUE
+```
+
+```{r setup, include=FALSE}
+param_val <- c(0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0) 
+plot_n <- c(2, 8, 20, 50) # group sizes to plot for both models
+plot_shift_sizes <- c(40,80,120) # shift sizes to plot for both models
+regimes <- c("fit")  # "inv" = inverse variance model, "fit" = fittest individual model
+single_panel <- TRUE  
+num_bins <- 160
+gen_seq = c(9999, seq(10000, 10030, by = 10))
+```
+
+```{r setup, include=FALSE}
+param_val <- c(0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0) 
+plot_n <- c(2, 8, 20, 50) # group sizes to plot for both models
+plot_shift_sizes <- c(40,80,120) # shift sizes to plot for both models
+regimes <- c("ave")  # "inv" = inverse variance model, "fit" = fittest individual model
+single_panel <- TRUE  
+num_bins <- 140
+gen_seq = c(9999, seq(10000, 10030, by = 10))
+```
+
+```{r setup, include=FALSE}
+param_val <- c(0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0) 
+plot_n <- c(2, 8, 20, 50) # group sizes to plot for both models
+plot_shift_sizes <- c(40,80,120) # shift sizes to plot for both models
+regimes <- c("ext")  # "inv" = inverse variance model, "fit" = fittest individual model
+single_panel <- TRUE  
+num_bins <- 140
+gen_seq = c(9999, seq(10000, 10030, by = 10))
 ```
 
 # PARAMETER: multi panel multi generation plot
@@ -73,6 +104,12 @@ bin_breaks <- seq(min_bin, max_bin, length.out = num_bins + 1)
 # Derive a constant bin width from your reference breaks
 bin_width <- (max(bin_breaks) - min(bin_breaks)) / num_bins
 half_span <- (num_bins * bin_width) / 2
+
+if (regimes != "inv") {
+  plot_psi <- param_val
+} else {
+  plot_beta <- param_val
+}
 
 # ---- Run ----
 plot_phenotype_multi(

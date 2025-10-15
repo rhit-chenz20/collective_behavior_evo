@@ -7,10 +7,10 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 setwd("/workdir/zc524/collective_behavior_evo/r_remote")
-base_data_folder <- "../data/new_variance"
+base_data_folder <- "../data/new_variance_ext"
 base_plot_folder <- "../r_plots/new_var_plots2"
-target_beta <- c(0.0, 0.01, 0.03, 0.05, 0.07, 0.3, 0.5, 0.7, 0.9, 1.0)
-regimes <- c("inv", "var")  # "inv" = inverse_variance, "var" = variance
+target_beta <- c(0.0, 0.01, 0.03, 0.05, 0.07, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0)
+regimes <- c("inv")  # "inv" = inverse_variance, "var" = variance
 ```
 
 # load GENOTYPE data
@@ -931,7 +931,7 @@ summary_stat_df <- do.call(rbind, lapply(file_list, function(file) {
 # Inside each panel: x = tick 9999..10005, y = seg_site
 # ---------------------------------------------------------
 
-tick_window <- 9999:10010
+tick_window <- 10099:10300
 rep_col  <- adjustcolor("gray30", alpha.f = 0.35)
 mean_col <- "black"
 
@@ -979,6 +979,8 @@ split_var <- "beta"
 }
 
 # ---- Main plotting function ----
+# ---- same preamble (tick_window, colors, .compute_seg_series) ----
+
 plot_seg_site_by_tick <- function(df,
                                   out_root = "seg_site_by_tick_panels",
                                   regimes = NULL) {
@@ -994,111 +996,135 @@ plot_seg_site_by_tick <- function(df,
   }
 
   # Basic coercions we'll reuse
-  df$tick <- suppressWarnings(as.integer(df$tick))
-  df$n    <- suppressWarnings(as.integer(df$n))
+  df$tick       <- suppressWarnings(as.integer(df$tick))
+  df$n          <- suppressWarnings(as.integer(df$n))
+  df$shift_size <- suppressWarnings(as.numeric(df$shift_size))  # <--- NEW: ensure present/numeric
 
   for (reg_lab in regimes) {
     df_reg <- subset(df, reg == reg_lab & tick %in% tick_window)
     if (!nrow(df_reg)) next
 
     # Make regime-specific folder
-    out_dir <- file.path(base_plot_folder, out_root, paste0("reg_", reg_lab))
-    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+    out_dir_reg <- file.path(base_plot_folder, out_root, paste0("reg_", reg_lab))
+    if (!dir.exists(out_dir_reg)) dir.create(out_dir_reg, recursive = TRUE)
 
-    # Unique split values (e.g., beta or dist_norm)
+    # Guard split_var
     if (!split_var %in% names(df_reg)) {
       warning("split_var '", split_var, "' not found; skipping reg=", reg_lab)
       next
     }
-    split_vals <- sort(unique(df_reg[[split_var]]))
 
-    # Panels are by n
-    n_vals <- sort(unique(df_reg$n))
-    if (!length(n_vals)) next
+    # ---- NEW: split by shift_size first ----
+    shift_vals <- sort(unique(df_reg$shift_size))
+    shift_vals <- shift_vals[is.finite(shift_vals)]
+    if (!length(shift_vals)) {
+      warning("No finite shift_size values found for reg=", reg_lab)
+      next
+    }
 
-    # Layout sizing
-    ncol <- ceiling(sqrt(length(n_vals)))
-    nrow <- ceiling(length(n_vals) / ncol)
-    pdf_w <- 9 * ncol  # inches
-    pdf_h <- 7 * nrow  # inches
+    for (sh in shift_vals) {
+      df_sh <- subset(df_reg, is.finite(shift_size) & shift_size == sh)
+      if (!nrow(df_sh)) next
 
-    for (sv in split_vals) {
-      df_sv <- subset(df_reg, df_reg[[split_var]] == sv)
-      if (!nrow(df_sv)) next
+      # Optional: put each shift into its own subfolder for tidiness
+      sh_tag <- gsub("[^A-Za-z0-9._-]+", "_", formatC(sh, format = "fg", digits = 8))
+      out_dir <- file.path(out_dir_reg, paste0("shift_", sh_tag))
+      if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
-      # Build a nice filename-safe label
-      sv_lab <- if (is.numeric(sv)) formatC(as.numeric(sv), format = "f", digits = 3) else as.character(sv)
-      sv_tag <- gsub("[^A-Za-z0-9._-]+", "_", sv_lab)
+      # Unique split values (psi / beta / dist_norm)
+      split_vals <- sort(unique(df_sh[[split_var]]))
 
-      out_file <- file.path(out_dir,
-                            paste0("seg_site_vs_tick_by_n_",
-                                   split_var, "_", sv_tag, ".pdf"))
-      pdf(out_file, width = pdf_w, height = pdf_h)
-      op <- par(mfrow = c(nrow, ncol), mar = c(4,4,3,1) + 0.1, oma = c(0,0,3,0))
+      # Panels are by n
+      n_vals <- sort(unique(df_sh$n))
+      if (!length(n_vals)) next
 
-      # Determine y-range across all panels to keep consistent
-      y_min <- Inf; y_max <- -Inf
-      panel_series <- vector("list", length(n_vals))
-      names(panel_series) <- as.character(n_vals)
+      # Layout sizing
+      ncol <- ceiling(sqrt(length(n_vals)))
+      nrow <- ceiling(length(n_vals) / ncol)
+      pdf_w <- 9 * ncol  # inches
+      pdf_h <- 7 * nrow  # inches
 
-      for (i in seq_along(n_vals)) {
-        nv <- n_vals[i]
-        dfn <- subset(df_sv, n == nv)
-        s <- .compute_seg_series(dfn, tick_window)
-        panel_series[[i]] <- s
-        y_all <- c(unlist(s$reps, use.names = FALSE), s$mean)
-        y_all <- y_all[is.finite(y_all)]
-        if (length(y_all)) {
-          y_min <- min(y_min, y_all)
-          y_max <- max(y_max, y_all)
-        }
-      }
-      if (!is.finite(y_min) || !is.finite(y_max) || y_min == y_max) {
-        y_min <- 0; y_max <- 1
-      }
+      # ---- inner loop: one PDF per (shift_size, split_var) ----
+      for (sv in split_vals) {
+        df_sv <- subset(df_sh, df_sh[[split_var]] == sv)
+        if (!nrow(df_sv)) next
 
-      # Draw panels
-      for (i in seq_along(n_vals)) {
-        nv <- n_vals[i]
-        s  <- panel_series[[i]]
-        main_lab <- paste0("n = ", nv)
+        # Nice labels
+        sv_lab <- if (is.numeric(sv)) formatC(as.numeric(sv), format = "f", digits = 3) else as.character(sv)
+        sv_tag <- gsub("[^A-Za-z0-9._-]+", "_", sv_lab)
 
-        plot(NA, xlim = range(tick_window), ylim = c(y_min, y_max),
-             xlab = "Tick", ylab = "seg_site", main = main_lab, xaxt = "n")
-        axis(1, at = tick_window)
+        out_file <- file.path(out_dir,
+                              paste0("seg_site_vs_tick_by_n_",
+                                     "shift_", sh_tag, "_",
+                                     split_var, "_", sv_tag, ".pdf"))
+        pdf(out_file, width = pdf_w, height = pdf_h)
+        op <- par(mfrow = c(nrow, ncol), mar = c(4,4,3,1) + 0.1, oma = c(0,0,3,0))
 
-        if (length(s$reps)) {
-          for (r in seq_along(s$reps)) {
-            lines(tick_window, s$reps[[r]], col = rep_col, lwd = 1)
-            points(tick_window, s$reps[[r]], pch = 16, cex = 0.5, col = rep_col)
+        # Determine y-range across all panels to keep consistent
+        y_min <- Inf; y_max <- -Inf
+        panel_series <- vector("list", length(n_vals))
+        names(panel_series) <- as.character(n_vals)
+
+        for (i in seq_along(n_vals)) {
+          nv <- n_vals[i]
+          dfn <- subset(df_sv, n == nv)
+          s <- .compute_seg_series(dfn, tick_window)
+          panel_series[[i]] <- s
+          y_all <- c(unlist(s$reps, use.names = FALSE), s$mean)
+          y_all <- y_all[is.finite(y_all)]
+          if (length(y_all)) {
+            y_min <- min(y_min, y_all)
+            y_max <- max(y_max, y_all)
           }
         }
-        lines(tick_window, s$mean, col = mean_col, lwd = 2)
-        points(tick_window, s$mean, pch = 16, cex = 0.9, col = mean_col)
+        if (!is.finite(y_min) || !is.finite(y_max) || y_min == y_max) {
+          y_min <- 0; y_max <- 1
+        }
 
-        legend("topleft", inset = 0.02,
-               legend = c("Replicate", "Across-rep mean"),
-               col = c(rep_col, mean_col), lty = 1, lwd = c(1,2),
-               pch = c(16,16), pt.cex = c(0.5,0.9), bty = "n", cex = 0.85)
+        # Draw panels
+        for (i in seq_along(n_vals)) {
+          nv <- n_vals[i]
+          s  <- panel_series[[i]]
+          main_lab <- paste0("n = ", nv)
+
+          plot(NA, xlim = range(tick_window), ylim = c(y_min, y_max),
+               xlab = "Tick", ylab = "seg_site", main = main_lab, xaxt = "n")
+          axis(1, at = tick_window)
+
+          if (length(s$reps)) {
+            for (r in seq_along(s$reps)) {
+              lines(tick_window, s$reps[[r]], col = rep_col, lwd = 1)
+              points(tick_window, s$reps[[r]], pch = 16, cex = 0.5, col = rep_col)
+            }
+          }
+          lines(tick_window, s$mean, col = mean_col, lwd = 2)
+          points(tick_window, s$mean, pch = 16, cex = 0.9, col = mean_col)
+
+          legend("topleft", inset = 0.02,
+                 legend = c("Replicate", "Across-rep mean"),
+                 col = c(rep_col, mean_col), lty = 1, lwd = c(1,2),
+                 pch = c(16,16), pt.cex = c(0.5,0.9), bty = "n", cex = 0.85)
+        }
+
+        # Top title per PDF
+        mtext(paste0("seg_site vs tick (", min(tick_window), ":", max(tick_window), ")",
+                     " | reg = ", reg_lab,
+                     " | shift_size = ", sh,
+                     " | one plot per ", split_var, " = ", sv_lab),
+              outer = TRUE, cex = 1.05, line = 1.0)
+
+        par(op); dev.off()
       }
-
-      # Top title per PDF
-      mtext(paste0("seg_site vs tick (", min(tick_window), " to ", max(tick_window), ")",
-                   " | reg = ", reg_lab,
-                   " | one plot per ", split_var, " = ", sv_lab),
-            outer = TRUE, cex = 1.05, line = 1.0)
-
-      par(op)
-      dev.off()
     }
   }
 }
 
+
 # ---- Run ----
 # Will create base_plot_folder/seg_site_by_tick_panels/reg_ave and reg_fit, etc.
 plot_seg_site_by_tick(summary_stat_df,
-                      out_root = "seg_site_by_tick_panels",
-                      regimes = c("inv","var"))
+                      out_root = "seg_site_by_tick",
+                      regimes = c("inv"))
 
 ```
 
