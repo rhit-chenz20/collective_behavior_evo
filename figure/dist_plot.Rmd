@@ -30,16 +30,16 @@ data_df <- readRDS("data_summary.rds")
 # PARAMETER: if you want to plot for FITTEST model, change parameters here
 ```{r}
 # plot_psi <- c(0.0, 0.5)
-plot_psi <- c(0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0)
-plot_beta <- c(0.0, 0.01, 0.03, 0.05, 0.07, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0)
+plot_psi <- c(0.0, 0.5, 0.9)
+plot_beta <- c(0.0, 0.01, 0.03, 0.05, 0.07)
 plot_n <- c(2, 8, 20, 50)
-plot_shift_sizes <- c(40, 80, 120)
-regimes <- regimes <- c("inv", "fit", "ext", "ave")
-plot_exp_fit <- TRUE
-plot_reps <- FALSE
+plot_shift_sizes <- c(40)
+regimes <- regimes <- c("fit", "ext", "ave")
+plot_exp_fit <- FALSE
+plot_reps <- TRUE
 tick_seq <- 9999:10100 # ticks to plot
 plot_summary_multi_by_beta_ticks(data_df,
-                                out_subfolder = "trajectory_full_no_reps",
+                                out_subfolder = "trajectory_partial_reps",
                                 regimes = regimes)
 ```
 
@@ -55,8 +55,10 @@ plot_exp_fit <- FALSE # i recommend FALSE because inverse-variance model does no
 # RUN PLOTTING
 ```{r}
 regimes <- c("inv")
+plot_beta <- c(0.0, 0.01, 0.03, 0.05, 0.07)
 tick_seq <- 10100:10400 # ticks to plot
 plot_exp_fit <- FALSE
+plot_reps <- FALSE
 plot_summary_multi_by_beta_ticks(data_df,
                                 out_subfolder = "trajectory_full_ext",
                                 regimes = regimes)

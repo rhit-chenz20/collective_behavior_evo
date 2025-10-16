@@ -596,7 +596,7 @@ plot_summary_multi_by_beta_ticks <- function(summary_stat_df,
                 }
                 if (plot_exp_fit) {
                     legend(
-                    "bottomleft", inset = 0.02,
+                    "topright", inset = 0.02,
                     legend = c(legend_vals, "Exp. decay fit"),
                     col    = c(mean_cols,  "black"),
                     lty    = c(rep(1, length(legend_vals)), 1),
@@ -607,7 +607,7 @@ plot_summary_multi_by_beta_ticks <- function(summary_stat_df,
                     )
                 } else {
                     legend(
-                    "bottomleft", inset = 0.02,
+                    "topright", inset = 0.02,
                     legend = legend_vals,
                     col    = mean_cols,
                     lty    = 1,
@@ -1135,7 +1135,11 @@ plot_distribution_multi_model <- function(
             png_w <- 6 * ncol_layout
             png_h <- 5 * nrow_layout
 
-            out_name <- paste0("n_", n_val, "_shift_", shift_size_target, "_by_", gap, "_", value_label_lower, ".pdf")
+            if (include_pre_selection) {
+                out_name <- paste0("n_", n_val, "_shift_", shift_size_target, "_by_", gap, "_", value_label_lower, "_", min(gen_seq), ":", max(gen_seq),"_pre.pdf")
+            } else{
+                out_name <- paste0("n_", n_val, "_shift_", shift_size_target, "_by_", gap, "_", value_label_lower, "_", min(gen_seq), ":", max(gen_seq),".pdf")
+            }
             pdf(file.path(out_dir, out_name), width = png_w, height = png_h)
             op <- par(mfrow = c(nrow_layout, ncol_layout),
                       mar = c(4, 4, 3, 1) + 0.1,

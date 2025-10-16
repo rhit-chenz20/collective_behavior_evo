@@ -1576,7 +1576,7 @@ compute_decay_table <- function(df, tick_seq) {
   do.call(rbind, out)
 }
 
-compute_jump <- function(df, tick_seq = 9999:10000, relative=TRUE) {
+compute_jump <- function(df, tick_seq = 10099:10100, relative=TRUE) {
   s <- .compute_series(df, tick_seq)
   yvals <- s$mean
   if (length(yvals) < 2 || any(!is.finite(yvals))) return(NA_real_)
@@ -2446,7 +2446,7 @@ if (!is.null(mut_count_df) && nrow(mut_count_df)) {
 }
 
 ```
-
+unique(mut_count_df$generation)
 ## plot number of alleles over beta and n
 ```{r}
 # ------------------------------------------------------
@@ -2527,7 +2527,7 @@ plot_mut_counts_over_beta <- function(mut_count_df,
                            " | n = ", n_val, " | ", title_shift,
                            " | gen = ", gen_target),
              xaxt = "n")
-        axis(1, at = beta_grid, labels = formatC(beta_grid, format = "f", digits = 1))
+        axis(1, at = beta_grid, labels = formatC(beta_grid, format = "f", digits = 2))
 
         if (length(rep_series)) {
           for (i in seq_along(rep_series)) {
@@ -2551,11 +2551,13 @@ plot_mut_counts_over_beta <- function(mut_count_df,
     }
   }
 }
+```
 
+```{r}
 # ---- Run ----
 plot_mut_counts_over_beta(
   mut_count_df,
-  gen_target = 10000L,
+  gen_target = 10605,
   out_subfolder = "mut_counts_by_beta",
   regimes = regimes  # e.g., c("ave","fit")
 )

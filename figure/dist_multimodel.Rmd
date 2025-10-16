@@ -25,14 +25,14 @@ pheno_df <- readRDS("phenotype_data.rds")
 
 # multimodel distribution plot
 ```{r}
-plot_psi <- c(0.0, 0.3)
-plot_beta <- c(0.0, 0.03)
+plot_psi <- c(0.0, 0.5)
+plot_beta <- c(0.0, 0.05)
 plot_n <- c( 2, 8, 20, 50)
 plot_shift_sizes <- c(40, 80, 120)
-regimes <- c("ave", "ext", "fit")
+regimes <- c("ave", "ext", "fit", "inv")
 num_bins <- 140
-gen_seq = seq(10020, 10100, by = 20)
-include_pre_selection <- TRUE
+gen_seq = seq(10020, 10060, by = 20)
+include_pre_selection <- FALSE
 
 min_bin <- -as.integer(num_bins/2)
 max_bin <- as.integer(num_bins/2)
@@ -61,16 +61,16 @@ plot_distribution_multi_model(
 ```
 
 ```{r}
-plot_psi <- c(0.0, 0.7)
-plot_beta <- c(0.0, 0.07)
-plot_n <- c( 2, 8, 20, 50)
-plot_shift_sizes <- c(40, 80, 120)
-regimes <- c("ave", "ext", "fit")
+plot_psi <- c(0.0, 0.5)
+plot_beta <- c(0.0, 0.05)
+plot_n <- c( 8)
+plot_shift_sizes <- c(120)
+regimes <- c("fit")
 
-gen_seq = seq(10000, 10006, by = 2)
+gen_seq = seq(10000, 10010, by = 5)
 include_pre_selection <- FALSE
 
-num_bins <- 100
+num_bins <- 120
 
 min_bin <- -as.integer(num_bins/2)
 max_bin <- as.integer(num_bins/2)

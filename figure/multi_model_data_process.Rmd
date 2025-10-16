@@ -19,7 +19,7 @@ regimes <- c("inv", "fit", "ave", "ext")  # "inv" = inverse_variance, "var" = va
 # load SUMMARY STATS data
 ```{r}
 # Top-level folder
-# base_data_folders <- c("../data/new_variance_ext")
+base_data_folders <- c("../data/new_variance_ext")
 folders <- file.path(base_data_folders, "data")
 
 extract_sum_metadata <- function(path) {
@@ -126,8 +126,8 @@ data_df <- data_df[data_df$tick >= 10099, ]
 
 ```{r}
 # Save
-saveRDS(data_df, file = "data_summary.rds")
-# saveRDS(data_df, file = "var_ext.rds")
+# saveRDS(data_df, file = "data_summary.rds")
+saveRDS(data_df, file = "var_ext.rds")
 ```
 
 ```{r}
