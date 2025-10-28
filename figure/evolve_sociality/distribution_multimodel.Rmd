@@ -1,0 +1,144 @@
+---
+title: "plot genotype data for multiple models"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+# parameters for plotting
+```{r setup, include=FALSE}
+wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
+setwd(wd_path)
+base_plot_folder <- "../plots/evolve_sociality"
+hcl_color_palette <- "Dark 2" # color pattern for lines 
+```
+
+# load genotype data
+```{r}
+geno_df <- readRDS("genotype_data.rds")
+```
+
+```{r}
+pheno_df <- readRDS("phenotype_data.rds")
+```
+
+
+# multimodel distribution plot
+```{r}
+plot_psi <- c(0.0)
+plot_beta <- c(0.0)
+plot_n <- c(20)
+plot_shift_sizes <- c(40, 80, 120)
+regimes <- c("ave", "ext", "fit", "inv")
+num_bins <- 100
+gen_seq = seq(10000, 10060, by = 20)
+include_pre_selection <- FALSE
+
+min_bin <- -as.integer(num_bins/2)
+max_bin <- as.integer(num_bins/2)
+bin_breaks <- seq(min_bin, max_bin, length.out = num_bins + 1)
+
+# Derive a constant bin width from your reference breaks
+bin_width <- (max(bin_breaks) - min(bin_breaks)) / num_bins
+half_span <- (num_bins * bin_width) / 2
+geno_df <- genotype_df[genotype_df$psis_mean > 0, ]
+# geno_df <- genotype_df
+
+# folder <- paste0("genotype_model_", paste(regimes, collapse = "_"), "_psi_", paste(plot_psi, collapse="_"), "_beta_", paste(plot_beta, collapse="_"))
+folder <- paste0("genotype_pos_model_", paste(regimes, collapse = "_"), "_psi_", paste(plot_psi, collapse="_"), "_beta_", paste(plot_beta, collapse="_"))
+# folder <- paste0("genotype_neg_model_", paste(regimes, collapse = "_"), "_psi_", paste(plot_psi, collapse="_"), "_beta_", paste(plot_beta, collapse="_"))
+
+# ---- Run ----
+plot_distribution_multi_model(
+    geno_df,
+    # out_subfolder = paste0("genotype_overtime_", paste0(c(min(gen_seq), max(gen_seq)), collapse = ":")),
+    out_subfolder = folder,
+    gen_seq = gen_seq,
+    num_bins = num_bins,
+    bin_width = bin_width,
+    half_span = half_span,
+    regimes = regimes,
+    include_pre_selection = include_pre_selection,
+    custom_vals = NULL,
+    value_label = "Genotype"
+)
+```
+
+```{r}
+plot_psi <- c(0.0)
+plot_beta <- c(0.0)
+# plot_n <- c(2, 8, 20, 50)
+# plot_shift_sizes <- c(40, 80, 120, 300)
+plot_n <- c(50)
+plot_shift_sizes <- c(40, 80, 120, 300)
+regimes <- c("ave", "ext", "fit")
+num_bins <- 100
+gen_seq = seq(10000, 10060, by = 20)
+include_pre_selection <- TRUE
+
+min_bin <- -as.integer(num_bins/2)
+max_bin <- as.integer(num_bins/2)
+bin_breaks <- seq(min_bin, max_bin, length.out = num_bins + 1)
+
+# Derive a constant bin width from your reference breaks
+bin_width <- (max(bin_breaks) - min(bin_breaks)) / num_bins
+half_span <- (num_bins * bin_width) / 2
+
+pheno_df <- phenotype_df[genotype_df$psis_mean > 0, ]
+folder <- paste0("phenotype_pos_model_", paste(regimes, collapse = "_"), "_psi_", paste(plot_psi, collapse="_"), "_beta_", paste(plot_beta, collapse="_"))
+
+
+# ---- Run ----
+plot_distribution_multi_model(
+    pheno_df,
+    # out_subfolder = paste0("genotype_overtime_", paste0(c(min(gen_seq), max(gen_seq)), collapse = ":")),
+    out_subfolder = folder,
+    gen_seq = gen_seq,
+    num_bins = num_bins,
+    bin_width = bin_width,
+    half_span = half_span,
+    regimes = regimes,
+    include_pre_selection = include_pre_selection,
+    custom_vals = NULL,
+    value_label = "phenotype"
+)
+
+
+pheno_df <- phenotype_df
+folder <- paste0("phenotype_model_", paste(regimes, collapse = "_"), "_psi_", paste(plot_psi, collapse="_"), "_beta_", paste(plot_beta, collapse="_"))
+
+
+# ---- Run ----
+plot_distribution_multi_model(
+    pheno_df,
+    # out_subfolder = paste0("genotype_overtime_", paste0(c(min(gen_seq), max(gen_seq)), collapse = ":")),
+    out_subfolder = folder,
+    gen_seq = gen_seq,
+    num_bins = num_bins,
+    bin_width = bin_width,
+    half_span = half_span,
+    regimes = regimes,
+    include_pre_selection = include_pre_selection,
+    custom_vals = NULL,
+    value_label = "phenotype"
+)
+
+pheno_df <- phenotype_df[genotype_df$psis_mean < 0, ]
+folder <- paste0("phenotype_neg_model_", paste(regimes, collapse = "_"), "_psi_", paste(plot_psi, collapse="_"), "_beta_", paste(plot_beta, collapse="_"))
+
+# ---- Run ----
+plot_distribution_multi_model(
+    pheno_df,
+    # out_subfolder = paste0("genotype_overtime_", paste0(c(min(gen_seq), max(gen_seq)), collapse = ":")),
+    out_subfolder = folder,
+    gen_seq = gen_seq,
+    num_bins = num_bins,
+    bin_width = bin_width,
+    half_span = half_span,
+    regimes = regimes,
+    include_pre_selection = include_pre_selection,
+    custom_vals = NULL,
+    value_label = "phenotype"
+)
+```
+

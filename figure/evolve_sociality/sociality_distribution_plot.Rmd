@@ -1,0 +1,79 @@
+---
+title: "plot genotype data for multiple models"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+# parameters for plotting
+```{r setup, include=FALSE}
+wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
+setwd(wd_path)
+base_plot_folder <- "../plots/evolve_sociality"
+hcl_color_palette <- "Dark 2" # color pattern for lines 
+param_val <- c(0.0) # for now no base psi and beta
+```
+
+# load genotype data
+```{r}
+psis_betas_df <- readRDS("../r_data/evolve_sociality_sociality.rds")
+```
+
+# parameter space for data
+regimes <- c("inv", "fit", "ext", "ave")
+## all group sizes
+plot_n <- c(2, 8, 20, 50)
+## all shift sizes 
+plot_shift_sizes <- c(40,80,12, 300) 
+## all generations
+gen_seq = c(seq(9999, 10010, by = 1), seq(10010, 10100, by=5)) # generations to plot
+
+# change parameters here for plotting a subset of the data
+## PARAMETER: single panel single generation plot
+
+```{r setup, include=FALSE}
+param_val <- c(0.0) 
+plot_n <- c(2, 8, 20, 50) # group sizes to plot for both models
+plot_shift_sizes <- c(40,80,120, 300) # shift sizes to plot for both models
+regimes <- c("ave")  # "inv" = inverse variance model, "fit" = fittest individual model
+single_panel <- TRUE  
+num_bins <- 80
+gen_seq = seq(9999, 9999, by = 1)
+```
+
+# RUN PLOTTING after change the parameters above
+```{r}
+min_bin <- -as.integer(num_bins/2)
+max_bin <- as.integer(num_bins/2)
+bin_breaks <- seq(min_bin, max_bin, length.out = num_bins + 1)
+
+# Derive a constant bin width from your reference breaks
+bin_width <- (max(bin_breaks) - min(bin_breaks)) / num_bins
+half_span <- (num_bins * bin_width) / 2
+
+if (regimes != "inv") {
+  plot_psi <- param_val
+} else {
+  plot_beta <- param_val
+}
+
+# ---- Run ----
+# Example call:
+plot_psi_histograms_by_gen(
+  df = psis_betas_df,
+  target_gen = 10050,
+  regs = c("ext","ave","fit"),
+  plot_n = c(2,8, 20, 50),         # or NULL to auto-detect per reg
+  pool_reps = TRUE,         # TRUE = pool reps; FALSE = bin-per-rep then average
+  value_col = "value",              # change if your ψ column has a different name
+  nbins = 100,                   # or provide bin_breaks = seq(-1,1,by=0.02)
+  out_subfolder = "psi_dist_onegen"
+)
+
+```
+
+
+```{r}
+min(psis_betas_df[psis_betas_df$reg == "fit", ]$value)
+
+```

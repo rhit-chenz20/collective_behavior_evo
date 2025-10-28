@@ -130,6 +130,9 @@ late() {
 	
 	calculate_phenotype(p1);
 }
+shift_time-29 late(){
+	sim.outputFull(filePath=pop_output, binary=T, pedigreeIDs=T, objectTags=T, substitutions=T); 
+}
 
 shift_time-30: early(){
 	defineGlobal("last_gen_z", p1.individuals.tagF);
@@ -148,11 +151,11 @@ shift_time-30 late(){
 	log.addCustomColumn("dif_z_opt", "optimum-mean(p1.individuals.tagF);");
 	log.addCustomColumn("Va0_sqrt", "Va0_sqrt;");
 	log.addCustomColumn("Vs", "Vs;");
-	log.addCustomColumn("dist_norm", "optimum-mean(p1.individuals.tagF);");
 	
 	log.addMeanSDColumns("a", "p1.individuals.sumOfMutationsOfType(m2)+2*sum(sim.substitutions[sim.substitutions.mutationType == m2].selectionCoeff);");
 	log.addCustomColumn("optimum", "optimum;");
 	log.addMeanSDColumns("group_vars", "group_vars;");
+	og.addMeanSDColumns("group_psis", "group_psis;");
 	log.addCustomColumn("dz1", " mean(p1.individuals.tagF) - mean(last_gen_z);");
 	log.addCustomColumn("par_gen_meanz", "mean(last_gen_z);");
 	log.addCustomColumn("par_mean", "mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]);");
@@ -161,7 +164,7 @@ shift_time-30 late(){
 	log.addCustomColumn("dz1_pred", "parent_mean=mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]); var(last_gen_g)/var(last_gen_z)*(parent_mean-mean(last_gen_z));");
 	log.addCustomColumn("rep", "ID;");
 	log.addCustomColumn("psi", "psi;");
-	log.addMeanSDColumns("psis", "2*atan(psi+p1.individuals.sumOfMutationsOfType(m3)+2*sum(sim.substitutions[sim.substitutions.mutationType == m3].selectionCoeff))/PI;");
+	log.addMeanSDColumns("psis", "psi+2*atan(p1.individuals.sumOfMutationsOfType(m3)+2*sum(sim.substitutions[sim.substitutions.mutationType == m3].selectionCoeff))/PI;");
 	log.addCustomColumn("beta", "beta;");
 }
 
@@ -177,7 +180,6 @@ shift_time late(){
 	print("new opt is " + optimum);
 	defineGlobal("Va0_sqrt", sqrt(var(a)));
 	calculate_phenotype(p1);
-	sim.outputFull(filePath=pop_output, binary=T, pedigreeIDs=T, objectTags=T, substitutions=T); 
 }
 
 
@@ -323,10 +325,11 @@ function (logical) record_psis(o<Subpopulation>$ p, [logical$ write = F]){
 		print("no psi_fn supplied. using default filename: " + psi_fn);
 	} 
 	psis = p.individuals.sumOfMutationsOfType(m3) + 2*sum(sim.substitutions[sim.substitutions.mutationType == m3].selectionCoeff);
+	psis = psi + 2*atan(psis)/PI;
 	if (write) {
     	return writeFile(psi_fn, psi_lines.serialize("tsv"), append=F);
 	}else{
-		psi_lines.setValue(community.tick, 2*atan(psis)/PI);
+		psi_lines.setValue(community.tick, psis);
       	return T;
 	}
 }
@@ -355,7 +358,7 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 	inds = p.individuals;
 	
 	a = inds.sumOfMutationsOfType(m2) + 2*sum(sim.substitutions[sim.substitutions.mutationType == m2].selectionCoeff);
-	psis = 2*atan(psi+inds.sumOfMutationsOfType(m3) + 2*sum(sim.substitutions[sim.substitutions.mutationType == m3].selectionCoeff))/PI;
+	psis = psi + 2*atan(inds.sumOfMutationsOfType(m3) + 2*sum(sim.substitutions[sim.substitutions.mutationType == m3].selectionCoeff))/PI;
 	
 	shuffled = sample(inds, N, replace=F);
 	phenotype = float(N);

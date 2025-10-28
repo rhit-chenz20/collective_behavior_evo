@@ -1,0 +1,41 @@
+---
+title: "plot evolutionary trajectory for multiple models"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+# parameter for plotting
+```{r setup, include=FALSE}
+wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
+setwd(wd_path)
+base_plot_folder <- "../plots/evolve_sociality"
+plot_psi <- c(0.0) # all psi values to plot for fittest model
+plot_beta <- c(0.0) # all beta values to plot for inverse-variance model
+plot_n <- c(2, 8, 20, 50) # group sizes to plot for both models
+plot_shift_sizes <- c(40,80,120, 300) # shift sizes to plot for both models
+regimes <- c("inv", "fit", "ext", "ave")  # "inv" = inverse variance model, "fit" = fittest individual model
+plot_reps <- TRUE  # whether to plot individual replicate series 
+plot_exp_fit <- TRUE  # whether to fit and plot exponential decay curve to evolutionary trajectory plot
+hcl_color_palette <- "Dark 2" # color pattern for lines 
+tick_seq <- 9999:10100 # ticks to plot
+```
+
+# load evolutionary trajectory data
+```{r}
+data_df <- readRDS("../r_data/evolve_sociality_summary.rds")
+```
+
+# PARAMETER: if you want to plot for FITTEST model, change parameters here
+```{r}
+plot_n <- c(2, 8, 20, 50)
+plot_shift_sizes <- c(40,80,120, 300)
+regimes <- regimes <- c("inv")
+plot_exp_fit <- FALSE
+plot_reps <- TRUE
+tick_seq <- 9999:10100 # ticks to plot
+# sub_df <- data_df[data_df$psis_mean > 0, ]
+plot_summary_multi_by_beta_ticks(data_df,
+                                out_subfolder = "trajectory_sociality_by_n",
+                                regimes = regimes)
+```

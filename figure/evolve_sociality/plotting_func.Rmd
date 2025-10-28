@@ -1,0 +1,1506 @@
+---
+title: "plotting functions"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+```{r setup, include=FALSE}
+.compute_center <- function(df_block) {
+    xcols <- grep("^[0-9]+$", names(df_block))
+    if (!length(xcols) || nrow(df_block) == 0) return(NA_real_)
+    vals <- suppressWarnings(as.numeric(unlist(df_block[, xcols])))
+    vals <- vals[is.finite(vals)]
+    if (!length(vals)) return(NA_real_)
+    mean(vals)
+}
+
+.avg_hist_curve_with_breaks <- function(df_block, breaks, num_bins) {
+    if (nrow(df_block) == 0) return(rep(NA_real_, num_bins))
+    xcols <- grep("^[0-9]+$", names(df_block))
+    reps  <- sort(unique(df_block$rep))
+    if (!length(xcols) || !length(reps)) return(rep(NA_real_, num_bins))
+    counts_mat <- matrix(NA_real_, nrow = length(reps), ncol = num_bins)
+    for (i in seq_along(reps)) {
+        row_i <- subset(df_block, rep == reps[i])[1, ]
+        vals <- suppressWarnings(as.numeric(as.vector(unlist(row_i[, xcols]))))
+        vals <- vals[is.finite(vals)]
+        if (!length(vals)) next
+        vals <- vals[vals > min(breaks) & vals < max(breaks)]
+        h <- hist(vals, breaks = breaks, plot = FALSE)
+        if (sum(h$counts) == 0) next
+        counts_mat[i, ] <- h$counts / sum(h$counts)
+    }
+    colMeans(counts_mat, na.rm = TRUE)
+}
+
+.compute_series <- function(df_panel, tick_seq) {
+    df_sub <- df_panel
+
+    # Coerce
+    dif_z_opt_num <- suppressWarnings(as.numeric(df_sub$dif_z_opt))
+    z_mean_num    <- suppressWarnings(as.numeric(df_sub$z_mean))
+    df_sub$tick   <- suppressWarnings(as.integer(df_sub$tick))
+    df_sub$rep    <- suppressWarnings(as.integer(df_sub$rep))
+
+    # Base y from dif_z_opt
+    y <- dif_z_opt_num
+
+    # ----- Dynamic special-case at tick 9999: y <- opt_rep_at_10000 - z_mean_9999 -----
+    # Use per-rep optimum at tick 10000 if available; otherwise skip replacement for that rep
+    if ("optimum" %in% names(df_sub)) {
+        opt_num <- suppressWarnings(as.numeric(df_sub$optimum))
+        # collect per-rep optimum at tick 10000
+        rows_opt <- is.finite(opt_num) & is.finite(df_sub$rep) & (df_sub$tick == 10000)
+        if (any(rows_opt)) {
+            opt_tab <- tapply(opt_num[rows_opt], df_sub$rep[rows_opt], function(v) mean(v, na.rm = TRUE))
+            # map per-row rep -> optimum
+            rep_ids   <- as.integer(names(opt_tab))
+            match_idx <- match(df_sub$rep, rep_ids)
+            rep_opt   <- rep(NA_real_, nrow(df_sub))
+            good_m    <- !is.na(match_idx)
+            rep_opt[good_m] <- as.numeric(opt_tab)[match_idx[good_m]]
+
+            # apply at tick 9999 where we have z_mean and rep_opt
+            idx_9999 <- (df_sub$tick == 9999) & is.finite(z_mean_num) & is.finite(rep_opt)
+            y[idx_9999] <- rep_opt[idx_9999] - z_mean_num[idx_9999]
+        }
+    }
+
+    df_sub$y <- y
+
+    # Keep finite rows
+    df_sub <- df_sub[is.finite(df_sub$y) & is.finite(df_sub$tick) & is.finite(df_sub$rep), , drop = FALSE]
+    if (!nrow(df_sub)) return(list(reps = list(), mean = rep(NA_real_, length(tick_seq)), present_ticks = integer(0)))
+
+    # Aggregate by tick,rep
+    agg <- aggregate(y ~ tick + rep, data = df_sub, FUN = mean)
+    reps <- sort(unique(agg$rep))
+
+    rep_series <- lapply(reps, function(r) {
+        yv <- rep(NA_real_, length(tick_seq))
+        rows <- agg[agg$rep == r & agg$tick %in% tick_seq, , drop = FALSE]
+        if (nrow(rows)) {
+            idx <- match(rows$tick, tick_seq)
+            yv[idx] <- rows$y
+        }
+        yv
+    })
+    names(rep_series) <- as.character(reps)
+
+    if (length(rep_series)) {
+        mat <- do.call(rbind, rep_series)
+        mean_series  <- apply(mat, 2L, function(col) mean(col, na.rm = TRUE))
+        present_ticks <- tick_seq[colSums(!is.na(mat)) > 0]
+    } else {
+        mean_series <- rep(NA_real_, length(tick_seq))
+        present_ticks <- integer(0)
+    }
+
+    list(reps = rep_series, mean = mean_series, present_ticks = present_ticks)
+}
+
+# ---------- Exponential-decay fit helpers ----------
+# Model: y(x) = c0 + c1 * exp( -k * (x - t0) ), with t0 = min(x) fixed
+.fit_exp_decay <- function(x, y) {
+    x <- as.numeric(x); y <- as.numeric(y)
+    ok <- is.finite(x) & is.finite(y)
+    x <- x[ok]; y <- y[ok]
+    if (length(x) < 5) {
+        return(list(success = FALSE, params = NA, x_fit = x, y_fit = rep(NA_real_, length(x)), r2 = NA_real_))
+    }
+    ord <- order(x); x <- x[ord]; y <- y[ord]
+    t0 <- min(x)
+
+    tail_n <- max(5L, ceiling(0.2 * length(y)))
+    c0_guess <- median(tail(y, tail_n), na.rm = TRUE)
+    c1_guess <- max(1e-8, y[1] - c0_guess)
+    k_guess  <- 0.01
+
+    y_shift <- pmax(y - c0_guess, 1e-8)
+    lm_fit <- try(suppressWarnings(lm(log(y_shift) ~ I(x - t0))), silent = TRUE)
+    if (!inherits(lm_fit, "try-error")) {
+        k_guess  <- max(1e-6, -coef(lm_fit)[2])
+        c1_guess <- max(1e-8, exp(coef(lm_fit)[1]))
+    }
+
+    df <- data.frame(x = x, y = y)
+    nls_fit <- try(
+        suppressWarnings(
+        nls(y ~ c0 + c1 * exp(-k * (x - t0)),
+            data = df,
+            start = list(c0 = c0_guess, c1 = c1_guess, k = k_guess),
+            control = list(maxiter = 200, warnOnly = TRUE))
+        ),
+        silent = TRUE
+    )
+
+    if (inherits(nls_fit, "try-error")) {
+        if (is.finite(k_guess) && is.finite(c1_guess) && is.finite(c0_guess)) {
+            c0 <- c0_guess; c1 <- c1_guess; k <- k_guess
+            y_hat <- c0 + c1 * exp(-k * (x - t0))
+            sse <- sum((y - y_hat)^2, na.rm = TRUE)
+            sst <- sum((y - mean(y, na.rm = TRUE))^2, na.rm = TRUE)
+            r2  <- if (sst > 0) 1 - sse/sst else NA_real_
+            return(list(success = TRUE, params = c(c0 = c0, c1 = c1, k = k, t0 = t0),
+                        x_fit = x, y_fit = y_hat, r2 = r2))
+        } else {
+            return(list(success = FALSE, params = NA, x_fit = x, y_fit = rep(NA_real_, length(x)), r2 = NA_real_))
+        }
+    }
+
+    co <- coef(nls_fit)
+    c0 <- unname(co["c0"]); c1 <- unname(co["c1"]); k <- unname(co["k"])
+    y_hat <- c0 + c1 * exp(-k * (x - t0))
+    sse <- sum((y - y_hat)^2, na.rm = TRUE)
+    sst <- sum((y - mean(y, na.rm = TRUE))^2, na.rm = TRUE)
+    r2  <- if (sst > 0) 1 - sse/sst else NA_real_
+
+    list(success = TRUE, params = c(c0 = c0, c1 = c1, k = k, t0 = t0),
+        x_fit = x, y_fit = y_hat, r2 = r2)
+}
+
+.fmt <- function(x, d = 3) formatC(x, format = "f", digits = d)
+
+```
+
+
+# plotting function for genotypic distribution
+```{r}
+plot_genotype_multi_by_beta <- function(genotype_df,
+                                       out_subfolder = "genotype_multi_by_beta_genbins",
+                                       gen_seq = 10000:10005,
+                                       num_bins = num_bins,
+                                       bin_width = bin_width,
+                                       half_span = half_span,
+                                       regimes = regimes,
+                                       single_panel = TRUE,
+                                       include_pre_selection = FALSE,
+                                       pre_selection_gen = 9999) { 
+    include_pre_selection <- include_pre_selection & !(pre_selection_gen %in% gen_seq)
+    # Loop over regimes
+    for (reg_lab in regimes) {
+        df_reg <- subset(genotype_df, reg == reg_lab)
+        if (nrow(df_reg) == 0) next
+
+        # Separate subfolder per regime
+        out_dir <- file.path(base_plot_folder, out_subfolder, paste0("model_", reg_lab))
+        if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+        for (n_val in plot_n) {
+            df_n <- subset(df_reg, n == n_val)
+            if (nrow(df_n) == 0) next
+
+            shift_keys <- paste0("shift=", plot_shift_sizes)
+            all_vals <- if (all(is.na(df_reg$beta[1]))) plot_psi else plot_beta
+            variable_type <- if (all(is.na(df_reg$beta[1]))) "psi" else "beta"
+
+            for (sk in shift_keys) {
+                df_group <- subset(df_n, shift_size == as.numeric(sub("shift=", "", sk)))
+                
+                if (nrow(df_group) == 0) next
+
+                # Common y-limit and x-range across all beta & gens
+                max_y <- 0
+                x_min <- Inf; x_max <- -Inf
+                for (val in all_vals) {
+                    df_p <- if (variable_type == "beta") {
+                        subset(df_group, beta == val)
+                    } else {
+                        subset(df_group, psi == val)
+                    }
+                    
+                    if (nrow(df_p) == 0) next
+                    for (g in gen_seq) {
+                        df_pg <- subset(df_p, generation == g)
+                        center <- .compute_center(df_pg)
+                        if (!is.finite(center)) next
+                        breaks_g <- seq(center - half_span, center + half_span, by = bin_width)
+                        avg_counts <- .avg_hist_curve_with_breaks(df_pg, breaks_g, num_bins)
+                        max_y <- max(max_y, avg_counts, na.rm = TRUE)
+                        x_min <- min(x_min, min(breaks_g), na.rm = TRUE)
+                        x_max <- max(x_max, max(breaks_g), na.rm = TRUE)
+                    }
+                    if (include_pre_selection) {
+                        df_pre <- subset(df_p, generation == pre_selection_gen)
+                        center <- .compute_center(df_pre)
+                        if (is.finite(center)) {
+                            breaks_pre <- seq(center - half_span, center + half_span, by = bin_width)
+                            avg_counts_pre <- .avg_hist_curve_with_breaks(df_pre, breaks_pre, num_bins)
+                            max_y <- max(max_y, avg_counts_pre, na.rm = TRUE)
+                            x_min <- min(x_min, min(breaks_pre), na.rm = TRUE)
+                            x_max <- max(x_max, max(breaks_pre), na.rm = TRUE)
+                        }
+                    }
+                }
+                if (!is.finite(max_y) || max_y <= 0) max_y <- 1
+                if (!is.finite(x_min) || !is.finite(x_max) || x_min >= x_max) {
+                    x_min <- -half_span; x_max <- half_span
+                }
+
+                if (single_panel & length(gen_seq) == 1) {
+                    # Single panel
+                    png_w <- 9; png_h <- 7
+                    title_suffix <- paste0("shift_size = ", as.numeric(sub("shift=", "", sk)))
+                    if (include_pre_selection) {
+                        out_name <- paste0("n_", n_val, "_", gsub("[ =]", "", title_suffix), "_pre.pdf")
+                    } else{
+                        out_name <- paste0("n_", n_val, "_", gsub("[ =]", "", title_suffix), ".pdf")
+                    }
+                    pdf(file.path(out_dir, out_name), width = png_w, height = png_h)
+                    op <- par(mfrow = c(1, 1), mar = c(4, 4, 3, 1) + 0.1, oma = c(0, 0, 3.5, 0))
+
+                    plot(NULL,
+                        xlim = c(x_min, x_max), ylim = c(0, max_y),
+                        xlab = "Genotype Value", ylab = "Proportion",
+                        main = paste0("genotype distributions | model = ", reg_lab,
+                            " | n = ", n_val, " | ", title_suffix))
+
+                    # curve(dnorm(x, mean = as.numeric(sub("shift=", "", sk)), sd = sqrt(2000)),
+                    #     add = TRUE, col = "black", lty = 2, lwd = 2)
+                    curve(dnorm(x, mean = 0, sd = sqrt(2000)),
+                        add = TRUE, col = "black", lty = 2, lwd = 2)
+
+                    val_col <- hcl.colors(length(all_vals), palette = hcl_color_palette)
+                    names(val_col) <- as.character(all_vals)
+                    for (val in all_vals) {
+                        df_p <- if (variable_type == "beta") {
+                            subset(df_group, beta == val)
+                        } else {
+                            subset(df_group, psi == val)
+                        }
+                        if (nrow(df_p) == 0) next
+
+                        g= gen_seq[1]  # only one generation
+                        df_pg <- subset(df_p, generation == g)
+                        center <- .compute_center(df_pg)
+                        if (!is.finite(center)) next
+                        breaks_g <- seq(center - half_span, center + half_span, by = bin_width)
+                        mids_g   <- 0.5 * (breaks_g[-length(breaks_g)] + breaks_g[-1])
+                        avg_counts <- .avg_hist_curve_with_breaks(df_pg, breaks_g, num_bins)
+                        if (all(is.na(avg_counts))) next
+                        lines(mids_g, avg_counts, col = val_col[as.character(val)], lwd = 2)
+
+                        if (include_pre_selection) {
+                            df_pre <- subset(df_p, generation == pre_selection_gen)
+                            center <- .compute_center(df_pre)
+                            if (is.finite(center)) {
+                                breaks_pre <- seq(center - half_span, center + half_span, by = bin_width)
+                                mids_pre   <- 0.5 * (breaks_pre[-length(breaks_pre)] + breaks_pre[-1])
+                                avg_counts_pre <- .avg_hist_curve_with_breaks(df_pre, breaks_pre, num_bins)
+                                if (!all(is.na(avg_counts_pre))) {
+                                    lines(mids_pre, avg_counts_pre,
+                                        col = adjustcolor(val_col[as.character(val)], alpha.f = 0.5),
+                                        lwd = 2, lty = 1)
+                                }
+                            }
+                        }
+                    }
+
+                    # legend_text = if (variable_type == "beta") {
+                    #     paste0("beta=", all_vals)
+                    # } else {
+                    #     paste0("psi=", all_vals)
+                    # }
+                    legend_text = paste0("beta=", all_vals)
+                    legend_text = if (include_pre_selection) {
+                        c(legend_text, "Fitness Func", "Pre-selection")
+                    } else {
+                        c(legend_text, "Fitness Func")
+                    }
+                    col_lab <- if (include_pre_selection) {
+                        c(val_col[as.character(all_vals)], "black", adjustcolor("black", alpha.f = 0.5))
+                    } else {
+                        c(val_col[as.character(all_vals)], "black")
+                    }
+                    lty = if (include_pre_selection) {
+                        c(rep(1, length(all_vals)), 2, 1)
+                    } else {
+                        c(rep(1, length(all_vals)), 2)
+                    }
+                    legend("topright",
+                            legend = legend_text,
+                            col = col_lab,
+                            lty = lty, lwd = 2, cex = 0.8, bg = "white")
+                    par(op)
+                    dev.off()
+                }else if (single_panel & length(gen_seq) > 1)
+                {
+                    # Single panel
+                    gap <- gen_seq[3] - gen_seq[2]
+                    png_w <- 9; png_h <- 7
+                    title_suffix <- paste0("shift_size = ", as.numeric(sub("shift=", "", sk)))
+                    if (include_pre_selection) {
+                        out_name <- paste0("n_", n_val, "_", gsub("[ =]", "", title_suffix), "by_", gap, "_pre.pdf")
+                    } else{
+                        out_name <- paste0("n_", n_val, "_", gsub("[ =]", "", title_suffix), "by_", gap, ".pdf")
+                    }
+                    pdf(file.path(out_dir, out_name), width = png_w, height = png_h)
+                    op <- par(mfrow = c(1, 1), mar = c(4, 4, 3, 1) + 0.1, oma = c(0, 0, 3.5, 0))
+
+                    plot(NULL,
+                        xlim = c(x_min, x_max), ylim = c(0, max_y),
+                        xlab = "Genotype Value", ylab = "Proportion",
+                        main = paste0("Genotype distributions | model = ", reg_lab,
+                            " | n = ", n_val, " | ", title_suffix))
+
+                    # curve(dnorm(x, mean = as.numeric(sub("shift=", "", sk)), sd = sqrt(2000)),
+                    #     add = TRUE, col = "black", lty = 2, lwd = 2)
+                    curve(dnorm(x, mean = 0, sd = sqrt(2000)),
+                        add = TRUE, col = "black", lty = 2, lwd = 2)
+
+                    val_col <- hcl.colors(length(all_vals), palette = hcl_color_palette)
+                    names(val_col) <- as.character(all_vals)
+                    alphas <- seq(0.3, 1.0, length.out = length(gen_seq))
+                    names(alphas) <- as.character(gen_seq)
+                    
+                    for (val in all_vals) {
+                        df_p <- if (variable_type == "beta") subset(df_group, beta == val) else subset(df_group, psi == val)
+                        if (nrow(df_p) == 0) next
+
+                        base_col <- val_col[as.character(val)]
+
+                        for (g in gen_seq) {
+                            df_pg <- subset(df_p, generation == g)
+                            center <- .compute_center(df_pg)
+                            if (!is.finite(center)) next
+
+                            breaks_g <- seq(center - half_span, center + half_span, by = bin_width)
+                            mids_g   <- 0.5 * (breaks_g[-length(breaks_g)] + breaks_g[-1])
+                            avg_counts <- .avg_hist_curve_with_breaks(df_pg, breaks_g, num_bins)
+                            if (all(is.na(avg_counts))) next
+
+                            lines(mids_g, avg_counts,
+                                col = adjustcolor(base_col, alpha.f = alphas[as.character(g)]),
+                                lwd = 2)
+                        }
+                        
+                        if (include_pre_selection) {
+                            df_pre <- subset(df_p, generation == pre_selection_gen)
+                            center <- .compute_center(df_pre)
+                            if (is.finite(center)) {
+                                breaks_pre <- seq(center - half_span, center + half_span, by = bin_width)
+                                mids_pre   <- 0.5 * (breaks_pre[-length(breaks_pre)] + breaks_pre[-1])
+                                avg_counts_pre <- .avg_hist_curve_with_breaks(df_pre, breaks_pre, num_bins)
+                                if (!all(is.na(avg_counts_pre))) {
+                                    lines(mids_pre, avg_counts_pre,
+                                        col = adjustcolor(val_col[as.character(val)]),
+                                        lwd = 2, lty = 5)
+                                }
+                            }
+                        }
+                    }
+
+                    legend_text = if (variable_type == "beta") {
+                        paste0("beta=", all_vals)
+                    } else {
+                        paste0("psi=", all_vals)
+                    }
+                    legend_text = if (include_pre_selection) {
+                        c(legend_text, "Fitness Func", "Pre-selection")
+                    } else {
+                        c(legend_text, "Fitness Func")
+                    }
+                    col_lab <- if (include_pre_selection) {
+                        c(val_col[as.character(all_vals)], "black", "black")
+                    } else {
+                        c(val_col[as.character(all_vals)], "black")
+                    }
+                    lty = if (include_pre_selection) {
+                        c(rep(1, length(all_vals)), 2, 5)
+                    } else {
+                        c(rep(1, length(all_vals)), 2)
+                    }
+                    legend("topright",
+                            legend = legend_text,
+                            col = col_lab,
+                            lty = lty, lwd = 2, cex = 0.8, bg = "white")
+                    early <- head(gen_seq, 1); late <- tail(gen_seq, 1)
+                    legend("topleft",
+                            legend = c(paste0("gen ", early), paste0("gen ", late), "later = darker"),
+                            col = c(adjustcolor("black", alpha.f = alphas[as.character(early)]),
+                                    adjustcolor("black", alpha.f = alphas[as.character(late)]),
+                                    NA),
+                            lty = c(1,1,NA), lwd = c(2,2,NA), cex = 0.8, bg = "white", bty = "o")
+                    
+                    par(op)
+                    dev.off()
+                
+                }else {
+                    stop("needs update. choose single-panel multi-generation plot.")
+                }
+            }
+        }
+    }
+}
+```
+
+# plotting function for trajectory (multi psi per n)
+```{R}
+plot_summary_multi_by_beta_ticks <- function(summary_stat_df,
+                                            out_subfolder = "summary_multi_by_beta_ticks",
+                                            regimes = NULL) {
+  if (!dir.exists(file.path(base_plot_folder, out_subfolder))) {
+    dir.create(file.path(base_plot_folder, out_subfolder), recursive = TRUE)
+  }
+
+  for (reg_lab in regimes) {
+    df_reg <- subset(summary_stat_df, reg == reg_lab)
+    if (nrow(df_reg) == 0) next
+
+    out_dir <- file.path(base_plot_folder, out_subfolder, paste0("model_", reg_lab))
+    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+    shift_keys <- paste0("shift=", plot_shift_sizes)
+
+    all_vals <- if (all(is.na(df_reg$beta[1]))) plot_psi else plot_beta
+    variable_type <- if (all(is.na(df_reg$beta[1]))) "psi" else "beta"
+    mean_cols <- hcl.colors(length(all_vals), hcl_color_palette)
+
+    for (sk in shift_keys) {
+      shift_val <- as.numeric(sub("shift=", "", sk))
+      df_shift <- subset(df_reg, shift_size == shift_val)
+      if (nrow(df_shift) == 0) next
+
+      ## ---- Compute shared y-limits across all n & all_vals for this (reg, shift) ----
+      y_min <- Inf; y_max <- -Inf
+      for (n_val in plot_n) {
+        df_n <- subset(df_shift, n == n_val)
+        if (nrow(df_n) == 0) next
+        for (val in all_vals) {
+          df_p <- if (variable_type == "beta") {
+            subset(df_n, beta == val & tick %in% tick_seq)
+          } else {
+            subset(df_n, psi  == val & tick %in% tick_seq)
+          }
+          if (nrow(df_p) == 0) next
+          s <- .compute_series(df_p, tick_seq)
+          y_all <- c(unlist(s$reps, use.names = FALSE), s$mean)
+          y_all <- y_all[is.finite(y_all)]
+          if (length(y_all)) {
+            y_min <- min(y_min, y_all)
+            y_max <- max(y_max, y_all)
+          }
+        }
+      }
+      if (!is.finite(y_min) || !is.finite(y_max) || y_min == y_max) { y_min <- 0; y_max <- 1 }
+
+      ## ---- Open ONE PDF with multiple panels (one per n) ----
+      n_panels <- length(plot_n)
+      nrow_panel <- ceiling(sqrt(n_panels))
+      ncol_panel <- ceiling(n_panels / nrow_panel)
+
+      title_suffix <- paste0("shift_size = ", shift_val)
+      out_name <- paste0("multiN_", gsub("[ =]", "", title_suffix), ".pdf")
+      pdf(file.path(out_dir, out_name), width = 4.5 * ncol_panel, height = 3.8 * nrow_panel)
+      op <- par(mfrow = c(nrow_panel, ncol_panel),
+                mar = c(4, 4, 2.6, 1) + 0.1, oma = c(0, 0, 2.8, 0))
+
+      ## ---- Draw each subpanel for each n ----
+      for (n_val in plot_n) {
+        df_n <- subset(df_shift, n == n_val)
+        plot(NA, xlim = range(tick_seq), ylim = c(y_min, y_max),
+             xlab = "Tick", ylab = "Distance to Optimum",
+             main = paste0("n = ", n_val, " | ", title_suffix, " | model = ", reg_lab),
+             xaxt = "n")
+        axis(1, at = tick_seq)
+
+        for (i in seq_along(all_vals)) {
+          val <- all_vals[i]
+          mean_col <- mean_cols[i]
+          df_p <- if (variable_type == "beta") {
+            subset(df_n, beta == val & tick %in% tick_seq)
+          } else {
+            subset(df_n, psi  == val & tick %in% tick_seq)
+          }
+          if (nrow(df_p) == 0) next
+
+          s <- .compute_series(df_p, tick_seq)
+
+          if (plot_reps && length(s$reps)) {
+            rep_col <- adjustcolor(mean_col, alpha.f = 0.35)
+            for (r in seq_along(s$reps)) {
+              lines(tick_seq, s$reps[[r]], col = rep_col, lwd = 1)
+              points(tick_seq, s$reps[[r]], pch = 16, cex = 0.5, col = rep_col)
+            }
+          }
+          lines(tick_seq, s$mean, col = mean_col, lwd = 2)
+          points(tick_seq, s$mean, pch = 16, cex = 0.9, col = mean_col)
+        }
+
+        ## ---- Add non-social exponential decay for this panel ----
+        # Assumes you provide: plot_nonsocial_decay(shift_size, n)
+        # plot_nonsocial_decay(reg_lab, shift_val, n_val)
+
+        ## ---- Optional: legend per panel (values of beta/psi) ----
+        legend_vals <- if (variable_type == "beta") paste0("beta=", all_vals) else paste0("psi=", all_vals)
+        legend("topright", inset = 0.02,
+               legend = legend_vals, col = mean_cols,
+               lty = 1, lwd = 1, pch = 16, pt.cex = 0.5, bty = "n", cex = 0.85)
+      }
+
+      mtext(paste0("Trajectory over ticks | model = ", reg_lab, " | ", title_suffix),
+            outer = TRUE, cex = 1.0, line = 0.6)
+      par(op)
+      dev.off()
+    }
+  }
+}
+
+
+```
+
+```{r}
+regs   <- c("ext","ave","fit")
+ns     <- c(2,8, 20, 50)
+shifts <- c(40, 80, 120)
+d <- list(ext = 0)
+l <- list(
+    list( # ext
+        list( # n=2
+            list(  #shift
+                0.087, 40.575, 0.041
+                )
+            )
+        ),
+    )
+
+plot_nonsocial_decay <- function(reg_lab, shift_size, n_val){
+    level1_index <- match(reg_lab, regs)
+    level2_index <- match(n_val, ns)
+    level3_index <- match(shift_size, shifts)
+
+    c0 <- l[[level1_index]][[level2_index]][[level3_index]][[1]]
+    c1 <- l[[level1_index]][[level2_index]][[level3_index]][[2]]
+    k <- l[[level1_index]][[level2_index]][[level3_index]][[3]]
+
+    t0 <- 9999
+
+    # x-range to draw across (use your plot's ticks)
+    xx <- tick_seq                           # or xx <- seq(min_x, max_x, by = 1)
+    yy <- c1 * exp(-k * (xx - t0)) + c0
+    yy[xx < t0] <- NA                        # (optional) don't draw before t0
+
+    lines(xx, yy, lwd = 2, lty = 2)          # add to existing plot
+}
+```
+
+# plotting function for trajectory (multi n per psi)
+```{r}
+plot_summary_multi_by_psi_ticks <- function(summary_stat_df,
+                                            out_subfolder = "summary_multi_by_psi_ticks",
+                                            regimes = NULL) {
+  if (!dir.exists(file.path(base_plot_folder, out_subfolder))) {
+    dir.create(file.path(base_plot_folder, out_subfolder), recursive = TRUE)
+  }
+
+  for (reg_lab in regimes) {
+    df_reg <- subset(summary_stat_df, reg == reg_lab)
+    if (nrow(df_reg) == 0) next
+
+    out_dir <- file.path(base_plot_folder, out_subfolder, paste0("model_", reg_lab))
+    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+    shift_keys <- c(paste0("shift=", plot_shift_sizes))
+
+    # Always loop over psi values (one file per psi)
+    all_psis <- sort(unique(na.omit(df_reg$psi)))
+    # if you want to force a pre-defined set: all_psis <- plot_psi
+
+    for (sk in shift_keys) {
+      shift_val <- as.numeric(sub("shift=", "", sk))
+      df_shift <- subset(df_reg, shift_size == shift_val)
+      if (nrow(df_shift) == 0) next
+
+      for (psi_val in all_psis) {
+        df_psi <- subset(df_shift, psi == psi_val & tick %in% tick_seq)
+        if (nrow(df_psi) == 0) next
+
+        # ---- Y-limits across all n for this (reg, shift, psi) ----
+        y_min <- Inf; y_max <- -Inf
+        for (n_val in plot_n) {
+          df_n <- subset(df_psi, n == n_val)
+          if (nrow(df_n) == 0) next
+          s <- .compute_series(df_n, tick_seq)  # should compute on column 'opt_z_dis'
+          y_all <- c(unlist(s$reps, use.names = FALSE), s$mean)
+          y_all <- y_all[is.finite(y_all)]
+          if (length(y_all)) {
+            y_min <- min(y_min, y_all)
+            y_max <- max(y_max, y_all)
+          }
+        }
+        if (!is.finite(y_min) || !is.finite(y_max) || y_min == y_max) {
+          y_min <- 0; y_max <- 1
+        }
+
+        title_suffix <- paste0("shift_size = ", shift_val)
+        out_name <- paste0("psi_", gsub("[.]", "p", as.character(psi_val)),
+                           "_", gsub("[ =]", "", title_suffix), ".pdf")
+        pdf(file.path(out_dir, out_name), width = 9, height = 7)
+
+        mean_cols <- hcl.colors(length(plot_n), hcl_color_palette)
+
+        plot(NA, xlim = range(tick_seq), ylim = c(y_min, y_max),
+             xlab = "Tick", ylab = "Distance to Optimum (opt_z_dis)",
+             main = paste0("Trajectory over ticks | model = ", reg_lab,
+                           " | psi = ", psi_val, " | ", title_suffix),
+             xaxt = "n")
+        axis(1, at = tick_seq)
+
+        # ---- Overlay each n in its own color ----
+        for (i in seq_along(plot_n)) {
+          n_val <- plot_n[i]
+          mean_col <- mean_cols[i]
+
+          df_n <- subset(df_psi, n == n_val)
+          if (nrow(df_n) == 0) next
+
+          s <- .compute_series(df_n, tick_seq)  # uses opt_z_dis inside
+
+          if (plot_reps && length(s$reps)) {
+            rep_col <- adjustcolor(mean_col, alpha.f = 0.35)
+            for (r in seq_along(s$reps)) {
+              lines(tick_seq, s$reps[[r]], col = rep_col, lwd = 1)
+              points(tick_seq, s$reps[[r]], pch = 16, cex = 0.5, col = rep_col)
+            }
+          }
+
+          lines(tick_seq, s$mean, col = mean_col, lwd = 2)
+          points(tick_seq, s$mean, pch = 16, cex = 0.9, col = mean_col)
+
+          # Optional: exponential-decay fit (skip tick 9999)
+          if (plot_exp_fit && is.finite(min(s$mean, na.rm = TRUE)) && is.finite(max(s$mean, na.rm = TRUE))) {
+            present <- is.finite(s$mean) & (tick_seq != 9999)
+            x_fit <- tick_seq[present]; y_fit <- s$mean[present]
+            if (length(x_fit) >= 5 && diff(range(y_fit)) > 0) {
+              fit <- .fit_exp_decay(x_fit, y_fit)
+              if (isTRUE(fit$success)) {
+                lines(fit$x_fit, fit$y_fit, col = "black", lwd = 2, lty = 2)
+              }
+            }
+          }
+        }
+
+        # Legend for n values
+        leg_vals <- paste0("n=", plot_n)
+        if (plot_exp_fit) {
+          legend("topright", inset = 0.02,
+                 legend = c(leg_vals, "Exp. decay fit"),
+                 col    = c(mean_cols, "black"),
+                 lty    = c(rep(1, length(leg_vals)), 1),
+                 lwd    = c(rep(1, length(leg_vals)), 2),
+                 pch    = c(rep(16, length(leg_vals)), 16),
+                 pt.cex = c(rep(0.5, length(leg_vals)), 0.9),
+                 bty = "n", cex = 0.85)
+        } else {
+          legend("topright", inset = 0.02,
+                 legend = leg_vals,
+                 col    = mean_cols,
+                 lty    = 1, lwd = 1, pch = 16, pt.cex = 0.5,
+                 bty = "n", cex = 0.85)
+        }
+
+        dev.off()
+      } # psi
+    } # shift
+  } # reg
+}
+
+```
+
+
+
+
+# plotting function for phenotype distribution
+```{r}
+plot_phenotype_multi <- function(phenotype_df,
+                                       out_subfolder = "phenotype_multi_by_beta_genbins",
+                                       gen_seq = 10000:10005,
+                                       num_bins = num_bins,
+                                       bin_width = bin_width,
+                                       half_span = half_span,
+                                       regimes = regimes,
+                                       single_panel = TRUE,
+                                       pre_selection_gen = 9999,
+                                       include_pre_selection = FALSE) {   # <--- added
+    include_pre_selection <- include_pre_selection & !(pre_selection_gen %in% gen_seq)                                   
+    # Loop over regimes
+    for (reg_lab in regimes) {
+        df_reg <- subset(phenotype_df, reg == reg_lab)
+        if (nrow(df_reg) == 0) next
+
+        # Separate subfolder per regime
+        out_dir <- file.path(base_plot_folder, out_subfolder, paste0("model_", reg_lab))
+        if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+        for (n_val in plot_n) {
+            df_n <- subset(df_reg, n == n_val)
+            if (nrow(df_n) == 0) next
+
+            shift_keys <- paste0("shift=", plot_shift_sizes)
+            all_vals <- if (all(is.na(df_reg$beta[1]))) plot_psi else plot_beta
+            variable_type <- if (all(is.na(df_reg$beta[1]))) "psi" else "beta"
+
+            for (sk in shift_keys) {
+                df_group <- subset(df_n, shift_size == as.numeric(sub("shift=", "", sk)))
+                
+                if (nrow(df_group) == 0) next
+
+                # Common y-limit and x-range across all beta & gens
+                max_y <- 0
+                x_min <- Inf; x_max <- -Inf
+                for (val in all_vals) {
+                    df_p <- if (variable_type == "beta") {
+                        subset(df_group, beta == val)
+                    } else {
+                        subset(df_group, psi == val)
+                    }
+                    
+                    if (nrow(df_p) == 0) next
+                    for (g in gen_seq) {
+                        df_pg <- subset(df_p, generation == g)
+                        center <- .compute_center(df_pg)
+                        if (!is.finite(center)) next
+                        breaks_g <- seq(center - half_span, center + half_span, by = bin_width)
+                        avg_counts <- .avg_hist_curve_with_breaks(df_pg, breaks_g, num_bins)
+                        max_y <- max(max_y, avg_counts, na.rm = TRUE)
+                        x_min <- min(x_min, min(breaks_g), na.rm = TRUE)
+                        x_max <- max(x_max, max(breaks_g), na.rm = TRUE)
+                    }
+
+                    if (include_pre_selection) {
+                        df_pre <- subset(df_p, generation == pre_selection_gen)
+                        center <- .compute_center(df_pre)
+                        if (is.finite(center)) {
+                            breaks_pre <- seq(center - half_span, center + half_span, by = bin_width)
+                            avg_counts_pre <- .avg_hist_curve_with_breaks(df_pre, breaks_pre, num_bins)
+                            max_y <- max(max_y, avg_counts_pre, na.rm = TRUE)
+                            x_min <- min(x_min, min(breaks_pre), na.rm = TRUE)
+                            x_max <- max(x_max, max(breaks_pre), na.rm = TRUE)
+                        }
+                    }
+                }
+                if (!is.finite(max_y) || max_y <= 0) max_y <- 1
+                if (!is.finite(x_min) || !is.finite(x_max) || x_min >= x_max) {
+                    x_min <- -half_span; x_max <- half_span
+                }
+
+                if (single_panel & length(gen_seq) == 1) {
+                    # Single panel
+                    png_w <- 9; png_h <- 7
+                    title_suffix <- paste0("shift_size = ", as.numeric(sub("shift=", "", sk)))
+                    out_name <- paste0("n_", n_val, "_", gsub("[ =]", "", title_suffix), ".pdf")
+                    pdf(file.path(out_dir, out_name), width = png_w, height = png_h)
+                    op <- par(mfrow = c(1, 1), mar = c(4, 4, 3, 1) + 0.1, oma = c(0, 0, 3.5, 0))
+
+                    plot(NULL,
+                        xlim = c(x_min, x_max), ylim = c(0, max_y),
+                        xlab = "Phenotype Value", ylab = "Proportion",
+                        main = paste0("Phenotype distributions | model = ", reg_lab,
+                            " | n = ", n_val, " | ", title_suffix))
+
+                    # curve(dnorm(x, mean = as.numeric(sub("shift=", "", sk)), sd = sqrt(2000)),
+                    #     add = TRUE, col = "black", lty = 2, lwd = 2)
+                    curve(dnorm(x, mean = 0, sd = sqrt(2000)),
+                        add = TRUE, col = "black", lty = 2, lwd = 2)
+
+                    val_col <- hcl.colors(length(all_vals), palette = hcl_color_palette)
+                    names(val_col) <- as.character(all_vals)
+                    for (val in all_vals) {
+                        df_p <- if (variable_type == "beta") {
+                            subset(df_group, beta == val)
+                        } else {
+                            subset(df_group, psi == val)
+                        }
+                        if (nrow(df_p) == 0) next
+
+                        g= gen_seq[1]  # only one generation
+                        df_pg <- subset(df_p, generation == g)
+                        center <- .compute_center(df_pg)
+                        if (!is.finite(center)) next
+                        breaks_g <- seq(center - half_span, center + half_span, by = bin_width)
+                        mids_g   <- 0.5 * (breaks_g[-length(breaks_g)] + breaks_g[-1])
+                        avg_counts <- .avg_hist_curve_with_breaks(df_pg, breaks_g, num_bins)
+                        if (all(is.na(avg_counts))) next
+                        lines(mids_g, avg_counts, col = val_col[as.character(val)], lwd = 2)
+
+                        if (include_pre_selection) {
+                            df_pre <- subset(df_p, generation == pre_selection_gen)
+                            center <- .compute_center(df_pre)
+                            if (is.finite(center)) {
+                                breaks_pre <- seq(center - half_span, center + half_span, by = bin_width)
+                                mids_pre   <- 0.5 * (breaks_pre[-length(breaks_pre)] + breaks_pre[-1])
+                                avg_counts_pre <- .avg_hist_curve_with_breaks(df_pre, breaks_pre, num_bins)
+                                if (!all(is.na(avg_counts_pre))) {
+                                    lines(mids_pre, avg_counts_pre,
+                                        col = adjustcolor(val_col[as.character(val)], alpha.f = 0.5),
+                                        lwd = 2, lty = 1)
+                                }
+                            }
+                        }
+                    }
+
+                    # legend_text = if (variable_type == "beta") {
+                    #     paste0("beta=", all_vals)
+                    # } else {
+                    #     paste0("psi=", all_vals)
+                    # }
+                    legend_text = paste0("beta=", all_vals)
+                    legend_text = if (include_pre_selection) {
+                        c(legend_text, "Fitness Func", "Pre-selection")
+                    } else {
+                        c(legend_text, "Fitness Func")
+                    }
+                    col_lab <- if (include_pre_selection) {
+                        c(val_col[as.character(all_vals)], "black", adjustcolor("black", alpha.f = 0.5))
+                    } else {
+                        c(val_col[as.character(all_vals)], "black")
+                    }
+                    lty = if (include_pre_selection) {
+                        c(rep(1, length(all_vals)), 2, 1)
+                    } else {
+                        c(rep(1, length(all_vals)), 2)
+                    }
+                    legend("topright",
+                            legend = legend_text,
+                            col = col_lab,
+                            lty = lty, lwd = 2, cex = 0.8, bg = "white")
+                    par(op)
+                    dev.off()
+                }else if (single_panel & length(gen_seq) > 1)
+                {
+                    # Single panel
+                    gap <- gen_seq[3] - gen_seq[2]
+                    png_w <- 9; png_h <- 7
+                    title_suffix <- paste0("shift_size = ", as.numeric(sub("shift=", "", sk)))
+                    if (include_pre_selection) {
+                        out_name <- paste0("n_", n_val, "_", gsub("[ =]", "", title_suffix), "by_", gap, "_pre.pdf")
+                    } else{
+                        out_name <- paste0("n_", n_val, "_", gsub("[ =]", "", title_suffix), "by_", gap, ".pdf")
+                    }
+                    pdf(file.path(out_dir, out_name), width = png_w, height = png_h)
+                    op <- par(mfrow = c(1, 1), mar = c(4, 4, 3, 1) + 0.1, oma = c(0, 0, 3.5, 0))
+
+                    plot(NULL,
+                        xlim = c(x_min, x_max), ylim = c(0, max_y),
+                        xlab = "Phenotype Value", ylab = "Proportion",
+                        main = paste0("Phenotype distributions | model = ", reg_lab,
+                            " | n = ", n_val, " | ", title_suffix))
+
+                    curve(dnorm(x, mean = as.numeric(sub("shift=", "", sk)), sd = sqrt(2000)),
+                        add = TRUE, col = "black", lty = 2, lwd = 2)
+
+                    val_col <- hcl.colors(length(all_vals), palette = hcl_color_palette)
+                    names(val_col) <- as.character(all_vals)
+                    alphas <- seq(0.3, 1.0, length.out = length(gen_seq))
+                    names(alphas) <- as.character(gen_seq)
+                    
+                    for (val in all_vals) {
+                        df_p <- if (variable_type == "beta") subset(df_group, beta == val) else subset(df_group, psi == val)
+                        if (nrow(df_p) == 0) next
+
+                        base_col <- val_col[as.character(val)]
+
+                        for (g in gen_seq) {
+                            df_pg <- subset(df_p, generation == g)
+                            center <- .compute_center(df_pg)
+                            if (!is.finite(center)) next
+
+                            breaks_g <- seq(center - half_span, center + half_span, by = bin_width)
+                            mids_g   <- 0.5 * (breaks_g[-length(breaks_g)] + breaks_g[-1])
+                            avg_counts <- .avg_hist_curve_with_breaks(df_pg, breaks_g, num_bins)
+                            if (all(is.na(avg_counts))) next
+
+                            lines(mids_g, avg_counts,
+                                col = adjustcolor(base_col, alpha.f = alphas[as.character(g)]),
+                                lwd = 2)
+                        }
+         
+                        if (include_pre_selection) {
+                            df_pre <- subset(df_p, generation == pre_selection_gen)
+                            center <- .compute_center(df_pre)
+                            if (is.finite(center)) {
+                                breaks_pre <- seq(center - half_span, center + half_span, by = bin_width)
+                                mids_pre   <- 0.5 * (breaks_pre[-length(breaks_pre)] + breaks_pre[-1])
+                                avg_counts_pre <- .avg_hist_curve_with_breaks(df_pre, breaks_pre, num_bins)
+                                if (!all(is.na(avg_counts_pre))) {
+                                    lines(mids_pre, avg_counts_pre,
+                                        col = adjustcolor(val_col[as.character(val)]),
+                                        lwd = 2, lty = 5)
+                                }
+                            }
+                        }
+                    }
+
+                    legend_text = if (variable_type == "beta") {
+                        paste0("beta=", all_vals)
+                    } else {
+                        paste0("psi=", all_vals)
+                    }
+                    legend_text = if (include_pre_selection) {
+                        c(legend_text, "Fitness Func", "Pre-selection")
+                    } else {
+                        c(legend_text, "Fitness Func")
+                    }
+                    col_lab <- if (include_pre_selection) {
+                        c(val_col[as.character(all_vals)], "black", "black")
+                    } else {
+                        c(val_col[as.character(all_vals)], "black")
+                    }
+                    lty = if (include_pre_selection) {
+                        c(rep(1, length(all_vals)), 2, 5)
+                    } else {
+                        c(rep(1, length(all_vals)), 2)
+                    }
+                    legend("topright",
+                            legend = legend_text,
+                            col = col_lab,
+                            lty = lty, lwd = 2, cex = 0.8, bg = "white")
+                    early <- head(gen_seq, 1); late <- tail(gen_seq, 1)
+                    legend("topleft",
+                            legend = c(paste0("gen ", early), paste0("gen ", late), "later = darker"),
+                            col = c(adjustcolor("black", alpha.f = alphas[as.character(early)]),
+                                    adjustcolor("black", alpha.f = alphas[as.character(late)]),
+                                    NA),
+                            lty = c(1,1,NA), lwd = c(2,2,NA), cex = 0.8, bg = "white", bty = "o")
+                    
+                    par(op)
+                    dev.off()
+                
+                }else {
+                    stop("needs update. choose single-panel multi-generation plot.")
+                }
+            }
+        }
+    }
+}
+```
+
+# plot all model in one figure
+```{r}
+plot_distribution_multi_model <- function(
+    data_df,
+    out_subfolder = "test",
+    gen_seq = 10000:10005,
+    num_bins = num_bins,
+    bin_width = bin_width,
+    half_span = half_span,
+    regimes = c("ave","fit","ext","inv"),
+    include_pre_selection = FALSE,
+    pre_selection_gen = 9999,
+    # value sets
+    psi_vals  = plot_psi,
+    beta_vals = plot_beta,
+    custom_vals = NULL,   # list, e.g. list(ave = c(0.1,0.3), fit = c(0.2,0.4))
+    value_label = c("Genotype","Phenotype")  # NEW: controls figure labels
+) {
+    # --- normalize label (proper case for display, lower for filenames if needed) ---
+    value_label_lower <- tolower(value_label)
+
+    include_pre_selection <- include_pre_selection & !(pre_selection_gen %in% gen_seq)
+
+    # ---- util: per-reg value set & variable type label ----
+    .vals_for_reg <- function(reg_lab) {
+        if (!is.null(custom_vals) && !is.null(custom_vals[[reg_lab]])) {
+            return(list(vals = custom_vals[[reg_lab]],
+                        vtype = if (reg_lab == "inv") "beta" else "psi"))
+        }
+        if (reg_lab == "inv") list(vals = beta_vals, vtype = "beta")
+        else                  list(vals = psi_vals,  vtype = "psi")
+    }
+
+    # ---- reorder: ensure 'inv' is NOT the 2nd panel ----
+    if ("inv" %in% regimes && length(regimes) >= 2) {
+        inv_idx <- which(regimes == "inv")[1]
+        if (inv_idx == 2) {
+            tmp <- regimes[1]; regimes[1] <- regimes[2]; regimes[2] <- tmp
+        }
+    }
+
+    # ---------- compute shared axes across regs for (n, shift) ----------
+    .compute_common_limits <- function(n_val, shift_size_target) {
+        max_y <- 0; x_min <- Inf; x_max <- -Inf
+        for (reg_lab in regimes) {
+            spec <- .vals_for_reg(reg_lab)
+            all_vals <- spec$vals
+            for (val in all_vals) {
+                df_reg <- subset(data_df,
+                                 reg == reg_lab & n == n_val & shift_size == shift_size_target &
+                                 ((spec$vtype == "beta" & beta == val) |
+                                  (spec$vtype == "psi"  & psi  == val)))
+                if (nrow(df_reg) == 0) next
+
+                for (g in gen_seq) {
+                    df_pg <- subset(df_reg, generation == g)
+                    center <- .compute_center(df_pg)
+                    if (!is.finite(center)) next
+                    breaks_g <- seq(center - half_span, center + half_span, by = bin_width)
+                    avg_counts <- .avg_hist_curve_with_breaks(df_pg, breaks_g, num_bins)
+                    max_y <- max(max_y, avg_counts, na.rm = TRUE)
+                    x_min <- min(x_min, min(breaks_g), na.rm = TRUE)
+                    x_max <- max(x_max, max(breaks_g), na.rm = TRUE)
+                }
+
+                if (include_pre_selection) {
+                    df_pre <- subset(df_reg, generation == pre_selection_gen)
+                    center <- .compute_center(df_pre)
+                    if (is.finite(center)) {
+                        breaks_pre <- seq(center - half_span, center + half_span, by = bin_width)
+                        avg_counts_pre <- .avg_hist_curve_with_breaks(df_pre, breaks_pre, num_bins)
+                        max_y <- max(max_y, avg_counts_pre, na.rm = TRUE)
+                        x_min <- min(x_min, min(breaks_pre), na.rm = TRUE)
+                        x_max <- max(x_max, max(breaks_pre), na.rm = TRUE)
+                    }
+                }
+            }
+        }
+        if (!is.finite(max_y) || max_y <= 0) max_y <- 1
+        if (!is.finite(x_min) || !is.finite(x_max) || x_min >= x_max) {
+            x_min <- -half_span; x_max <- half_span
+        }
+        list(xlim = c(x_min, x_max), ylim = c(0, max_y))
+    }
+
+    # ---------- draw one panel for a given reg ----------
+    .draw_panel_for_reg <- function(reg_lab, n_val, shift_size_target, xlim, ylim,
+                                    draw_param_legend = FALSE, draw_gen_legend = FALSE) {
+        spec <- .vals_for_reg(reg_lab)
+        all_vals <- spec$vals
+        vtype    <- spec$vtype  # "beta" or "psi"
+
+        df_reg <- subset(data_df, reg == reg_lab & n == n_val & shift_size == shift_size_target)
+        plot(NULL, xlim = xlim, ylim = ylim,
+             xlab = paste(value_label, "Value"),  # CHANGED
+             ylab = "Proportion",
+             main = paste0("Model = ", reg_lab))
+
+        curve(dnorm(x, mean = shift_size_target, sd = sqrt(2000)),
+              add = TRUE, col = "black", lty = 2, lwd = 2)
+
+        val_col <- hcl.colors(length(all_vals), palette = hcl_color_palette)
+        names(val_col) <- as.character(all_vals)
+        alphas <- seq(0.3, 1.0, length.out = length(gen_seq))
+        names(alphas) <- as.character(gen_seq)
+
+        for (val in all_vals) {
+            df_p <- subset(df_reg, (vtype == "beta" & beta == val) | (vtype == "psi" & psi == val))
+            if (nrow(df_p) == 0) next
+            base_col <- val_col[as.character(val)]
+
+            for (g in gen_seq) {
+                df_pg <- subset(df_p, generation == g)
+                center <- .compute_center(df_pg)
+                if (!is.finite(center)) next
+                breaks_g <- seq(center - half_span, center + half_span, by = bin_width)
+                mids_g   <- 0.5 * (breaks_g[-length(breaks_g)] + breaks_g[-1])
+                avg_counts <- .avg_hist_curve_with_breaks(df_pg, breaks_g, num_bins)
+                if (all(is.na(avg_counts))) next
+                lines(mids_g, avg_counts,
+                      col = adjustcolor(base_col, alpha.f = alphas[as.character(g)]), lwd = 2)
+            }
+
+            if (include_pre_selection) {
+                df_pre <- subset(df_p, generation == pre_selection_gen)
+                center <- .compute_center(df_pre)
+                if (is.finite(center)) {
+                    breaks_pre <- seq(center - half_span, center + half_span, by = bin_width)
+                    mids_pre   <- 0.5 * (breaks_pre[-length(breaks_pre)] + breaks_pre[-1])
+                    avg_counts_pre <- .avg_hist_curve_with_breaks(df_pre, breaks_pre, num_bins)
+                    if (!all(is.na(avg_counts_pre))) {
+                        lines(mids_pre, avg_counts_pre, col = adjustcolor(base_col), lwd = 2, lty = 5)
+                    }
+                }
+            }
+        }
+
+        # legends
+        if (draw_param_legend || reg_lab == "inv") {
+            legend_labels <- if (vtype == "beta") paste0("beta=", all_vals) else paste0("psi=", all_vals)
+            legend("topright",
+                   legend = legend_labels,
+                   col = val_col[as.character(all_vals)],
+                   lty = rep(1, length(all_vals)),
+                   lwd = 2, cex = 0.8, bg = "white")
+        }
+        if (draw_gen_legend) {
+            early <- head(gen_seq, 1); late <- tail(gen_seq, 1)
+            legend_text <- c(paste0("gen ", early), paste0("gen ", late), "later = darker", "Fitness Func")
+            col_text <- c(adjustcolor("black", alpha.f = alphas[as.character(early)]),
+                          adjustcolor("black", alpha.f = alphas[as.character(late)]),
+                          NA,
+                          "black")
+            lty_text <- c(1, 1, NA, 2)
+            lwd_text <- c(2, 2, NA, 2)
+
+            if (include_pre_selection) {
+                legend_text <- c(legend_text, "Pre-selection")
+                col_text <- c(col_text, "black")
+                lty_text <- c(lty_text, 5)
+                lwd_text <- c(lwd_text, 2)
+            }
+            legend("topleft",
+                   legend = legend_text,
+                   col = col_text,
+                   lty = lty_text, lwd = lwd_text, cex = 0.8, bg = "white", bty = "o")
+        }
+    }
+
+    # ---------- main driver ----------
+    out_dir <- file.path(base_plot_folder, out_subfolder)
+    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+    gap <- gen_seq[3] - gen_seq[2]
+    for (n_val in plot_n) {
+        for (shift_size_target in plot_shift_sizes) {
+            lims <- .compute_common_limits(n_val, shift_size_target)
+            xlim <- lims$xlim; ylim <- lims$ylim
+
+            # layout: 2×2 if 4 regs; else compact grid
+            nreg <- length(regimes)
+            nrow_layout <- if (nreg <= 3) 1 else 2
+            ncol_layout <- if (nreg <= 3) nreg else 2
+
+            # wider panels (≈6×5 per panel)
+            png_w <- 6 * ncol_layout
+            png_h <- 5 * nrow_layout
+
+            if (include_pre_selection) {
+                out_name <- paste0("n_", n_val, "_shift_", shift_size_target, "_by_", gap, "_", value_label_lower, "_", min(gen_seq), ":", max(gen_seq),"_pre.pdf")
+            } else{
+                out_name <- paste0("n_", n_val, "_shift_", shift_size_target, "_by_", gap, "_", value_label_lower, "_", min(gen_seq), ":", max(gen_seq),".pdf")
+            }
+            pdf(file.path(out_dir, out_name), width = png_w, height = png_h)
+            op <- par(mfrow = c(nrow_layout, ncol_layout),
+                      mar = c(4, 4, 3, 1) + 0.1,
+                      oma = c(0, 0, 3, 0))
+
+            for (i in seq_along(regimes)) {
+                reg_lab <- regimes[i]
+                draw_gen_legend   <- (i == 1)         # top-left
+                draw_param_legend <- (i == ncol_layout)         # top-right (always)
+                .draw_panel_for_reg(reg_lab, n_val, shift_size_target, xlim, ylim,
+                                    draw_param_legend = draw_param_legend,
+                                    draw_gen_legend   = draw_gen_legend)
+            }
+
+            mtext(paste0(value_label, " distributions | n = ", n_val,     # CHANGED
+                         " | shift_size = ", shift_size_target,
+                         " by ", gap,
+                         " | models: ", paste(regimes, collapse = ", ")),
+                  outer = TRUE, cex = 1.1, line = 1)
+
+            par(op); dev.off()
+        }
+    }
+}
+
+```
+
+```{R}
+
+plot_psis_mean_by_psi_ticks <- function(summary_stat_df,
+                                        out_subfolder = "psis_mean_by_psi_ticks",
+                                        regimes = NULL) {
+  if (!dir.exists(file.path(base_plot_folder, out_subfolder))) {
+    dir.create(file.path(base_plot_folder, out_subfolder), recursive = TRUE)
+  }
+
+  for (reg_lab in regimes) {
+    df_reg <- subset(summary_stat_df, reg == reg_lab)
+    if (nrow(df_reg) == 0) next
+
+    out_dir <- file.path(base_plot_folder, out_subfolder, paste0("model_", reg_lab))
+    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+    shift_keys <- paste0("shift=", plot_shift_sizes)
+    all_psis   <- sort(unique(na.omit(df_reg$psi)))  # or use: all_psis <- plot_psi
+
+    for (sk in shift_keys) {
+      shift_val <- as.numeric(sub("shift=", "", sk))
+      df_shift <- subset(df_reg, shift_size == shift_val)
+      if (nrow(df_shift) == 0) next
+
+      for (psi_val in all_psis) {
+        df_psi <- subset(df_shift, psi == psi_val & tick %in% tick_seq)
+        if (nrow(df_psi) == 0) next
+
+        ## ---- Compute y-limits across all n using psis_mean ----
+        y_min <- Inf; y_max <- -Inf
+        for (n_val in plot_n) {
+          df_n <- subset(df_psi, n == n_val)
+          if (nrow(df_n) == 0) next
+          # align to tick_seq by rep
+          reps <- sort(unique(df_n$rep))
+          if (length(reps) == 0) next
+          for (rp in reps) {
+            d <- subset(df_n, rep == rp)
+            yy <- rep(NA_real_, length(tick_seq))
+            m  <- match(tick_seq, d$tick)
+            ok <- is.finite(m)
+            yy[ok] <- d$psis_mean[m[ok]]
+            vals <- yy[is.finite(yy)]
+            if (length(vals)) {
+              y_min <- min(y_min, vals)
+              y_max <- max(y_max, vals)
+            }
+          }
+          # across-rep mean
+          # build a matrix reps × ticks
+          y_mat <- sapply(reps, function(rp) {
+            d <- subset(df_n, rep == rp)
+            v <- rep(NA_real_, length(tick_seq))
+            m <- match(tick_seq, d$tick)
+            ok <- is.finite(m)
+            v[ok] <- d$psis_mean[m[ok]]
+            v
+          })
+          if (!is.null(dim(y_mat))) {
+            mean_vec <- rowMeans(y_mat, na.rm = TRUE)
+            vals <- mean_vec[is.finite(mean_vec)]
+            if (length(vals)) {
+              y_min <- min(y_min, vals, y_min)
+              y_max <- max(y_max, vals, y_max)
+            }
+          }
+        }
+        if (!is.finite(y_min) || !is.finite(y_max) || y_min == y_max) {
+          y_min <- 0; y_max <- 1
+        }
+
+        ## ---- Open PDF & base frame ----
+        title_suffix <- paste0("shift_size = ", shift_val)
+        out_name <- paste0("psi_", gsub("[.]", "p", as.character(psi_val)),
+                           "_", gsub("[ =]", "", title_suffix), ".pdf")
+        pdf(file.path(out_dir, out_name), width = 9, height = 7)
+
+        mean_cols <- hcl.colors(length(plot_n), hcl_color_palette)
+
+        plot(NA, xlim = range(tick_seq), ylim = c(y_min, y_max),
+             xlab = "Tick", ylab = "psis_mean",
+             main = paste0("psis_mean over time | model = ", reg_lab,
+                           " | psi = ", psi_val, " | ", title_suffix),
+             xaxt = "n")
+        axis(1, at = tick_seq)
+
+        ## ---- Overlay each n ----
+        for (i in seq_along(plot_n)) {
+          n_val   <- plot_n[i]
+          mean_col <- mean_cols[i]
+
+          df_n <- subset(df_psi, n == n_val)
+          if (nrow(df_n) == 0) next
+
+          reps <- sort(unique(df_n$rep))
+          if (length(reps) == 0) next
+
+          # Build matrix (rows = ticks, cols = reps)
+          y_mat <- sapply(reps, function(rp) {
+            d <- subset(df_n, rep == rp)
+            v <- rep(NA_real_, length(tick_seq))
+            m <- match(tick_seq, d$tick)
+            ok <- is.finite(m)
+            v[ok] <- d$psis_mean[m[ok]]
+            v
+          })
+
+          # Draw replicate series
+          if (plot_reps && !is.null(dim(y_mat))) {
+            rep_col <- adjustcolor(mean_col, alpha.f = 0.35)
+            for (j in seq_along(reps)) {
+              yy <- y_mat[, j]
+              if (all(!is.finite(yy))) next
+              lines(tick_seq, yy, col = rep_col, lwd = 1)
+              points(tick_seq, yy, pch = 16, cex = 0.5, col = rep_col)
+            }
+          }
+
+          # Across-rep mean
+          if (!is.null(dim(y_mat))) {
+            mean_vec <- rowMeans(y_mat, na.rm = TRUE)
+            if (any(is.finite(mean_vec))) {
+              lines(tick_seq, mean_vec, col = mean_col, lwd = 2)
+              points(tick_seq, mean_vec, pch = 16, cex = 0.9, col = mean_col)
+
+              # Optional: exponential-decay fit (skip tick 9999)
+              if (plot_exp_fit) {
+                present <- is.finite(mean_vec) & (tick_seq != 9999)
+                x_fit <- tick_seq[present]; y_fit <- mean_vec[present]
+                if (length(x_fit) >= 5 && diff(range(y_fit)) > 0) {
+                  fit <- .fit_exp_decay(x_fit, y_fit)
+                  if (isTRUE(fit$success)) {
+                    lines(fit$x_fit, fit$y_fit, col = "black", lwd = 2, lty = 2)
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        # Legend: one entry per n (+ optional fit)
+        leg_vals <- paste0("n=", plot_n)
+        if (plot_exp_fit) {
+          legend("bottomright", inset = 0.02,
+                 legend = c(leg_vals, "Exp. decay fit"),
+                 col    = c(mean_cols, "black"),
+                 lty    = c(rep(1, length(leg_vals)), 1),
+                 lwd    = c(rep(1, length(leg_vals)), 2),
+                 pch    = c(rep(16, length(leg_vals)), 16),
+                 pt.cex = c(rep(0.5, length(leg_vals)), 0.9),
+                 bty = "n", cex = 0.85)
+        } else {
+          legend("bottomright", inset = 0.02,
+                 legend = leg_vals,
+                 col    = mean_cols,
+                 lty    = 1, lwd = 1, pch = 16, pt.cex = 0.5,
+                 bty = "n", cex = 0.85)
+        }
+
+        dev.off()
+      } # psi
+    } # shift
+  } # reg
+}
+```
+
+## plot sociality distribution
+```{r}
+plot_psi_histograms_by_gen <- function(df,
+                                       target_gen,
+                                       regs = c("ext","ave","fit"),
+                                       plot_n = NULL,
+                                       pool_reps = TRUE,
+                                       nbins = 60,
+                                       breaks = NULL,          # optional numeric vector of breaks to force
+                                       value_col = "value",    # column holding per-individual psi values
+                                       out_subfolder = "psi_hists_gen") {
+  # ---- helpers ----
+  .gen_key <- function(d) {
+    if ("tick" %in% names(d)) return("tick")
+    if ("generation" %in% names(d)) return("generation")
+    names(d)[1]
+  }
+  gen_col <- .gen_key(df)
+
+  # Keep only psi rows (if df includes both psi & beta in long format)
+  if ("variable" %in% names(df)) {
+    df <- subset(df, variable == "psi")
+  }
+  if (!value_col %in% names(df)) stop("value_col '", value_col, "' not found in df")
+
+  # Choose n list if not specified
+  if (is.null(plot_n)) {
+    plot_n <- sort(unique(df$n))
+  }
+
+  # Output dirs by regime
+  base_dir <- file.path(base_plot_folder, out_subfolder)
+  if (!dir.exists(base_dir)) dir.create(base_dir, recursive = TRUE)
+
+  # iterate regimes
+  for (reg_lab in regs) {
+    d_reg <- subset(df, reg == reg_lab & get(gen_col) == target_gen)
+    if (nrow(d_reg) == 0) next
+
+    # Build common breaks across ALL n in this (reg, gen), unless user supplies 'breaks'
+    brks <- breaks
+    if (is.null(brks)) {
+      # range from all psi values available for this reg/gen
+      vals_all <- d_reg[[value_col]]
+      vals_all <- vals_all[is.finite(vals_all)]
+      if (!length(vals_all)) next
+      rng <- range(vals_all)
+      # If degenerate range, widen slightly
+      if (rng[1] == rng[2]) rng <- rng + c(-0.5, 0.5)
+      brks <- seq(rng[1], rng[2], length.out = nbins + 1)
+    }
+
+    # Prepare PDF: one panel per n
+    out_dir <- file.path(base_dir, paste0("model_", reg_lab))
+    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+    n_panels <- length(plot_n)
+    nrow_panel <- ceiling(sqrt(n_panels))
+    ncol_panel <- ceiling(n_panels / nrow_panel)
+
+    pdf(file.path(out_dir, paste0("psi_hist_reg_", reg_lab, "_gen_", target_gen, ".pdf")),
+        width = 8 * ncol_panel, height = 6 * nrow_panel)
+    op <- par(mfrow = c(nrow_panel, ncol_panel),
+              mar = c(4, 3.8, 2.5, 1) + 0.1, oma = c(0, 0, 2.5, 0))
+
+    # Pre-choose a color per n for consistency
+    cols <- hcl.colors(length(plot_n), "Berlin")
+
+    # Determine a shared y-maximum (in counts) across panels for nice comparison
+    # We compute provisional counts per n to find max
+    ymax <- 1
+    provisional_counts <- vector("list", length(plot_n))
+    for (i in seq_along(plot_n)) {
+      n_val <- plot_n[i]
+      d_n <- subset(d_reg, n == n_val)
+      if (nrow(d_n) == 0) { provisional_counts[[i]] <- rep(0, length(brks)-1); next }
+
+      if (pool_reps) {
+        cnts <- hist(d_n[[value_col]], breaks = brks, plot = FALSE)$counts
+      } else {
+        reps <- sort(unique(d_n$rep))
+        if (!length(reps)) { provisional_counts[[i]] <- rep(0, length(brks)-1); next }
+        mat <- sapply(reps, function(rp) {
+          hist(subset(d_n, rep == rp)[[value_col]], breaks = brks, plot = FALSE)$counts
+        })
+        if (is.null(dim(mat))) {
+          cnts <- mat  # only one rep
+        } else {
+          cnts <- rowMeans(mat, na.rm = TRUE)
+        }
+      }
+      provisional_counts[[i]] <- cnts
+      ymax <- max(ymax, max(cnts, na.rm = TRUE))
+    }
+    # Avoid zero lower bound for log axis
+    y_min_plot <- 1
+    y_max_plot <- max(10, ymax)
+
+    # Draw panels
+    for (i in seq_along(plot_n)) {
+      n_val <- plot_n[i]
+      cnts <- provisional_counts[[i]]
+
+      # Base frame with log y
+      plot(NA, xlim = range(brks), ylim = c(y_min_plot, y_max_plot),
+           xlab = "psi", ylab = "Count (log scale)", main = paste0("n = ", n_val),
+           xaxt = "n", yaxt = "n", log = "y")
+      axis(1)
+      # y-axis with integer-ish ticks; choose nice ticks
+      y_ticks <- 10 ^ seq(0, floor(log10(y_max_plot)), by = 1)
+      axis(2, at = y_ticks, labels = y_ticks, las = 1)
+
+      # Draw bars (skip zero-count bars because log-scale can't draw them)
+      if (length(cnts)) {
+        for (b in seq_along(cnts)) {
+          cval <- cnts[b]
+          if (is.na(cval) || cval <= 0) next
+          xleft  <- brks[b]
+          xright <- brks[b + 1]
+          rect(xleft, y_min_plot, xright, cval,
+               col = adjustcolor(cols[i], alpha.f = 0.7), border = NA)
+        }
+        # Optional outline for clarity
+        # lines(rep(brks, each=2)[-c(1, length(brks)*2)],
+        #       as.vector(rbind(pmax(cnts, y_min_plot), pmax(cnts, y_min_plot))),
+        #       col="gray30")
+      }
+
+      # Small subtitle about pooling mode
+      mtext(if (pool_reps) "pooled reps" else "avg counts across reps", side = 3, line = 0.2, cex = 0.8)
+    }
+
+    mtext(paste0("Regime: ", reg_lab, "  |  Generation: ", target_gen,
+                 "  |  ", if (pool_reps) "Pooled reps" else "Averaged across reps",
+                 "  |  bins=", length(brks)-1),
+          outer = TRUE, cex = 1.0, line = 0.6)
+
+    par(op)
+    dev.off()
+  } # end regimes
+}
+
+```

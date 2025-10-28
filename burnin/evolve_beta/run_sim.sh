@@ -17,10 +17,11 @@ mkdir -p ../../data/${dir_name}/betas
 mkdir -p ../../data/${dir_name}/group_betas
 
 c=0
+
 for rep in {1..10}; do  
    for sz in 40 80 120 300; do   
         for n in 2 8 20 50; do
-            for beta in 0.0 0.05 0.5 1.0; do
+            for beta in 0.0; do
                 echo "Submitting job for beta=${beta}, n=${n}, sz=${sz}, rep=${rep}."
 
                 bin/slim5.0 -d psi=-100 \
@@ -40,7 +41,8 @@ for rep in {1..10}; do
                     inverse.slim &> ../../data/${dir_name}/log/n_${n}_beta_${beta}_sz_${sz}_reg_inv_${rep}.txt &
 
                 ((c++))
-                if (( c > 10)); then
+                if (( c > 9)); then
+                    echo "waiting for background processes to finish..."
                     wait
                     c=0
                 fi
