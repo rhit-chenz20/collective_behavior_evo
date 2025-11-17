@@ -31,18 +31,26 @@ data_df <- readRDS("../r_data/data_summary.rds")
 ```{r}
 # plot_psi <- c(0.0, 0.5)
 plot_psi <- c(0.0, 0.5, 0.9)
-plot_beta <- c(0.0)
+plot_beta <- c(0.5)
 plot_n <- c(8)
-plot_shift_sizes <- c(80)
-regimes <- regimes <- c("fit", "ext", "ave")
+plot_shift_sizes <- c(120)
+regimes <- regimes <- c("inv")
 plot_exp_fit <- FALSE
-plot_reps <- FALSE
+plot_reps <- TRUE
 tick_seq <- 9999:10100 # ticks to plot
 plot_ticks <- tick_seq - 9999
+col_to_plot = "seg_site"
+color <-  c(hcl.colors(3, hcl_color_palette)[2])
 plot_summary_multi_by_beta_ticks(data_df,
-                                out_subfolder = "presentation",
-                                regimes = regimes)
+                                out_subfolder = "presentation_seg",
+                                regimes = regimes,
+                                column_to_plot = col_to_plot,
+                                col = color)
 ```
+```{r}
+unique(data_df[data_df$reg == "inv" & data_df$beta == 0.5, ]$rep)
+```
+
 
 # PARAMETER: if you want to plot for INVERSE_VARIANCE model, change parameters here
 ```{r}
@@ -60,9 +68,12 @@ regimes <- c("inv")
 plot_beta <- c(0.0, 0.5, 0.9)
 tick_seq <- 10100:10300 # ticks to plot
 plot_exp_fit <- FALSE
-plot_reps <- TRUE
+plot_reps <- FALSE
 plot_summary_multi_by_beta_ticks(data_ext_df,
                                 out_subfolder = "presentation",
                                 regimes = regimes)
 ```
 
+```{r}
+colnames(data_df)
+```

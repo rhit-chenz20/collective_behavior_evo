@@ -166,8 +166,8 @@ output: pdf_document
 
 # plotting function for genotypic distribution
 ```{r}
-plot_genotype_multi_by_beta <- function(genotype_df,
-                                       out_subfolder = "genotype_multi_by_beta_genbins",
+plot_genotype_multi_by_psi <- function(genotype_df,
+                                       out_subfolder = "genotype_multi_by_psi_genbins",
                                        gen_seq = 10000:10005,
                                        num_bins = num_bins,
                                        bin_width = bin_width,
@@ -191,23 +191,18 @@ plot_genotype_multi_by_beta <- function(genotype_df,
             if (nrow(df_n) == 0) next
 
             shift_keys <- paste0("shift=", plot_shift_sizes)
-            all_vals <- if (all(is.na(df_reg$beta[1]))) plot_psi else plot_beta
-            variable_type <- if (all(is.na(df_reg$beta[1]))) "psi" else "beta"
+            all_vals <- plot_psi
 
             for (sk in shift_keys) {
                 df_group <- subset(df_n, shift_size == as.numeric(sub("shift=", "", sk)))
                 
                 if (nrow(df_group) == 0) next
 
-                # Common y-limit and x-range across all beta & gens
+                # Common y-limit and x-range across all psi & gens
                 max_y <- 0
                 x_min <- Inf; x_max <- -Inf
                 for (val in all_vals) {
-                    df_p <- if (variable_type == "beta") {
-                        subset(df_group, beta == val)
-                    } else {
-                        subset(df_group, psi == val)
-                    }
+                    df_p <- subset(df_group, psi == val)
                     
                     if (nrow(df_p) == 0) next
                     for (g in gen_seq) {
@@ -263,11 +258,8 @@ plot_genotype_multi_by_beta <- function(genotype_df,
                     val_col <- hcl.colors(length(all_vals), palette = hcl_color_palette)
                     names(val_col) <- as.character(all_vals)
                     for (val in all_vals) {
-                        df_p <- if (variable_type == "beta") {
-                            subset(df_group, beta == val)
-                        } else {
-                            subset(df_group, psi == val)
-                        }
+                        df_p <-  subset(df_group, psi == val)
+                        
                         if (nrow(df_p) == 0) next
 
                         g= gen_seq[1]  # only one generation
@@ -296,12 +288,7 @@ plot_genotype_multi_by_beta <- function(genotype_df,
                         }
                     }
 
-                    # legend_text = if (variable_type == "beta") {
-                    #     paste0("beta=", all_vals)
-                    # } else {
-                    #     paste0("psi=", all_vals)
-                    # }
-                    legend_text = paste0("beta=", all_vals)
+                    legend_text = paste0("psi=", all_vals)
                     legend_text = if (include_pre_selection) {
                         c(legend_text, "Fitness Func", "Pre-selection")
                     } else {
@@ -354,7 +341,7 @@ plot_genotype_multi_by_beta <- function(genotype_df,
                     names(alphas) <- as.character(gen_seq)
                     
                     for (val in all_vals) {
-                        df_p <- if (variable_type == "beta") subset(df_group, beta == val) else subset(df_group, psi == val)
+                        df_p <- subset(df_group, psi == val)
                         if (nrow(df_p) == 0) next
 
                         base_col <- val_col[as.character(val)]
@@ -390,11 +377,8 @@ plot_genotype_multi_by_beta <- function(genotype_df,
                         }
                     }
 
-                    legend_text = if (variable_type == "beta") {
-                        paste0("beta=", all_vals)
-                    } else {
-                        paste0("psi=", all_vals)
-                    }
+                    legend_text = paste0("psi=", all_vals)
+                    
                     legend_text = if (include_pre_selection) {
                         c(legend_text, "Fitness Func", "Pre-selection")
                     } else {
@@ -436,8 +420,8 @@ plot_genotype_multi_by_beta <- function(genotype_df,
 
 # plotting function for trajectory (multi psi per n)
 ```{R}
-plot_summary_multi_by_beta_ticks <- function(summary_stat_df,
-                                            out_subfolder = "summary_multi_by_beta_ticks",
+plot_summary_multi_by_psi_ticks <- function(summary_stat_df,
+                                            out_subfolder = "summary_multi_by_psi_ticks",
                                             regimes = NULL) {
   if (!dir.exists(file.path(base_plot_folder, out_subfolder))) {
     dir.create(file.path(base_plot_folder, out_subfolder), recursive = TRUE)
@@ -452,8 +436,7 @@ plot_summary_multi_by_beta_ticks <- function(summary_stat_df,
 
     shift_keys <- paste0("shift=", plot_shift_sizes)
 
-    all_vals <- if (all(is.na(df_reg$beta[1]))) plot_psi else plot_beta
-    variable_type <- if (all(is.na(df_reg$beta[1]))) "psi" else "beta"
+    all_vals <- plot_psi
     mean_cols <- hcl.colors(length(all_vals), hcl_color_palette)
 
     for (sk in shift_keys) {
@@ -467,11 +450,8 @@ plot_summary_multi_by_beta_ticks <- function(summary_stat_df,
         df_n <- subset(df_shift, n == n_val)
         if (nrow(df_n) == 0) next
         for (val in all_vals) {
-          df_p <- if (variable_type == "beta") {
-            subset(df_n, beta == val & tick %in% tick_seq)
-          } else {
-            subset(df_n, psi  == val & tick %in% tick_seq)
-          }
+          df_p <- subset(df_n, psi  == val & tick %in% tick_seq)
+          
           if (nrow(df_p) == 0) next
           s <- .compute_series(df_p, tick_seq)
           y_all <- c(unlist(s$reps, use.names = FALSE), s$mean)
@@ -507,11 +487,8 @@ plot_summary_multi_by_beta_ticks <- function(summary_stat_df,
         for (i in seq_along(all_vals)) {
           val <- all_vals[i]
           mean_col <- mean_cols[i]
-          df_p <- if (variable_type == "beta") {
-            subset(df_n, beta == val & tick %in% tick_seq)
-          } else {
-            subset(df_n, psi  == val & tick %in% tick_seq)
-          }
+          df_p <- subset(df_n, psi  == val & tick %in% tick_seq)
+          
           if (nrow(df_p) == 0) next
 
           s <- .compute_series(df_p, tick_seq)
@@ -531,8 +508,8 @@ plot_summary_multi_by_beta_ticks <- function(summary_stat_df,
         # Assumes you provide: plot_nonsocial_decay(shift_size, n)
         # plot_nonsocial_decay(reg_lab, shift_val, n_val)
 
-        ## ---- Optional: legend per panel (values of beta/psi) ----
-        legend_vals <- if (variable_type == "beta") paste0("beta=", all_vals) else paste0("psi=", all_vals)
+        ## ---- Optional: legend per panel (values of psi/psi) ----
+        legend_vals <- paste0("psi=", all_vals)
         legend("topright", inset = 0.02,
                legend = legend_vals, col = mean_cols,
                lty = 1, lwd = 1, pch = 16, pt.cex = 0.5, bty = "n", cex = 0.85)
@@ -713,7 +690,7 @@ plot_summary_multi_by_psi_ticks <- function(summary_stat_df,
 # plotting function for phenotype distribution
 ```{r}
 plot_phenotype_multi <- function(phenotype_df,
-                                       out_subfolder = "phenotype_multi_by_beta_genbins",
+                                       out_subfolder = "phenotype_multi_by_psi_genbins",
                                        gen_seq = 10000:10005,
                                        num_bins = num_bins,
                                        bin_width = bin_width,
@@ -737,23 +714,19 @@ plot_phenotype_multi <- function(phenotype_df,
             if (nrow(df_n) == 0) next
 
             shift_keys <- paste0("shift=", plot_shift_sizes)
-            all_vals <- if (all(is.na(df_reg$beta[1]))) plot_psi else plot_beta
-            variable_type <- if (all(is.na(df_reg$beta[1]))) "psi" else "beta"
+            all_vals <- plot_psi
 
             for (sk in shift_keys) {
                 df_group <- subset(df_n, shift_size == as.numeric(sub("shift=", "", sk)))
                 
                 if (nrow(df_group) == 0) next
 
-                # Common y-limit and x-range across all beta & gens
+                # Common y-limit and x-range across all psi & gens
                 max_y <- 0
                 x_min <- Inf; x_max <- -Inf
                 for (val in all_vals) {
-                    df_p <- if (variable_type == "beta") {
-                        subset(df_group, beta == val)
-                    } else {
-                        subset(df_group, psi == val)
-                    }
+                    df_p <- subset(df_group, psi == val)
+                    
                     
                     if (nrow(df_p) == 0) next
                     for (g in gen_seq) {
@@ -806,11 +779,8 @@ plot_phenotype_multi <- function(phenotype_df,
                     val_col <- hcl.colors(length(all_vals), palette = hcl_color_palette)
                     names(val_col) <- as.character(all_vals)
                     for (val in all_vals) {
-                        df_p <- if (variable_type == "beta") {
-                            subset(df_group, beta == val)
-                        } else {
-                            subset(df_group, psi == val)
-                        }
+                        df_p <- subset(df_group, psi == val)
+                        
                         if (nrow(df_p) == 0) next
 
                         g= gen_seq[1]  # only one generation
@@ -839,12 +809,7 @@ plot_phenotype_multi <- function(phenotype_df,
                         }
                     }
 
-                    # legend_text = if (variable_type == "beta") {
-                    #     paste0("beta=", all_vals)
-                    # } else {
-                    #     paste0("psi=", all_vals)
-                    # }
-                    legend_text = paste0("beta=", all_vals)
+                    legend_text = paste0("psi=", all_vals)
                     legend_text = if (include_pre_selection) {
                         c(legend_text, "Fitness Func", "Pre-selection")
                     } else {
@@ -895,7 +860,7 @@ plot_phenotype_multi <- function(phenotype_df,
                     names(alphas) <- as.character(gen_seq)
                     
                     for (val in all_vals) {
-                        df_p <- if (variable_type == "beta") subset(df_group, beta == val) else subset(df_group, psi == val)
+                        df_p <- subset(df_group, psi == val)
                         if (nrow(df_p) == 0) next
 
                         base_col <- val_col[as.character(val)]
@@ -931,11 +896,8 @@ plot_phenotype_multi <- function(phenotype_df,
                         }
                     }
 
-                    legend_text = if (variable_type == "beta") {
-                        paste0("beta=", all_vals)
-                    } else {
-                        paste0("psi=", all_vals)
-                    }
+                    legend_text = paste0("psi=", all_vals)
+                    
                     legend_text = if (include_pre_selection) {
                         c(legend_text, "Fitness Func", "Pre-selection")
                     } else {
@@ -989,7 +951,6 @@ plot_distribution_multi_model <- function(
     pre_selection_gen = 9999,
     # value sets
     psi_vals  = plot_psi,
-    beta_vals = plot_beta,
     custom_vals = NULL,   # list, e.g. list(ave = c(0.1,0.3), fit = c(0.2,0.4))
     value_label = c("Genotype","Phenotype")  # NEW: controls figure labels
 ) {
@@ -1002,10 +963,9 @@ plot_distribution_multi_model <- function(
     .vals_for_reg <- function(reg_lab) {
         if (!is.null(custom_vals) && !is.null(custom_vals[[reg_lab]])) {
             return(list(vals = custom_vals[[reg_lab]],
-                        vtype = if (reg_lab == "inv") "beta" else "psi"))
+                        vtype ="psi"))
         }
-        if (reg_lab == "inv") list(vals = beta_vals, vtype = "beta")
-        else                  list(vals = psi_vals,  vtype = "psi")
+        list(vals = psi_vals,  vtype = "psi")
     }
 
     # ---- reorder: ensure 'inv' is NOT the 2nd panel ----
@@ -1025,8 +985,7 @@ plot_distribution_multi_model <- function(
             for (val in all_vals) {
                 df_reg <- subset(data_df,
                                  reg == reg_lab & n == n_val & shift_size == shift_size_target &
-                                 ((spec$vtype == "beta" & beta == val) |
-                                  (spec$vtype == "psi"  & psi  == val)))
+                                  (spec$vtype == "psi"  & psi  == val))
                 if (nrow(df_reg) == 0) next
 
                 for (g in gen_seq) {
@@ -1065,7 +1024,7 @@ plot_distribution_multi_model <- function(
                                     draw_param_legend = FALSE, draw_gen_legend = FALSE) {
         spec <- .vals_for_reg(reg_lab)
         all_vals <- spec$vals
-        vtype    <- spec$vtype  # "beta" or "psi"
+        vtype    <- spec$vtype  # "psi"
 
         df_reg <- subset(data_df, reg == reg_lab & n == n_val & shift_size == shift_size_target)
         plot(NULL, xlim = xlim, ylim = ylim,
@@ -1082,7 +1041,7 @@ plot_distribution_multi_model <- function(
         names(alphas) <- as.character(gen_seq)
 
         for (val in all_vals) {
-            df_p <- subset(df_reg, (vtype == "beta" & beta == val) | (vtype == "psi" & psi == val))
+            df_p <- subset(df_reg, vtype == "psi" & psi == val)
             if (nrow(df_p) == 0) next
             base_col <- val_col[as.character(val)]
 
@@ -1113,8 +1072,8 @@ plot_distribution_multi_model <- function(
         }
 
         # legends
-        if (draw_param_legend || reg_lab == "inv") {
-            legend_labels <- if (vtype == "beta") paste0("beta=", all_vals) else paste0("psi=", all_vals)
+        if (draw_param_legend) {
+            legend_labels <- paste0("psi=", all_vals)
             legend("topright",
                    legend = legend_labels,
                    col = val_col[as.character(all_vals)],
@@ -1380,7 +1339,7 @@ plot_psi_histograms_by_gen <- function(df,
   }
   gen_col <- .gen_key(df)
 
-  # Keep only psi rows (if df includes both psi & beta in long format)
+  # Keep only psi rows (if df includes psin long format)
   if ("variable" %in% names(df)) {
     df <- subset(df, variable == "psi")
   }
@@ -1504,3 +1463,444 @@ plot_psi_histograms_by_gen <- function(df,
 }
 
 ```
+
+
+## plot distribution for different data
+```{r}
+
+# ---- Helper: get integer-named value columns ----
+.value_cols_int <- function(df) {
+  grep("^[0-9]+$", names(df), value = TRUE)
+}
+
+.apply_filter <- function(d, filter) {
+  if (!length(filter)) return(d)
+  for (nm in names(filter)) {
+    val <- filter[[nm]]
+
+    # Threshold syntax: <col>_<op> with op in {gt,ge,lt,le}
+    if (grepl("_(gt|ge|lt|le)$", nm)) {
+      base <- sub("_(gt|ge|lt|le)$", "", nm)
+      op   <- sub("^.*_(gt|ge|lt|le)$", "\\1", nm)
+      if (!(base %in% names(d))) next
+
+      x <- suppressWarnings(as.numeric(d[[base]]))
+      thr <- as.numeric(val)
+      if (!is.finite(thr)) next
+
+      keep <- switch(op,
+        gt = x >  thr,
+        ge = x >= thr,
+        lt = x <  thr,
+        le = x <= thr
+      )
+      keep[is.na(keep)] <- FALSE
+      d <- d[keep, , drop = FALSE]
+
+    } else if (nm %in% names(d)) {
+      # Plain equality filter
+      d <- d[d[[nm]] == val, , drop = FALSE]
+    }
+  }
+  d
+}
+
+# ---- Main: average-binned line plot across replicates ---------------------
+plot_rep_binned_mean_line <- function(
+  df,
+  filter = list(),                # e.g., list(reg="ave", n=8, shift_size=200)
+  generation = 10001,             # target generation
+  breaks = NULL,                  # explicit numeric vector of bin edges (preferred)
+  n_bins = 50,                    # used only if 'breaks' is NULL
+  xlim = NULL,                    # c(min, max); required if you use n_bins; ignored if 'breaks' given
+  ylim = NULL,
+  labels = list(title = "Averaged distribution",
+                x = "Value",
+                y = "Proportion"),
+  col = "black", lwd = 2, lty = 1,
+  add = FALSE,                    # if TRUE, add lines to existing plot
+  show_points = FALSE,            # draw points at bin midpoints
+  cex_axis = 1.2, cex_lab = 1.4, cex_main = 1.4, plot_rep = FALSE
+) {
+  # subset by generation and filter
+  d <- df
+  if (!is.null(generation) && "generation" %in% names(d)) {
+    d <- d[d$generation == generation, , drop = FALSE]
+  }
+    d <- .apply_filter(d, filter)
+  if (nrow(d) == 0) stop("No rows after applying generation/filter.")
+
+  # identify value columns
+  vcols <- .value_cols_int(d)
+  if (!length(vcols)) stop("No integer-named value columns found.")
+
+  # figure out bins
+  if (!is.null(breaks)) {
+    breaks <- sort(as.numeric(breaks))
+    if (any(!is.finite(breaks)) || length(breaks) < 2) stop("Invalid 'breaks'.")
+    x_min <- min(breaks); x_max <- max(breaks)
+  } else {
+    if (is.null(xlim) || length(xlim) != 2) stop("Provide 'xlim = c(min,max)' when 'breaks' is NULL.")
+    x_min <- xlim[1]; x_max <- xlim[2]
+    if (!is.finite(x_min) || !is.finite(x_max) || x_max <= x_min) stop("Invalid 'xlim'.")
+    breaks <- seq(x_min, x_max, length.out = n_bins + 1)
+  }
+
+  # per-rep hist proportions (ignoring out-of-range values)
+  reps <- sort(unique(d$rep))
+  if (length(reps) == 0) stop("Column 'rep' missing or no replicates present.")
+
+  bin_mids <- (breaks[-1] + breaks[-length(breaks)]) / 2
+  M <- matrix(0, nrow = length(reps), ncol = length(bin_mids))
+
+  row_idx <- 0
+  for (r in reps) {
+    row_idx <- row_idx + 1
+    dr <- d[d$rep == r, , drop = FALSE]
+    if (nrow(dr) == 0) next
+
+    # pool values across all integer-named columns for this rep-row
+    vals <- unlist(dr[, vcols, drop = FALSE], use.names = FALSE)
+    vals <- vals[is.finite(vals)]
+    # ignore out-of-range
+    vals <- vals[vals >= x_min & vals <= x_max]
+    if (!length(vals)) next
+
+    # counts per bin (right-closed by default)
+    h <- hist(vals, breaks = breaks, plot = FALSE, include.lowest = TRUE, right = TRUE)
+    # convert to proportions per bin (sum = 1 within range)
+    prop <- h$counts / sum(h$counts)
+    # guard if all were NA (shouldn't happen with include.lowest & filtering)
+    prop[!is.finite(prop)] <- 0
+    M[row_idx, ] <- prop
+  }
+
+  # average across reps
+  # (if some reps contributed zeros because of no vals, still okay)
+  mean_prop <- colMeans(M, na.rm = TRUE)
+
+  if (!add) {
+    par(cex.axis = cex_axis, cex.lab = cex_lab, cex.main = cex_main)
+    if (is.null(ylim)){
+        if (plot_rep) ymax <- max(c(mean_prop, M), na.rm = TRUE)
+        else ymax <- max(mean_prop, 1e-12)
+        plot(bin_mids, mean_prop, type = "l",
+            xlab = labels$x, ylab = labels$y,
+            main = labels$title,
+            xlim = c(x_min, x_max),
+            ylim = c(0, ymax))
+    } else {
+        plot(bin_mids, mean_prop, type = "l",
+            xlab = labels$x, ylab = labels$y,
+            main = labels$title,
+            xlim = c(x_min, x_max),
+            ylim = ylim)
+    }
+  }
+if (plot_rep) {
+    rep_col <- adjustcolor(col, alpha.f = 0.3)
+    for (ii in seq_len(nrow(M))) {
+      yi <- M[ii, ]
+      if (all(!is.finite(yi))) next
+      lines(bin_mids, yi, col = rep_col, lwd = lwd, lty = lty)
+    }
+  }
+  lines(bin_mids, mean_prop, col = col, lwd = lwd, lty = lty)
+  if (show_points) points(bin_mids, mean_prop, pch = 16, col = col)
+
+  # return the summary invisibly
+  invisible(data.frame(mid = bin_mids, mean_prop = mean_prop))
+}
+
+
+
+```
+
+
+
+# plotting function for trajectory
+```{r}
+# ---------- Main plotting function ----------
+plot_summary_multi_by_psi_ticks <- function(summary_stat_df,
+                                            out_subfolder = "summary_multi_by_psi_ticks",
+                                            regimes = NULL,
+                                            column_to_plot = "dif_z_opt",
+                                            col = NULL) {
+    if (!dir.exists(file.path(base_plot_folder, out_subfolder))) {
+        dir.create(file.path(base_plot_folder, out_subfolder), recursive = TRUE)
+    }
+
+    for (reg_lab in regimes) {
+        df_reg <- subset(summary_stat_df, reg == reg_lab)
+        if (nrow(df_reg) == 0) next
+
+        out_dir <- file.path(base_plot_folder, out_subfolder, paste0("model_", reg_lab))
+        if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+        shift_keys <- c(paste0("shift=", plot_shift_sizes))
+        all_vals <- plot_psi 
+        if (is.null(col)){
+            mean_cols <- hcl.colors(length(all_vals), hcl_color_palette)
+        }else {
+            mean_cols <- col
+        }
+
+        for (n_val in plot_n) {
+            df_n <- subset(df_reg, n == n_val)
+            if (nrow(df_n) == 0) next
+
+            for (sk in shift_keys) {
+                df_group <- subset(df_n, shift_size == as.numeric(sub("shift=", "", sk)))
+                if (nrow(df_group) == 0) next
+
+                # Y-limits across panels
+                y_min <- Inf; y_max <- -Inf
+                for (val in all_vals) {
+                    df_p <- subset(df_group, psi == val & tick %in% tick_seq)
+                    
+                    if (nrow(df_p) == 0) next
+                    s <- .compute_series(df_p, tick_seq, column_to_plot)
+                    y_all <- c(unlist(s$reps, use.names = FALSE), s$mean)
+                    y_all <- y_all[is.finite(y_all)]
+                    if (length(y_all)) {
+                        y_min <- min(y_min, y_all)
+                        y_max <- max(y_max, y_all)
+                    }
+                }
+                if (!is.finite(y_min) || !is.finite(y_max) || y_min == y_max) {
+                    y_min <- 0; y_max <- 1
+                }
+
+                title_suffix <- paste0("shift_size = ", as.numeric(sub("shift=", "", sk)))
+                out_name <- paste0("n_", n_val, "_", gsub("[ =]", "", title_suffix), ".png")
+                png(file.path(out_dir, out_name), width = 2500, height = 1800, res = 200)
+
+                par(cex.axis = 1.6, cex.lab = 2.0, cex.main = 1.0, mar = c(4.5, 6, 3, 1) + 0.1)
+                plot(NA, xlim = range(tick_seq), ylim = c(y_min, y_max),
+                    xlab = "Generation", ylab = "Distance to Optimum", 
+                    main = paste0("Trajectory over 100 generations | model = ",
+                            reg_lab, " | n = ", n_val, " | ", title_suffix),
+                    xaxt = "n")
+            
+                ticks <- list(0, 50, 100, 200)
+                at_ticks <- list(9999, 10050, 10100, 10200)
+                axis(1, at = at_ticks, labels = ticks)
+
+                for (i in seq_along(all_vals)) {
+                    val <- all_vals[i]
+                    mean_col <- mean_cols[i]
+                    df_p <- subset(df_group, psi == val & tick %in% tick_seq)
+                    
+                    if (nrow(df_p) == 0) next
+
+                    s <- .compute_series(df_p, tick_seq, column_to_plot)
+                    # Replicate series
+                    if (plot_reps & length(s$reps)) {
+                        rep_col <- adjustcolor(mean_col, , alpha.f = 0.35)
+
+                        for (r in seq_along(s$reps)) {
+                            lines(tick_seq, s$reps[[r]], col = rep_col, lwd = 1.5)
+                            points(tick_seq, s$reps[[r]], pch = 16, cex = 0.5, col = rep_col)
+                        }
+                    }
+                    # Across-rep mean (already with dynamic 9999 substitution)
+                    lines(tick_seq, s$mean, col = mean_col, lwd = 1.5)
+                    points(tick_seq, s$mean, pch = 16, cex = 1.5, col = mean_col)
+
+                    # ---- Exponential-decay fit (exclude tick 9999 from fitting) ----
+                    if (plot_exp_fit & is.finite(min(s$mean, na.rm = TRUE)) && is.finite(max(s$mean, na.rm = TRUE))) {
+                        present <- is.finite(s$mean) & (tick_seq != 9999)
+                        x_fit <- tick_seq[present]
+                        y_fit <- s$mean[present]
+                        if (length(x_fit) >= 5 && diff(range(y_fit)) > 0) {
+                            fit <- .fit_exp_decay(x_fit, y_fit)
+                            if (isTRUE(fit$success)) {
+                                lines(fit$x_fit, fit$y_fit, col = "black", lwd = 2, lty = 2)
+
+                k <- fit$params["k"]
+                tau <- if (is.finite(k) && k > 0) 1/k else NA_real_
+                t_half <- if (is.finite(k) && k > 0) log(2)/k else NA_real_
+
+                legend("bottomleft", inset = 0.02,
+                       legend = c(
+                         "Exp fit: y = c0 + c1*e^{-k(x - t0)}",
+                         paste0("c0=", .fmt(fit$params["c0"]), ", c1=", .fmt(fit$params["c1"])),
+                         paste0("k=", .fmt(k), "  (tau= ", .fmt(tau), ", t1/2= ", .fmt(t_half), ")"),
+                         paste0("R^2=", .fmt(fit$r2)),
+                         "Note: tick 9999 excluded from fit"
+                       ),
+                       col = c(NA, "red", "red", "red", NA),
+                       lty = c(NA, 2, 2, 2, NA), lwd = c(NA, 2, 2, 2, NA),
+                       bty = "n", cex = 0.78, text.col = c("black","red","red","red","black"))
+                            }
+                        }
+                    }
+                }
+
+                # legend_vals <- paste0(expression("psi="), all_vals)
+                leg_expr <- as.expression(lapply(all_vals, function(v) bquote(psi == .(v))))
+                
+                if (plot_exp_fit) {
+                    legend(
+                    "topright", inset = 0.02,
+                    legend = c(leg_expr, "Exp. decay fit"),
+                    col    = c(mean_cols,  "black"),
+                    lty    = c(rep(1, length(legend_vals)), 1),
+                    lwd    = c(rep(1, length(legend_vals)), 2),
+                    pch    = c(rep(16, length(legend_vals)), 16),
+                    pt.cex = c(rep(0.5, length(legend_vals)), 0.9),
+                    bty = "n", cex = 0.85
+                    )
+                } else {
+                    legend(
+                    "topright", inset = 0.02,
+                    legend = leg_expr,
+                    col    = mean_cols,
+                    lty    = 1,
+                    lwd    = 2,
+                    pch    = 20,
+                    pt.cex = 1.0,
+                    bty = "n", cex = 2.2
+                    )
+                }
+
+                dev.off()
+            }
+        }
+    }
+}
+
+```
+
+```{r}
+plot_psimean_faceted_by_spsi <- function(df,
+                                         base_plot_folder,
+                                         regs = NULL,
+                                         ns    = NULL,
+                                         shift_sizes = NULL,
+                                         file_subdir = "psimean",
+                                         mean_line_col = "black",
+                                         mean_lwd      = 4,
+                                         mean_lty      = 5,
+                                         col_gt        = "#0072B2",  # > spsi
+                                         col_eq        = "#7B1FA2",  # = spsi
+                                         col_lt        = "#D55E00",  # < spsi
+                                         rep_alpha     = 0.55,
+                                         point_cex     = 0.7,
+                                         tol           = 1e-10) {
+
+  needed <- c("tick","psi_mean","psi_sd","rep","reg","n","shift_size","spsi")
+  missing_cols <- setdiff(needed, names(df))
+  if (length(missing_cols)) stop("Missing columns: ", paste(missing_cols, collapse=", "))
+
+  d <- df
+  d$tick       <- suppressWarnings(as.integer(d$tick))
+  d$rep        <- suppressWarnings(as.integer(d$rep))
+  d$n          <- suppressWarnings(as.integer(as.character(d$n)))
+  d$shift_size <- suppressWarnings(as.integer(as.character(d$shift_size)))
+  d$psi_mean   <- suppressWarnings(as.numeric(d$psi_mean))
+  d$psi_sd     <- suppressWarnings(as.numeric(d$psi_sd))
+  d$spsi       <- suppressWarnings(as.numeric(d$spsi))
+  d <- d[is.finite(d$tick) & is.finite(d$rep) & is.finite(d$psi_mean) &
+           !is.na(d$reg) & is.finite(d$n) & is.finite(d$shift_size) & is.finite(d$spsi), ]
+
+  if (!is.null(regs))        d <- d[d$reg %in% regs, ]
+  if (!is.null(ns))          d <- d[d$n %in% ns, ]
+  if (!is.null(shift_sizes)) d <- d[d$shift_size %in% shift_sizes, ]
+
+  out_dir <- file.path(base_plot_folder, file_subdir)
+  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+  .grid_dims <- function(k) { if (k <= 1) c(1,1) else { nc <- ceiling(sqrt(k)); nr <- ceiling(k/nc); c(nr,nc) } }
+
+  combos <- unique(d[, c("reg","n","shift_size")])
+  combos <- combos[order(combos$reg, combos$n, combos$shift_size), ]
+
+  for (ii in seq_len(nrow(combos))) {
+    reg_i  <- combos$reg[ii]
+    n_i    <- combos$n[ii]
+    sz_i   <- combos$shift_size[ii]
+
+    sub <- d[d$reg == reg_i & d$n == n_i & d$shift_size == sz_i, ]
+    if (nrow(sub) == 0) next
+
+    spsi_vals <- sort(unique(sub$spsi))
+    K <- length(spsi_vals); dims <- .grid_dims(K)
+
+    # x-range can stay common within file; y-range will be per-panel
+    x_range <- range(sub$tick, na.rm = TRUE)
+
+    png_path <- file.path(out_dir, paste0(reg_i, "_", sz_i, "_", n_i, ".png"))
+    png(png_path, width = 1800, height = max(1000, 500 * dims[1]), res = 150)
+    op <- par(mfrow = dims, mar = c(4,4,3.5,1.5), mgp = c(2.2, 0.7, 0))
+
+    add_legend <- TRUE
+
+    for (sval in spsi_vals) {
+      panel <- sub[sub$spsi == sval, ]
+      if (nrow(panel) == 0) { plot.new(); title(main = paste0("spsi = ", format(sval))); next }
+
+      # ----- Per-panel centered y-limits around spsi -----
+      # consider all points in the panel (all reps)
+      y_min <- min(panel$psi_mean, na.rm = TRUE)
+      y_max <- max(panel$psi_mean, na.rm = TRUE)
+      max_dev <- max(abs(c(y_min - sval, y_max - sval)))
+      if (!is.finite(max_dev) || max_dev == 0) max_dev <- 1e-6
+      pad <- 0.05 * max_dev
+      y_lim <- sval + c(-max_dev - pad, max_dev + pad)
+
+      plot(NA, xlim = x_range, ylim = y_lim,
+           xlab = "tick", ylab = expression(psi[mean]),
+           main = bquote(reg==.(reg_i) * ", n=" * .(n_i) * ", shift=" * .(sz_i) * ", spsi=" * .(sval)))
+
+      # Rep points colored by comparison to spsi
+      reps <- sort(unique(panel$rep))
+      col_gt_a <- adjustcolor(col_gt, rep_alpha)
+      col_eq_a <- adjustcolor(col_eq, rep_alpha)
+      col_lt_a <- adjustcolor(col_lt, rep_alpha)
+
+      for (r in reps) {
+        pr <- panel[panel$rep == r, c("tick","psi_mean")]
+        pr <- pr[order(pr$tick), ]
+        diff <- pr$psi_mean - sval
+        is_eq <- abs(diff) <= tol
+        is_gt <- diff >  tol
+        is_lt <- diff < -tol
+
+        if (any(is_lt)) points(pr$tick[is_lt], pr$psi_mean[is_lt], pch = 16, cex = point_cex, col = col_lt_a)
+        if (any(is_eq)) points(pr$tick[is_eq], pr$psi_mean[is_eq], pch = 16, cex = point_cex, col = col_eq_a)
+        if (any(is_gt)) points(pr$tick[is_gt], pr$psi_mean[is_gt], pch = 16, cex = point_cex, col = col_gt_a)
+      }
+
+      # Mean across reps (black dashed thick)
+      mdat <- aggregate(psi_mean ~ tick, data = panel, FUN = mean)
+      mdat <- mdat[order(mdat$tick), ]
+      lines(mdat$tick, mdat$psi_mean, col = mean_line_col, lwd = mean_lwd, lty = mean_lty)
+
+      # Reference line at spsi (center line)
+      abline(h = sval, lty = 3, col = adjustcolor("gray20", 0.7))
+      if (add_legend){
+        legend("topleft",
+              legend = c(expression(psi[mean] < spsi),
+                          expression(psi[mean] == spsi),
+                          expression(psi[mean] > spsi),
+                          "mean across reps"),
+              pch = c(16,16,16, NA),
+              lwd = c(NA,NA,NA, mean_lwd),
+              lty = c(NA,NA,NA, mean_lty),
+              col = c(col_lt, col_eq, col_gt, mean_line_col),
+              bty = "n", cex = 0.9)
+        add_legend <- FALSE
+      }
+    }
+
+    par(op); dev.off()
+    message("Wrote: ", png_path)
+  }
+}
+
+
+```
+
+
+

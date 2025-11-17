@@ -9,7 +9,7 @@ output: pdf_document
 ```{r setup, include=FALSE}
 wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
 setwd(wd_path)
-base_plot_folder <- "../plots/evolve_sociality"
+base_plot_folder <- "../plots/discrete_sociality"
 hcl_color_palette <- "Dark 2" # color pattern for lines 
 param_val <- c(0.0) # for now no base psi and beta
 ```

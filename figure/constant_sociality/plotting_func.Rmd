@@ -32,70 +32,76 @@ output: pdf_document
     colMeans(counts_mat, na.rm = TRUE)
 }
 
-.compute_series <- function(df_panel, tick_seq) {
-    df_sub <- df_panel
+.compute_series <- function(df_panel, tick_seq, column_to_plot) {
+  df_sub <- df_panel
 
-    # Coerce
-    dif_z_opt_num <- suppressWarnings(as.numeric(df_sub$dif_z_opt))
-    z_mean_num    <- suppressWarnings(as.numeric(df_sub$z_mean))
-    df_sub$tick   <- suppressWarnings(as.integer(df_sub$tick))
-    df_sub$rep    <- suppressWarnings(as.integer(df_sub$rep))
+  # Basic coercions used for indexing
+  df_sub$tick <- suppressWarnings(as.integer(df_sub$tick))
+  df_sub$rep  <- suppressWarnings(as.integer(df_sub$rep))
 
-    # Base y from dif_z_opt
-    y <- dif_z_opt_num
+  # --- Choose column to plot ---
+  if (!(column_to_plot %in% names(df_sub))) {
+    stop(sprintf("column_to_plot '%s' not found in data.", column_to_plot))
+  }
+  y <- suppressWarnings(as.numeric(df_sub[[column_to_plot]]))
 
-    # ----- Dynamic special-case at tick 9999: y <- opt_rep_at_10000 - z_mean_9999 -----
-    # Use per-rep optimum at tick 10000 if available; otherwise skip replacement for that rep
+  # --- Special case ONLY if plotting dif_z_opt ---
+  if (identical(column_to_plot, "dif_z_opt")) {
+    # Need z_mean at tick 9999 for the shift; compute only if present
+    z_mean_num <- if ("z_mean" %in% names(df_sub)) suppressWarnings(as.numeric(df_sub$z_mean)) else NA_real_
+
+    # Use per-rep optimum at tick 10000 if available
     if ("optimum" %in% names(df_sub)) {
-        opt_num <- suppressWarnings(as.numeric(df_sub$optimum))
-        # collect per-rep optimum at tick 10000
-        rows_opt <- is.finite(opt_num) & is.finite(df_sub$rep) & (df_sub$tick == 10000)
-        if (any(rows_opt)) {
-            opt_tab <- tapply(opt_num[rows_opt], df_sub$rep[rows_opt], function(v) mean(v, na.rm = TRUE))
-            # map per-row rep -> optimum
-            rep_ids   <- as.integer(names(opt_tab))
-            match_idx <- match(df_sub$rep, rep_ids)
-            rep_opt   <- rep(NA_real_, nrow(df_sub))
-            good_m    <- !is.na(match_idx)
-            rep_opt[good_m] <- as.numeric(opt_tab)[match_idx[good_m]]
+      opt_num <- suppressWarnings(as.numeric(df_sub$optimum))
+      rows_opt <- is.finite(opt_num) & is.finite(df_sub$rep) & (df_sub$tick == 10000)
+      if (any(rows_opt)) {
+        opt_tab <- tapply(opt_num[rows_opt], df_sub$rep[rows_opt], function(v) mean(v, na.rm = TRUE))
+        rep_ids   <- as.integer(names(opt_tab))
+        match_idx <- match(df_sub$rep, rep_ids)
+        rep_opt   <- rep(NA_real_, nrow(df_sub))
+        good_m    <- !is.na(match_idx)
+        rep_opt[good_m] <- as.numeric(opt_tab)[match_idx[good_m]]
 
-            # apply at tick 9999 where we have z_mean and rep_opt
-            idx_9999 <- (df_sub$tick == 9999) & is.finite(z_mean_num) & is.finite(rep_opt)
-            y[idx_9999] <- rep_opt[idx_9999] - z_mean_num[idx_9999]
-        }
+        # Apply only at tick 9999, when both z_mean and rep_opt exist
+        idx_9999 <- (df_sub$tick == 9999) & is.finite(z_mean_num) & is.finite(rep_opt)
+        y[idx_9999] <- rep_opt[idx_9999] - z_mean_num[idx_9999]
+      }
     }
+  }
 
-    df_sub$y <- y
+  df_sub$y <- y
 
-    # Keep finite rows
-    df_sub <- df_sub[is.finite(df_sub$y) & is.finite(df_sub$tick) & is.finite(df_sub$rep), , drop = FALSE]
-    if (!nrow(df_sub)) return(list(reps = list(), mean = rep(NA_real_, length(tick_seq)), present_ticks = integer(0)))
+  # Keep finite rows
+  df_sub <- df_sub[is.finite(df_sub$y) & is.finite(df_sub$tick) & is.finite(df_sub$rep), , drop = FALSE]
+  if (!nrow(df_sub)) {
+    return(list(reps = list(), mean = rep(NA_real_, length(tick_seq)), present_ticks = integer(0)))
+  }
 
-    # Aggregate by tick,rep
-    agg <- aggregate(y ~ tick + rep, data = df_sub, FUN = mean)
-    reps <- sort(unique(agg$rep))
+  # Aggregate by (tick, rep)
+  agg <- aggregate(y ~ tick + rep, data = df_sub, FUN = mean)
+  reps <- sort(unique(agg$rep))
 
-    rep_series <- lapply(reps, function(r) {
-        yv <- rep(NA_real_, length(tick_seq))
-        rows <- agg[agg$rep == r & agg$tick %in% tick_seq, , drop = FALSE]
-        if (nrow(rows)) {
-            idx <- match(rows$tick, tick_seq)
-            yv[idx] <- rows$y
-        }
-        yv
-    })
-    names(rep_series) <- as.character(reps)
-
-    if (length(rep_series)) {
-        mat <- do.call(rbind, rep_series)
-        mean_series  <- apply(mat, 2L, function(col) mean(col, na.rm = TRUE))
-        present_ticks <- tick_seq[colSums(!is.na(mat)) > 0]
-    } else {
-        mean_series <- rep(NA_real_, length(tick_seq))
-        present_ticks <- integer(0)
+  rep_series <- lapply(reps, function(r) {
+    yv <- rep(NA_real_, length(tick_seq))
+    rows <- agg[agg$rep == r & agg$tick %in% tick_seq, , drop = FALSE]
+    if (nrow(rows)) {
+      idx <- match(rows$tick, tick_seq)
+      yv[idx] <- rows$y
     }
+    yv
+  })
+  names(rep_series) <- as.character(reps)
 
-    list(reps = rep_series, mean = mean_series, present_ticks = present_ticks)
+  if (length(rep_series)) {
+    mat <- do.call(rbind, rep_series)
+    mean_series   <- apply(mat, 2L, function(col) mean(col, na.rm = TRUE))
+    present_ticks <- tick_seq[colSums(!is.na(mat)) > 0]
+  } else {
+    mean_series <- rep(NA_real_, length(tick_seq))
+    present_ticks <- integer(0)
+  }
+
+  list(reps = rep_series, mean = mean_series, present_ticks = present_ticks)
 }
 
 # ---------- Exponential-decay fit helpers ----------
@@ -499,7 +505,9 @@ plot_genotype_multi_by_beta <- function(genotype_df,
 # ---------- Main plotting function ----------
 plot_summary_multi_by_beta_ticks <- function(summary_stat_df,
                                             out_subfolder = "summary_multi_by_beta_ticks",
-                                            regimes = NULL) {
+                                            regimes = NULL,
+                                            column_to_plot = "dif_z_opt",
+                                            col = NULL) {
     if (!dir.exists(file.path(base_plot_folder, out_subfolder))) {
         dir.create(file.path(base_plot_folder, out_subfolder), recursive = TRUE)
     }
@@ -514,7 +522,11 @@ plot_summary_multi_by_beta_ticks <- function(summary_stat_df,
         shift_keys <- c(paste0("shift=", plot_shift_sizes))
         all_vals <- if (all(is.na(df_reg$beta[1]))) plot_psi else plot_beta
         variable_type <- if (all(is.na(df_reg$beta[1]))) "psi" else "beta"
-        mean_cols <- hcl.colors(length(all_vals), hcl_color_palette)
+        if (is.null(col)){
+            mean_cols <- hcl.colors(length(all_vals), hcl_color_palette)
+        }else {
+            mean_cols <- col
+        }
 
         for (n_val in plot_n) {
             df_n <- subset(df_reg, n == n_val)
@@ -533,7 +545,7 @@ plot_summary_multi_by_beta_ticks <- function(summary_stat_df,
                         subset(df_group, psi == val & tick %in% tick_seq)
                     }
                     if (nrow(df_p) == 0) next
-                    s <- .compute_series(df_p, tick_seq)
+                    s <- .compute_series(df_p, tick_seq, column_to_plot)
                     y_all <- c(unlist(s$reps, use.names = FALSE), s$mean)
                     y_all <- y_all[is.finite(y_all)]
                     if (length(y_all)) {
@@ -546,15 +558,19 @@ plot_summary_multi_by_beta_ticks <- function(summary_stat_df,
                 }
 
                 title_suffix <- paste0("shift_size = ", as.numeric(sub("shift=", "", sk)))
-                out_name <- paste0("n_", n_val, "_", gsub("[ =]", "", title_suffix), ".pdf")
-                pdf(file.path(out_dir, out_name), width = 9, height = 7)
+                out_name <- paste0("n_", n_val, "_", gsub("[ =]", "", title_suffix), ".png")
+                png(file.path(out_dir, out_name), width = 2500, height = 1800, res = 200)
 
+                par(cex.axis = 1.6, cex.lab = 2.0, cex.main = 1.0, mar = c(4.5, 6, 3, 1) + 0.1)
                 plot(NA, xlim = range(tick_seq), ylim = c(y_min, y_max),
-                    xlab = "Tick", ylab = "Distance to Optimum", 
+                    xlab = "Generation", ylab = "Distance to Optimum", 
                     main = paste0("Trajectory over 100 generations | model = ",
                             reg_lab, " | n = ", n_val, " | ", title_suffix),
                     xaxt = "n")
-                axis(1, at = tick_seq)
+            
+                ticks <- list(0, 50, 100, 200)
+                at_ticks <- list(9999, 10050, 10100, 10200)
+                axis(1, at = at_ticks, labels = ticks)
 
                 for (i in seq_along(all_vals)) {
                     val <- all_vals[i]
@@ -566,19 +582,19 @@ plot_summary_multi_by_beta_ticks <- function(summary_stat_df,
                     }
                     if (nrow(df_p) == 0) next
 
-                    s <- .compute_series(df_p, tick_seq)
+                    s <- .compute_series(df_p, tick_seq, column_to_plot)
                     # Replicate series
                     if (plot_reps & length(s$reps)) {
                         rep_col <- adjustcolor(mean_col, , alpha.f = 0.35)
 
                         for (r in seq_along(s$reps)) {
-                            lines(tick_seq, s$reps[[r]], col = rep_col, lwd = 1)
+                            lines(tick_seq, s$reps[[r]], col = rep_col, lwd = 1.5)
                             points(tick_seq, s$reps[[r]], pch = 16, cex = 0.5, col = rep_col)
                         }
                     }
                     # Across-rep mean (already with dynamic 9999 substitution)
-                    lines(tick_seq, s$mean, col = mean_col, lwd = 2)
-                    points(tick_seq, s$mean, pch = 16, cex = 0.9, col = mean_col)
+                    lines(tick_seq, s$mean, col = mean_col, lwd = 1.5)
+                    points(tick_seq, s$mean, pch = 16, cex = 1.5, col = mean_col)
 
                     # ---- Exponential-decay fit (exclude tick 9999 from fitting) ----
                     if (plot_exp_fit & is.finite(min(s$mean, na.rm = TRUE)) && is.finite(max(s$mean, na.rm = TRUE))) {
@@ -610,15 +626,13 @@ plot_summary_multi_by_beta_ticks <- function(summary_stat_df,
                     }
                 }
 
-                if (variable_type == "beta") {
-                    legend_vals <- paste0("beta=", all_vals)
-                } else {
-                    legend_vals <- paste0("psi=", all_vals)
-                }
+                # legend_vals <- paste0(expression("psi="), all_vals)
+                leg_expr <- as.expression(lapply(all_vals, function(v) bquote(psi == .(v))))
+                
                 if (plot_exp_fit) {
                     legend(
                     "topright", inset = 0.02,
-                    legend = c(legend_vals, "Exp. decay fit"),
+                    legend = c(leg_expr, "Exp. decay fit"),
                     col    = c(mean_cols,  "black"),
                     lty    = c(rep(1, length(legend_vals)), 1),
                     lwd    = c(rep(1, length(legend_vals)), 2),
@@ -629,13 +643,13 @@ plot_summary_multi_by_beta_ticks <- function(summary_stat_df,
                 } else {
                     legend(
                     "topright", inset = 0.02,
-                    legend = legend_vals,
+                    legend = leg_expr,
                     col    = mean_cols,
                     lty    = 1,
-                    lwd    = 1,
-                    pch    = 16,
-                    pt.cex = 0.5,
-                    bty = "n", cex = 0.85
+                    lwd    = 2,
+                    pch    = 20,
+                    pt.cex = 1.0,
+                    bty = "n", cex = 2.2
                     )
                 }
 
@@ -1191,3 +1205,229 @@ plot_distribution_multi_model <- function(
 }
 
 ```
+
+
+```{r}
+# --- helpers ---------------------------------------------------------------
+
+# integer-named value columns
+.value_cols_int <- function(df) grep("^[0-9]+$", names(df), value = TRUE)
+
+# compute binned proportions per-rep and their across-rep mean
+.binned_props_for_filter <- function(df, filter, generation, breaks) {
+  d <- df
+  if (!is.null(generation) && "generation" %in% names(d)) {
+    d <- d[d$generation == generation, , drop = FALSE]
+  }
+  if (length(filter)) {
+    for (nm in names(filter)) if (nm %in% names(d)) d <- d[d[[nm]] == filter[[nm]], , drop = FALSE]
+  }
+  if (nrow(d) == 0) stop("No rows after applying generation/filter.")
+
+  vcols <- .value_cols_int(d)
+  if (!length(vcols)) stop("No integer-named value columns found.")
+
+  breaks <- sort(as.numeric(breaks))
+  x_min <- min(breaks); x_max <- max(breaks)
+  mids  <- (breaks[-1] + breaks[-length(breaks)]) / 2
+
+  reps <- sort(unique(d$rep))
+  M <- matrix(NA_real_, nrow = length(reps), ncol = length(mids))
+
+  for (i in seq_along(reps)) {
+    dr <- d[d$rep == reps[i], , drop = FALSE]
+    vals <- suppressWarnings(as.numeric(unlist(dr[, vcols, drop = FALSE], use.names = FALSE)))
+    vals <- vals[is.finite(vals) & vals >= x_min & vals <= x_max]
+    if (!length(vals)) next
+    h <- hist(vals, breaks = breaks, plot = FALSE, include.lowest = TRUE, right = FALSE)
+    prop <- h$counts / sum(h$counts)              # proportions (sum to 1 within range)
+    M[i, ] <- prop
+  }
+
+  list(mid = mids, mat = M, mean_prop = colMeans(M, na.rm = TRUE))
+}
+
+# --- main: plot histogram "lines" (across-rep mean), optional per-rep fades --
+plot_hist_lines_multi <- function(
+  df,
+  filters,                           # list of filter lists: list(f1, f2, ...)
+  generation,
+  breaks,                            # numeric vector of bin edges (shared by all)
+  labels = list(title = "Binned distributions", x = "Value", y = "Proportion"),
+  cols = NULL,                       # colors per filter
+  lwd = 4,
+  show_rep = FALSE,                  # faded per-rep lines behind the mean
+  rep_alpha = 0.2,
+  rep_lwd = 1,
+  add = FALSE,                    # add to existing plot?
+  ymax = NULL
+) {
+  k <- length(filters)
+  if (is.null(cols)) cols <- grDevices::hcl.colors(k, "Dark 2", rev = FALSE)
+
+  # compute first, plot after (so y-limits fit all)
+  series <- vector("list", k)
+  for (i in seq_len(k)) {
+    series[[i]] <- .binned_props_for_filter(df, filters[[i]], generation, breaks)
+  }
+
+  mids <- series[[1]]$mid
+  if(is.null(ymax)){
+    ymax <- max(vapply(series, function(s) max(s$mean_prop, na.rm = TRUE), 0), na.rm = TRUE)
+    if (!is.finite(ymax) || ymax <= 0) ymax <- 1
+  }
+  if (!add) {
+    plot(mids, series[[1]]$mean_prop, type = "n",
+         xlab = labels$x, ylab = labels$y, main = labels$title,
+         xlim = range(mids), ylim = c(0, 1.05 * ymax))
+  }
+
+  for (i in seq_len(k)) {
+    si <- series[[i]]
+    if (isTRUE(show_rep)) {
+      rep_col <- grDevices::adjustcolor(cols[i], rep_alpha)
+      for (r in seq_len(nrow(si$mat))) {
+        yi <- si$mat[r, ]
+        if (all(!is.finite(yi))) next
+        lines(mids, yi, col = rep_col, lwd = rep_lwd)
+      }
+    }
+    lines(mids, si$mean_prop, col = cols[i], lwd = lwd)
+  }
+
+  invisible(series)
+}
+
+```
+
+## multi gen distribution
+```{r}
+# ============================
+# Single filter, multi-generation binned lines
+# Earlier gens = lighter color; with legend
+# ============================
+plot_multigen_binned_single_filter <- function(
+  df,
+  filter,                   # e.g., list(reg="ave", n=8, shift_size=200, spsi=0.3)
+  generations,              # e.g., c(9999, 10050, 10100)  (order = earliest -> latest)
+  breaks,                   # numeric vector of bin edges (shared by all gens)
+  title   = "Binned distributions across generations",
+  xlab    = "Value",
+  ylab    = "Proportion",
+  col_base = "steelblue",   # base color; earlier gens will be lighter versions
+  lwd     = 3,
+  show_rep = FALSE,         # faded per-rep lines
+  rep_alpha = 0.15,
+  rep_lwd   = 1,
+  legend_pos = "topright",  # legend position
+  legend_as_offset = TRUE,   # label as t = gen - min(generations)
+  ymax = NULL
+) {
+  # ---- helpers ----
+  int_value_cols <- function(d) grep("^[0-9]+$", names(d), value = TRUE)
+
+  safe_filter <- function(d, flt) {
+    if (!length(flt) || !nrow(d)) return(d)
+    keep <- rep(TRUE, nrow(d))
+    for (nm in names(flt)) {
+      if (!(nm %in% names(d))) next
+      val <- flt[[nm]]
+      if (length(val) == 0) next
+      if (any(is.na(val))) {
+        keep <- keep & (is.na(d[[nm]]) | d[[nm]] %in% val[!is.na(val)])
+      } else {
+        keep <- keep & (d[[nm]] %in% val)
+      }
+    }
+    d[keep, , drop = FALSE]
+  }
+
+  binned_one_generation <- function(d0, gen, flt, brks) {
+    d <- d0
+    if ("generation" %in% names(d)) d <- d[d$generation == gen, , drop = FALSE]
+    d <- safe_filter(d, flt)
+    if (!nrow(d)) return(NULL)
+
+    vcols <- int_value_cols(d); if (!length(vcols)) return(NULL)
+
+    brks <- sort(as.numeric(brks))
+    x_min <- min(brks); x_max <- max(brks)
+    mids  <- (brks[-1] + brks[-length(brks)]) / 2
+
+    reps <- sort(unique(d$rep)); if (!length(reps)) return(NULL)
+    M <- matrix(NA_real_, nrow = length(reps), ncol = length(mids))
+    any_filled <- FALSE
+
+    for (i in seq_along(reps)) {
+      dr <- d[d$rep == reps[i], , drop = FALSE]
+      vals <- suppressWarnings(as.numeric(unlist(dr[, vcols, drop = FALSE], use.names = FALSE)))
+      vals <- vals[is.finite(vals)]
+      vals <- vals[vals >= x_min & vals <= x_max]      # ignore out-of-range
+      if (!length(vals)) next
+      h <- hist(vals, breaks = brks, plot = FALSE, include.lowest = TRUE, right = FALSE)
+      if (sum(h$counts) == 0) next
+      M[i, ] <- h$counts / sum(h$counts)               # proportions sum to 1
+      any_filled <- TRUE
+    }
+
+    if (!any_filled) return(NULL)
+    list(mid = mids, mat = M, mean_prop = colMeans(M, na.rm = TRUE))
+  }
+
+  # ---- compute series ----
+  gens <- as.numeric(generations)
+  series <- lapply(gens, function(g) binned_one_generation(df, g, filter, breaks))
+  ok <- vapply(series, Negate(is.null), logical(1))
+  if (!any(ok)) stop("No data after filtering/binning for any generation.")
+  first_ok <- which(ok)[1]
+  mids <- series[[first_ok]]$mid
+
+  # common ylim
+  finite_max <- function(x) {
+    x <- x[is.finite(x)]
+    if (!length(x)) NA_real_ else max(x)
+  }
+  if (is.null(ymax)) ymax <- max(vapply(series[ok], function(s) finite_max(s$mean_prop), numeric(1)), na.rm = TRUE)
+  if (!is.finite(ymax) || ymax <= 0) ymax <- 1
+
+  # ---- color ramp: earlier lighter, later darker (higher alpha) ----
+  # alpha from 0.35 -> 1.0 over the sequence (order of 'gens' as provided)
+a_seq <- seq(0.2, 1.0, length.out = length(gens))
+cols_gen <- vapply(a_seq, function(a) grDevices::adjustcolor(col_base, alpha.f = a),
+                   FUN.VALUE = character(1), USE.NAMES = FALSE)
+  # ---- base plot ----
+  plot(mids, rep(0, length(mids)), type = "n",
+       xlab = xlab, ylab = ylab, main = title,
+       xlim = range(mids), ylim = c(0, 1.05 * ymax))
+
+  # ---- draw per-generation lines ----
+  for (j in seq_along(gens)) {
+    s <- series[[j]]
+    if (is.null(s)) next
+
+    if (isTRUE(show_rep) && is.matrix(s$mat)) {
+      rep_col <- grDevices::adjustcolor(cols_gen[j], rep_alpha)  # even lighter
+      for (r in seq_len(nrow(s$mat))) {
+        yi <- s$mat[r, ]
+        if (all(!is.finite(yi))) next
+        lines(s$mid, yi, col = rep_col, lwd = rep_lwd, lty = 1)
+      }
+    }
+    lines(s$mid, s$mean_prop, col = cols_gen[j], lwd = lwd, lty = 1)
+  }
+
+  # ---- legend ----
+  if (legend_as_offset) {
+    t0 <- min(gens, na.rm = TRUE)
+    leg_labs <- paste0("t = ", gens - t0)
+  } else {
+    leg_labs <- as.character(gens)
+  }
+  legend(legend_pos, bty = "n", title = "Generation",
+         legend = leg_labs[ok], col = cols_gen[ok], lwd = lwd, lty = 1)
+
+  invisible(series)
+}
+
+```
+

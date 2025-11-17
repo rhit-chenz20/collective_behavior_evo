@@ -9,11 +9,8 @@ output: pdf_document
 ```{r setup, include=FALSE}
 wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
 setwd(wd_path)
-base_data_folders <- c("../../data/evolve_sociality_discrete")
-base_plot_folder <- "plots"
-target_psi <- c(0.2, 0.5, 0.8)
+base_data_folders <- c("../../data/fluctuate_env_constant_psi")
 regimes <- c("inv", "fit", "ave", "ext")  # "inv" = inverse_variance, "var" = variance
-
 
 # ---- Helper: choose the generation key column name ----
 .gen_key <- function(d) {
@@ -29,11 +26,11 @@ regimes <- c("inv", "fit", "ave", "ext")  # "inv" = inverse_variance, "var" = va
 folders <- file.path(base_data_folders, "data")
 
 extract_sum_metadata <- function(path) {
-    rx <- "data/n_(\\d+)_psi_(-?[0-9.]+)_sz_(\\d+)_reg_(inv|fit|ext|ave)_(\\d+)\\.tsv"
+    rx <- "n_(\\d+)_(psi|beta)_(-?[0-9.]+)_sz_(\\d+)_reg_(inv|fit|ext|ave)_(\\d+)\\.tsv"
     m  <- regexec(rx, path)
     p  <- regmatches(path, m)[[1]]
 
-    if (length(p) != 6) {
+    if (length(p) != 7) {
         # Try to extract the reg part manually (for logging or skipping)
         reg_match <- sub(".*_reg_([a-zA-Z0-9]+)_\\d+\\.tsv$", "\\1", path)
         
@@ -45,13 +42,14 @@ extract_sum_metadata <- function(path) {
                 " with match: ", paste(p, collapse = ", "))
         return(data.frame())
     }
-
+    
     data.frame(
         n          = as.integer(p[2]),
-        psi      = as.numeric(p[3]),
-        shift_size = as.integer(p[4]),
-        reg        = p[5],               
-        rep        = as.integer(p[6]),
+        var = p[3],
+        value      = as.numeric(p[4]),
+        shift_size = as.integer(p[5]),
+        reg        = p[6],               
+        rep        = as.integer(p[7]),
         file_id    = basename(path),
         stringsAsFactors = FALSE
     )
@@ -81,10 +79,17 @@ dfs <- lapply(folders, function(folder) {
 
         meta <- extract_sum_metadata(file)
         if (nrow(meta) == 0) return(NULL)
+      if (meta$var == "beta"){
+        df$psi = NA
+        df$beta = meta$value
+      } 
+      if (meta$var == "psi"){
+        df$beta = NA
+        df$psi = meta$value
+      } 
 
         # # Attach metadata columns
         df$n          <- meta$n
-        df$spsi <- meta$psi/2
         df$shift_size <- meta$shift_size
         df$reg        <- meta$reg
         df$rep        <- meta$rep
@@ -93,41 +98,30 @@ dfs <- lapply(folders, function(folder) {
         df
     }))
     stat_df <- stat_df[ , sort(names(stat_df))]
-
+   
     return(stat_df)
 })
 
 summary_stat_df <- do.call(rbind, dfs)
 ```
 
-```{r}
-data_df <- subset(
-  summary_stat_df,
-  shift_size != 0,
-  select = c(tick, dif_z_opt, psi, beta, shift_size, reg, n, rep, optimum, z_mean)
-)
 
-data_df <- data_df[data_df$tick >= 9999 & data_df$tick <= 10100, ]
-```
 
 ```{r}
-spsi = 0.4
-reg = "ave"
-nrow(summary_stat_df[summary_stat_df$spsi == spsi & summary_stat_df$reg == reg & summary_stat_df$psi_mean>spsi & summary_stat_df$tick < 10000,])
-nrow(summary_stat_df[summary_stat_df$spsi == spsi & summary_stat_df$reg == reg & summary_stat_df$psi_mean==spsi & summary_stat_df$tick < 10000,])
-nrow(summary_stat_df[summary_stat_df$spsi == spsi & summary_stat_df$reg == reg & summary_stat_df$psi_mean<spsi & summary_stat_df$tick < 10000,])
+unique(colnames(summary_stat_df))
+unique(summary_stat_df[summary_stat_df$reg == "inv" & summary_stat_df$psi == 0.5, ]$rep)
 ```
 
 
 
 ```{r}
 # Save
-saveRDS(summary_stat_df, file = "../r_data/dsicrete_evolve_sociality/summary.rds")
+saveRDS(summary_stat_df, file = "../r_data/fluc_env_cpsi/data_summary.rds")
 ```
 
 ```{r}
 # Later (or on another machine)
-data_df <- readRDS("../r_data/dsicrete_evolve_sociality/summary.rds")
+data_df <- readRDS("../r_data/fluc_env_cpsi/summary.rds")
 ```
 
 ```{r}
@@ -191,50 +185,9 @@ dfs <- lapply(folders, function(folder) {
     meta <- extract_geno_metadata(file)
     if (nrow(meta) == 0) return(NULL)
 
-    # ---- Locate partner data file with same relative path under 'data' ----
-    data_file <- sub("/genotype/", "/data/", file, fixed = TRUE)
-    have_data <- file.exists(data_file)
-
-    # Default psis_mean is NA; try to fill from data file
-    psis_vec <- rep(NA_real_, nrow(df))
-
-    if (have_data) {
-      dat <- tryCatch(read.table(data_file, header = TRUE, sep = "\t", check.names = FALSE),
-                      error = function(e) NULL)
-      if (is.null(dat)) {
-        warning("Failed to read data partner: ", data_file)
-      } else if (!("psi_mean" %in% names(dat))) {
-        warning("Missing 'psi_mean' in data partner: ", data_file)
-      } else {
-        # Match by generation key
-        key_x <- .gen_key(df)
-        key_y <- .gen_key(dat)
-
-        kx <- suppressWarnings(as.integer(df[[key_x]]))
-        ky <- suppressWarnings(as.integer(dat[[key_y]]))
-
-        ok_y <- is.finite(ky)
-        dat_sub <- dat[ok_y, , drop = FALSE]
-        ky_sub  <- ky[ok_y]
-        # In case of duplicates in partner, keep first per generation
-        first_idx <- !duplicated(ky_sub)
-        ky_sub <- ky_sub[first_idx]
-        psis_lookup <- suppressWarnings(as.numeric(dat_sub$psis_mean[first_idx]))
-
-        m <- match(kx, ky_sub)
-        psis_vec <- psis_lookup[m]
-      }
-    } else {
-      warning("Data partner not found for genotype file: ", file,
-              " -> expected: ", data_file)
-    }
-
-    # Attach the psis_mean column (overwrites if already present)
-    df$psis_mean <- psis_vec
-
     # Attach metadata columns
     df$n <- meta$n
-    df$spsi  <- meta$psi
+    df$psi  <- meta$psi
     df$shift_size <- meta$shift_size
     df$reg        <- meta$reg
     df$rep        <- meta$rep
@@ -256,7 +209,7 @@ geno_df <- genotype_df[genotype_df$generation >= 9999 & genotype_df$generation <
 ```
 
 ```{r}
-saveRDS(genotype_df, file = "../r_data/dsicrete_evolve_sociality/genotypes.rds")
+saveRDS(genotype_df, file = "../r_data/fluc_env_cpsi/genotypes.rds")
 ```
 
 ```{r}
@@ -336,50 +289,9 @@ dfs <- lapply(folders, function(folder) {
     meta <- extract_geno_metadata(file)
     if (nrow(meta) == 0) return(NULL)
 
-    # ---- Locate partner data file with same relative path under 'data' ----
-    data_file <- sub("/phenotype/", "/data/", file, fixed = TRUE)
-    have_data <- file.exists(data_file)
-
-    # Default psis_mean is NA; try to fill from data file
-    psis_vec <- rep(NA_real_, nrow(df))
-
-    if (have_data) {
-      dat <- tryCatch(read.table(data_file, header = TRUE, sep = "\t", check.names = FALSE),
-                      error = function(e) NULL)
-      if (is.null(dat)) {
-        warning("Failed to read data partner: ", data_file)
-      } else if (!("psi_mean" %in% names(dat))) {
-        warning("Missing 'psi_mean' in data partner: ", data_file)
-      } else {
-        # Match by generation key
-        key_x <- .gen_key(df)
-        key_y <- .gen_key(dat)
-
-        kx <- suppressWarnings(as.integer(df[[key_x]]))
-        ky <- suppressWarnings(as.integer(dat[[key_y]]))
-
-        ok_y <- is.finite(ky)
-        dat_sub <- dat[ok_y, , drop = FALSE]
-        ky_sub  <- ky[ok_y]
-        # In case of duplicates in partner, keep first per generation
-        first_idx <- !duplicated(ky_sub)
-        ky_sub <- ky_sub[first_idx]
-        psis_lookup <- suppressWarnings(as.numeric(dat_sub$psis_mean[first_idx]))
-
-        m <- match(kx, ky_sub)
-        psis_vec <- psis_lookup[m]
-      }
-    } else {
-      warning("Data partner not found for genotype file: ", file,
-              " -> expected: ", data_file)
-    }
-
-    # Attach the psis_mean column (overwrites if already present)
-    df$psis_mean <- psis_vec
-
     # Attach metadata columns
     df$n <- meta$n
-    df$spsi  <- meta$psi
+    df$psi  <- meta$psi
     df$shift_size <- meta$shift_size
     df$reg        <- meta$reg
     df$rep        <- meta$rep
@@ -399,12 +311,14 @@ phenotype_df <- do.call(rbind, dfs)
 ```{r}
 # pheno_df <- phenotype_df[phenotype_df$generation >= 9999 & phenotype_df$generation <= 10100, ]
 # print(max(phenotype_df$psis_mean))
-colnames(phenotype_df)
+# colnames(phenotype_df)
 
+names(phenotype_df)[names(phenotype_df) == "spsi"] <- "psi"
+unique(phenotype_df$psi)
 ```
 
 ```{r}
-saveRDS(phenotype_df, file = "../r_data/dsicrete_evolve_sociality/phenotypes.rds")
+saveRDS(phenotype_df, file = "../r_data/fluc_env_cpsi/phenotypes.rds")
 ```
 
 ```{r}
@@ -520,7 +434,7 @@ dfs <- lapply(folders, function(folder) {
         df$reg        <- meta$reg
         df$rep        <- meta$rep
         df$file_id    <- meta$file_id
-        df$spsi    <- meta$psi
+        df$psi    <- meta$psi
         df
     }))
     psis_df <- psis_df[ , sort(names(psis_df))]
@@ -672,7 +586,7 @@ dfs <- lapply(folders, function(folder) {
         df$reg        <- meta$reg
         df$rep        <- meta$rep
         df$file_id    <- meta$file_id
-        df$spsi    <- meta$psi
+        df$psi    <- meta$psi
         df
     }))
     f_df <- f_df[ , sort(names(f_df))]

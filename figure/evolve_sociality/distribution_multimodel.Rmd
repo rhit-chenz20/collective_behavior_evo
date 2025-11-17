@@ -9,136 +9,158 @@ output: pdf_document
 ```{r setup, include=FALSE}
 wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
 setwd(wd_path)
-base_plot_folder <- "../plots/evolve_sociality"
+base_plot_folder <- "../plots/discrete_sociality"
 hcl_color_palette <- "Dark 2" # color pattern for lines 
 ```
 
 # load genotype data
 ```{r}
-geno_df <- readRDS("genotype_data.rds")
+genotype_df <- readRDS("../r_data/dsicrete_evolve_sociality/genotypes.rds")
 ```
 
 ```{r}
-pheno_df <- readRDS("phenotype_data.rds")
+phenotype_df <- readRDS("../r_data/dsicrete_evolve_sociality/phenotypes.rds")
 ```
 
+```{r}
+psis_df <- readRDS("../r_data/dsicrete_evolve_sociality/psis.rds")
+```
+
+```{r}
+fitness_df <- readRDS("../r_data/dsicrete_evolve_sociality/fitnesses.rds")
+```
+
+```{r}
+# regs <- c("fit", "ext", "ave", "inv")
+# regs <- c("inv")
+regs <- c("fit", "ext", "ave")
+n <- 20
+shift_size <- 120
+
+sub_df <- phenotype_df
+data_label <- "Phenotype"
+labels <- list(title = paste("Averaged", data_label, "Distribution"),
+                    x = paste(data_label, "value"), y = "Proportion")
+
+bin_breaks <- seq(60, 140, by = 1)
+ylim <- c(0, 0.1)
+
+gen <- 10100
+plot_rep <- FALSE
+
+plot_dist()
+```
+
+```{r}
+# regs <- c("fit", "ext", "ave", "inv")
+regs <- c("inv")
+# regs <- c("fit", "ext", "ave")
+n <- 2
+shift_size <- 120
+
+sub_df <- genotype_df
+data_label <- "Genotype"
+labels <- list(title = paste("Averaged", data_label, "Distribution"),
+                    x = paste(data_label, "value"), y = "Proportion")
+
+bin_breaks <- seq(50, 150, by = 1)
+ylim <- c(0, 0.1)
+
+gen <- 10100
+plot_rep <- FALSE
+
+plot_dist()
+```
+
+```{r}
+regs <- c("fit", "ext", "ave", "inv")
+# regs <- c("inv")
+# regs <- c("fit", "ext", "ave")
+n <- 20
+shift_size <- 120
+
+sub_df <- fitness_df
+data_label <- "Fitness"
+labels <- list(title = paste("Averaged", data_label, "Distribution"),
+                    x = paste(data_label, "value"), y = "Proportion")
+
+bin_breaks <- seq(0.005, 0.01, by = 0.0001)
+ylim <- c(0, 0.5)
+
+gen <- 10100
+plot_rep <- FALSE
+
+plot_dist()
+```
+
+```{r}
+# regs <- c("fit", "ext", "ave", "inv")
+regs <- c("inv")
+# regs <- c("fit", "ext", "ave")
+n <- 8
+shift_size <- 120
+
+sub_df <- psis_df
+data_label <- "Psi"
+labels <- list(title = paste("Averaged", data_label, "Distribution"),
+                    x = paste(data_label, "value"), y = "Proportion")
+
+bin_breaks <- seq(-0.001, 0.01, by = 0.0001)
+ylim <- c(0, 1)
+
+gen <- 9999
+plot_rep <- TRUE
+
+plot_dist()
+```
 
 # multimodel distribution plot
 ```{r}
-plot_psi <- c(0.0)
-plot_beta <- c(0.0)
-plot_n <- c(20)
-plot_shift_sizes <- c(40, 80, 120)
-regimes <- c("ave", "ext", "fit", "inv")
-num_bins <- 100
-gen_seq = seq(10000, 10060, by = 20)
-include_pre_selection <- FALSE
+plot_dist <- function(){
+    out_dir  <- file.path(base_plot_folder, sprintf("%s_distribution", data_label))
+    if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
-min_bin <- -as.integer(num_bins/2)
-max_bin <- as.integer(num_bins/2)
-bin_breaks <- seq(min_bin, max_bin, length.out = num_bins + 1)
+    for (r in regs){
+        out_dir  <- file.path(base_plot_folder, sprintf("%s_distribution/reg_%s", data_label, r))
+        if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
-# Derive a constant bin width from your reference breaks
-bin_width <- (max(bin_breaks) - min(bin_breaks)) / num_bins
-half_span <- (num_bins * bin_width) / 2
-geno_df <- genotype_df[genotype_df$psis_mean > 0, ]
-# geno_df <- genotype_df
+        data_filter <- list(list(reg=r, n=n, shift_size=shift_size, spsi=0.0),
+                list(reg=r, n=n, shift_size=shift_size, spsi=0.1),
+                list(reg=r, n=n, shift_size=shift_size, spsi=0.5))
 
-# folder <- paste0("genotype_model_", paste(regimes, collapse = "_"), "_psi_", paste(plot_psi, collapse="_"), "_beta_", paste(plot_beta, collapse="_"))
-folder <- paste0("genotype_pos_model_", paste(regimes, collapse = "_"), "_psi_", paste(plot_psi, collapse="_"), "_beta_", paste(plot_beta, collapse="_"))
-# folder <- paste0("genotype_neg_model_", paste(regimes, collapse = "_"), "_psi_", paste(plot_psi, collapse="_"), "_beta_", paste(plot_beta, collapse="_"))
+        legend_label <- c(expression(psi==0.0), expression(psi==0.1), expression(psi==0.5))
+        cols <- hcl.colors(length(data_filter), palette = hcl_color_palette)
+        out_file <- file.path(out_dir, sprintf("dist_lines_gen_%s_reg_%s_n_%d_shift_%d.png", gen, r,n,shift_size))
+        png(filename = out_file, width = 1800, height = 1400, res = 200)  # ~6x4.7" at 300 dpi
 
-# ---- Run ----
-plot_distribution_multi_model(
-    geno_df,
-    # out_subfolder = paste0("genotype_overtime_", paste0(c(min(gen_seq), max(gen_seq)), collapse = ":")),
-    out_subfolder = folder,
-    gen_seq = gen_seq,
-    num_bins = num_bins,
-    bin_width = bin_width,
-    half_span = half_span,
-    regimes = regimes,
-    include_pre_selection = include_pre_selection,
-    custom_vals = NULL,
-    value_label = "Genotype"
-)
+        for (i in 1:length(data_filter)){
+            f <- data_filter[[i]]
+            c <- cols[i]
+            overlay <- (i>1)
+
+            res <- plot_rep_binned_mean_line(
+                df = sub_df,
+                filter = f,
+                generation = gen,
+                breaks = bin_breaks,
+                labels = labels,
+                ylim = ylim,
+                add = overlay,
+                col = c, lwd = 2,
+                plot_rep = plot_rep
+            )
+        }
+
+        legend("topright", bty = "n",
+            legend = legend_label,
+            col = cols, lwd = 2)
+
+        dev.off()
+    }
+}
 ```
 
 ```{r}
-plot_psi <- c(0.0)
-plot_beta <- c(0.0)
-# plot_n <- c(2, 8, 20, 50)
-# plot_shift_sizes <- c(40, 80, 120, 300)
-plot_n <- c(50)
-plot_shift_sizes <- c(40, 80, 120, 300)
-regimes <- c("ave", "ext", "fit")
-num_bins <- 100
-gen_seq = seq(10000, 10060, by = 20)
-include_pre_selection <- TRUE
-
-min_bin <- -as.integer(num_bins/2)
-max_bin <- as.integer(num_bins/2)
-bin_breaks <- seq(min_bin, max_bin, length.out = num_bins + 1)
-
-# Derive a constant bin width from your reference breaks
-bin_width <- (max(bin_breaks) - min(bin_breaks)) / num_bins
-half_span <- (num_bins * bin_width) / 2
-
-pheno_df <- phenotype_df[genotype_df$psis_mean > 0, ]
-folder <- paste0("phenotype_pos_model_", paste(regimes, collapse = "_"), "_psi_", paste(plot_psi, collapse="_"), "_beta_", paste(plot_beta, collapse="_"))
-
-
-# ---- Run ----
-plot_distribution_multi_model(
-    pheno_df,
-    # out_subfolder = paste0("genotype_overtime_", paste0(c(min(gen_seq), max(gen_seq)), collapse = ":")),
-    out_subfolder = folder,
-    gen_seq = gen_seq,
-    num_bins = num_bins,
-    bin_width = bin_width,
-    half_span = half_span,
-    regimes = regimes,
-    include_pre_selection = include_pre_selection,
-    custom_vals = NULL,
-    value_label = "phenotype"
-)
-
-
-pheno_df <- phenotype_df
-folder <- paste0("phenotype_model_", paste(regimes, collapse = "_"), "_psi_", paste(plot_psi, collapse="_"), "_beta_", paste(plot_beta, collapse="_"))
-
-
-# ---- Run ----
-plot_distribution_multi_model(
-    pheno_df,
-    # out_subfolder = paste0("genotype_overtime_", paste0(c(min(gen_seq), max(gen_seq)), collapse = ":")),
-    out_subfolder = folder,
-    gen_seq = gen_seq,
-    num_bins = num_bins,
-    bin_width = bin_width,
-    half_span = half_span,
-    regimes = regimes,
-    include_pre_selection = include_pre_selection,
-    custom_vals = NULL,
-    value_label = "phenotype"
-)
-
-pheno_df <- phenotype_df[genotype_df$psis_mean < 0, ]
-folder <- paste0("phenotype_neg_model_", paste(regimes, collapse = "_"), "_psi_", paste(plot_psi, collapse="_"), "_beta_", paste(plot_beta, collapse="_"))
-
-# ---- Run ----
-plot_distribution_multi_model(
-    pheno_df,
-    # out_subfolder = paste0("genotype_overtime_", paste0(c(min(gen_seq), max(gen_seq)), collapse = ":")),
-    out_subfolder = folder,
-    gen_seq = gen_seq,
-    num_bins = num_bins,
-    bin_width = bin_width,
-    half_span = half_span,
-    regimes = regimes,
-    include_pre_selection = include_pre_selection,
-    custom_vals = NULL,
-    value_label = "phenotype"
-)
+unique(fitness_df$n)
 ```
 

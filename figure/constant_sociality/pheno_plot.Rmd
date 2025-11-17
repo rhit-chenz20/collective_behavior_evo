@@ -9,7 +9,7 @@ output: pdf_document
 ```{r setup, include=FALSE}
 wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
 setwd(wd_path)
-base_plot_folder <- "plots"
+base_plot_folder <- "../plots/11_11"
 hcl_color_palette <- "Dark 2" # color pattern for lines 
 regimes <- c("fit", "ext", "ave")  # only fittest model has phenotype
 num_bins <- 120 # number of bins for histogram (bin range from -num_bins/2 to num_bins/2)
@@ -19,7 +19,11 @@ single_panel <- FALSE # single plot with multiple psi values, only works for sin
 
 # load phenotype data
 ```{r}
-pheno_df <- readRDS("phenotype_data.rds")
+pheno_df <- readRDS("../r_data/phenotype_data.rds")
+```
+
+```{r}
+pheno_df <- phenotype_df
 ```
 
 # parameter space for data
@@ -122,4 +126,43 @@ plot_phenotype_multi(
   regimes = regimes,
   single_panel = single_panel
 )
+```
+
+
+
+
+```{r}
+breaks_vec <- seq(-40, 80, by = 1)   # values outside [-5,5] are ignored
+reg = "ave"
+n=8
+shift_size = 20
+gen=9999
+filt_A <- list(reg=reg, n=n, psi=0, shift_size=shift_size)
+filt_B <- list(reg=reg, n=n, psi=0.5, shift_size=shift_size)
+filt_C <- list(reg=reg, n=n, psi=0.9, shift_size=shift_size)
+
+
+png(file.path(base_plot_folder, paste0("pheno_", gen, "/", reg, "_", shift_size,"_", n, ".png")), width=2200, height=1500, res=150)
+par(cex.axis = 1.6, cex.lab = 2.0, cex.main = 1.0, mar = c(4.5, 6, 3, 1) + 0.1)
+                
+plot_hist_lines_multi(
+  df = pheno_df,
+  filters = list(filt_A, filt_B, filt_C),
+  generation = gen,
+  breaks = breaks_vec,
+  labels = list(title = paste0("pheno_", gen, "/", reg, "_", shift_size,"_", n, "opt = ", shift_size),
+                x = "Phenotype value", y = "Proportion"),
+  show_rep = FALSE,
+  ymax = 0.1,
+  lwd = 4,
+  cols = c(hcl.colors(3, "Dark 2", rev = FALSE)[1], hcl.colors(3, "Dark 2", rev = FALSE)[2], hcl.colors(3, "Dark 2", rev = FALSE)[3])
+)
+leg_expr <- as.expression(lapply(c(filt_A$psi, filt_B$psi, filt_C$psi), function(v) bquote(psi == .(v))))
+                
+legend("topright", bty = "n",
+        legend = leg_expr,
+       col = c(hcl.colors(3, "Dark 2", rev = FALSE)[1],hcl.colors(3, "Dark 2", rev = FALSE)[2], hcl.colors(3, "Dark 2", rev = FALSE)[3]),
+        lwd = 4, cex=2.2)
+dev.off()
+
 ```

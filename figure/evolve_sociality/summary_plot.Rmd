@@ -9,21 +9,19 @@ output: pdf_document
 ```{r setup, include=FALSE}
 wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
 setwd(wd_path)
-base_plot_folder <- "../plots/constant_sociality"
-plot_psi <- c(0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0) # all psi values to plot for fittest model
-plot_beta <- c(0.0, 0.01, 0.03, 0.05, 0.07, 0.3, 0.5, 0.7, 0.9, 1.0) # all beta values to plot for inverse-variance model
+base_plot_folder <- "../plots/11_11"
 plot_n <- c(2, 8, 20, 50) # group sizes to plot for both models
 plot_shift_sizes <- c(40,80,120) # shift sizes to plot for both models
 regimes <- c("inv", "fit", "ext", "ave")  # "inv" = inverse variance model, "fit" = fittest individual model
 plot_reps <- TRUE  # whether to plot individual replicate series 
 plot_exp_fit <- TRUE  # whether to fit and plot exponential decay curve to evolutionary trajectory plot
 hcl_color_palette <- "Dark 2" # color pattern for lines 
-tick_seq <- 9999:10100 # ticks to plot
+tick_seq <- 9999:10300 # ticks to plot
 ```
 
 # load evolutionary trajectory data
 ```{r}
-data_df <- readRDS("../r_data/data_summary.rds")
+data_df <- readRDS("../r_data/dsicrete_evolve_sociality/summary.rds")
 # data_df <- readRDS("var_ext.rds")
 ```
 
@@ -31,18 +29,25 @@ data_df <- readRDS("../r_data/data_summary.rds")
 ```{r}
 # plot_psi <- c(0.0, 0.5)
 plot_psi <- c(0.0, 0.5, 0.9)
-plot_beta <- c(0.0)
 plot_n <- c(8)
-plot_shift_sizes <- c(80)
-regimes <- regimes <- c("fit", "ext", "ave")
+plot_shift_sizes <- c(120)
+regimes <- regimes <- c("inv")
 plot_exp_fit <- FALSE
-plot_reps <- FALSE
+plot_reps <- TRUE
 tick_seq <- 9999:10100 # ticks to plot
 plot_ticks <- tick_seq - 9999
+col_to_plot = "seg_site"
+color <-  c(hcl.colors(3, hcl_color_palette)[2])
 plot_summary_multi_by_beta_ticks(data_df,
-                                out_subfolder = "presentation",
-                                regimes = regimes)
+                                out_subfolder = "",
+                                regimes = regimes,
+                                column_to_plot = col_to_plot,
+                                col = color)
 ```
+```{r}
+unique(data_df[data_df$reg == "inv" & data_df$beta == 0.5, ]$rep)
+```
+
 
 # PARAMETER: if you want to plot for INVERSE_VARIANCE model, change parameters here
 ```{r}
@@ -60,9 +65,21 @@ regimes <- c("inv")
 plot_beta <- c(0.0, 0.5, 0.9)
 tick_seq <- 10100:10300 # ticks to plot
 plot_exp_fit <- FALSE
-plot_reps <- TRUE
+plot_reps <- FALSE
 plot_summary_multi_by_beta_ticks(data_ext_df,
                                 out_subfolder = "presentation",
                                 regimes = regimes)
 ```
 
+```{r}
+colnames(data_df)
+```
+
+```{r}
+# Example:
+plot_psimean_faceted_by_spsi(data_df, base_plot_folder,
+                             regs = c("fit","ave","inv","ext"),
+                             ns = c(2, 8, 20, 50),
+                             shift_sizes = c(40, 80, 120, 300))
+
+```

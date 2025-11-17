@@ -9,9 +9,8 @@ output: pdf_document
 ```{r setup, include=FALSE}
 wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
 setwd(wd_path)
-base_plot_folder <- "plots/evolve_sociality"
-plot_psi <- c(0.0) # all psi values to plot for fittest model
-plot_beta <- c(0.0) # all beta values to plot for inverse-variance model
+base_plot_folder <- "../plots/discrete_sociality"
+plot_psi <- c(0.0, 0.1, 0.5) # all psi values to plot for fittest model
 plot_n <- c(2, 8, 20, 50) # group sizes to plot for both models
 plot_shift_sizes <- c(40,80,120, 300) # shift sizes to plot for both models
 regimes <- c("inv", "fit", "ext", "ave")  # "inv" = inverse variance model, "fit" = fittest individual model
@@ -23,19 +22,20 @@ tick_seq <- 9999:10100 # ticks to plot
 
 # load evolutionary trajectory data
 ```{r}
-data_df <- readRDS("r_data/evolve_sociality_summary.rds")
+data_df <- readRDS("../r_data/dsicrete_evolve_sociality/summary.rds")
 ```
 
 # PARAMETER: if you want to plot for FITTEST model, change parameters here
 ```{r}
+
 plot_n <- c(2, 8, 20, 50)
 plot_shift_sizes <- c(40,80,120, 300)
 regimes <- regimes <- c("fit", "ext", "ave")
 plot_exp_fit <- FALSE
 plot_reps <- TRUE
 tick_seq <- 9999:10100 # ticks to plot
-sub_df <- data_df[data_df$psis_mean > 0, ]
-plot_summary_multi_by_psi_ticks(sub_df,
+# sub_df <- data_df[data_df$psis_mean > 0, ]
+plot_summary_multi_by_psi_ticks(summary_stat_df,
                                 out_subfolder = "trajectory_positive_psi_by_n",
                                 regimes = regimes)
 ```

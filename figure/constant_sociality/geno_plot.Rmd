@@ -9,15 +9,19 @@ output: pdf_document
 ```{r setup, include=FALSE}
 wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
 setwd(wd_path)
-base_plot_folder <- "../plots/evolve_sociality"
+base_plot_folder <- "../plots/presentation"
 hcl_color_palette <- "Dark 2" # color pattern for lines 
 ```
 
 # load genotype data
 ```{r}
-geno_df <- readRDS("genotype_data.rds")
+geno_df <- readRDS("../r_data/genotype_data.rds")
 ```
 
+```{r}
+geno_df <- genotype_df
+unique(geno_df$psi)
+```
 # parameter space for data
 ## all psi values to plot for fittest model
 psi <- c(0.0, 0.1, 0.3, 0.5, 0.7, 0.9, 1.0) 
@@ -88,3 +92,147 @@ plot_genotype_multi_by_beta(
     include_pre_selection = include_pre_selection
 )
 ```
+
+```{r}
+# breaks_vec <- seq(-40, 80, by = 1)   # values outside [-5,5] are ignored
+# reg = "ave"
+# n=50
+# shift_size = 60
+# gen=10000
+
+for (gen in c(9999, 10000)){
+  for (n in c(2,8,20,50)){
+    for (shift_size in c(20, 40, 60)){
+      for (reg in c("inv", "fit", "ext", "ave")){
+        for (type in c("genotype", "phenotype")){
+          if (reg == "inv" & type == "phenotype"){
+            next
+          }
+          cat("Plotting:", type, " generation:", gen, " n:", n, " shift_size:", shift_size, " reg:", reg, "\n")
+          
+          breaks_vec <- seq(-40, 80, by = 1)  
+          if (type == "genotype"){
+            df_to_use <- geno_df
+          } else if (type == "phenotype"){
+            df_to_use <- pheno_df
+          }
+
+          if(gen == 10000){
+            title <- paste0(type, "_", gen, "/", reg, "_", shift_size,"_", n, "opt = ", shift_size)
+          }else{
+            title <- paste0(type, "_", gen, "/", reg, "_", shift_size,"_", n, "opt = ", 0)
+          }
+
+          filt_A <- list(reg=reg, n=n, psi=0, shift_size=shift_size)
+          filt_B <- list(reg=reg, n=n, psi=0.5, shift_size=shift_size)
+          filt_C <- list(reg=reg, n=n, psi=0.9, shift_size=shift_size)
+
+          png(file.path(base_plot_folder, paste0(type, "_", gen, "/", reg, "_", shift_size,"_", n, ".png")), width=2200, height=1500, res=150)
+          par(cex.axis = 1.6, cex.lab = 2.0, cex.main = 1.0, mar = c(4.5, 6, 3, 1) + 0.1)
+          plot_hist_lines_multi(
+            df = df_to_use,
+            filters = list(filt_A, filt_B, filt_C),
+            generation = gen,
+            breaks = breaks_vec,
+            labels = list(title = title,
+                          x = ifelse(type == "genotype", "Genotype value", "Phenotype value"),
+                          y = "Proportion"),
+            show_rep = FALSE,
+            ymax = if (reg == "inv" | type == "phenotype") 0.1 else 0.05,
+            cols = c(hcl.colors(3, hcl_color_palette, rev = TRUE)[1],hcl.colors(3, hcl_color_palette, rev = TRUE)[2], hcl.colors(3, hcl_color_palette, rev = TRUE)[3])
+          )
+
+          leg_expr <- as.expression(lapply(c(filt_A$psi, filt_B$psi, filt_C$psi), function(v) bquote(psi == .(v))))
+                
+          legend("topright", bty = "n",
+                  legend = leg_expr,
+                col = c(hcl.colors(3, hcl_color_palette, rev = TRUE)[1],hcl.colors(3, hcl_color_palette, rev = TRUE)[2], hcl.colors(3, hcl_color_palette, rev = TRUE)[3]), lwd = 2, cex=2.2)
+          dev.off()
+        }
+      }
+    }
+  }
+}
+```
+
+```{r}
+unique(geno_df[geno_df$reg == "inv", ]$generation)
+# colnames(geno_df)
+```
+
+## plot multi generation 
+```{r}
+breaks_vec <- seq(-40, 150, by = 1)                 # outside [-5,5] ignored
+filt <- list(reg="inv", n=8, shift_size=120, beta=0.0)
+gens <- c(9999, 10010, 10020, 10030, 10050, 10070, 10100)
+
+col = grDevices::hcl.colors(3, "Dark 2", rev = TRUE)[3]
+
+out_dir  <- file.path(base_plot_folder, "geno_multi")
+if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+out_file <- file.path(out_dir, paste0( reg, "_geno.png"))
+
+png(out_file, width=2200, height=1500, res=150)
+par(cex.axis = 1.6, cex.lab = 2.0, cex.main = 1.0, mar = c(4.5, 6, 3, 1) + 0.1)
+plot_multigen_binned_single_filter(
+  df = geno_df,
+  filter = filt,
+  generations = gens,
+  breaks = breaks_vec,
+  title = bquote("Binned distributions (" * psi==.(filt$beta) * ")"),
+  xlab  = "Genotype value",
+  ylab  = "Proportion",
+  col   = col,
+  show_rep = FALSE,
+  legend_pos = "topright",
+  legend_as_offset = TRUE,
+  ymax = 0.2
+)
+leg_expr <- as.expression( bquote(psi == .(filt$beta)))
+                
+# legend("topright", bty = "n",
+#         legend = leg_expr,
+#        col = grDevices::hcl.colors(2, hcl_color_palette, rev = TRUE), lwd = 2, cex=2.2)
+dev.off()
+cat("Saved:", out_file, "\n")
+```
+
+
+breaks_vec <- seq(-5, 5, by = 0.1)                 # outside [-5,5] ignored
+filt <- list(reg="inv", n=8, shift_size=120, beta=0.0)
+gens <- c(9999, 10050, 10100)
+
+out_dir  <- file.path(base_plot_folder, "geno_multi")
+if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+out_file <- file.path(out_dir, paste0("geno_multi/", reg, "_geno.png"))
+
+png(out_file, width=2200, height=1500, res=150)
+par(cex.axis = 1.6, cex.lab = 2.0, cex.main = 1.0, mar = c(4.5, 6, 3, 1) + 0.1)
+plot_multigen_binned_single_filter(
+  df = geno_df,
+  filter = filt,
+  generations = gens,
+  breaks = breaks_vec,
+  title = bquote("Binned distributions (" * psi==.(filt$spsi) * ")"),
+  xlab  = "Genotype value",
+  ylab  = "Proportion",
+  col   = "steelblue",
+  show_rep = TRUE
+)
+leg_expr <- as.expression( bquote(psi == .(filt$beta)))
+                
+legend("topright", bty = "n",
+        legend = leg_expr,
+       col = grDevices::hcl.colors(2, hcl_color_palette, rev = TRUE), lwd = 2, cex=2.2)
+dev.off()
+cat("Saved:", out_file, "\n")
+
+
+
+
+
+
+
+
+
+

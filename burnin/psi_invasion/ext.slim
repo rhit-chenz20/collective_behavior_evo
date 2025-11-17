@@ -1,0 +1,431 @@
+initialize() {
+	initializeSLiMOptions(keepPedigrees=T);
+
+    // Constant parameters
+	defineConstant("maxL", 10000);
+	defineConstant("U", 0.03);
+	defineConstant("N", 1000);
+	defineConstant("Vs", 2*N);
+    defineGlobal("L", 500);
+
+    // variable parameters
+	defineConstant("shift_time", 10*N);
+	defineConstant("end_time", shift_time+300);
+    defineGlobal("L_psi", 100);
+    // defineConstant("start_psi", 0.5);
+	
+    // book keeping
+	defineGlobal("Va0_sqrt", -1);	
+    defineGlobal("mutToAdd_a", 0);
+    defineGlobal("optimum", 0.0);
+    if (!exists("seed")){
+        defineConstant("seed", getSeed());
+    }
+
+    // output data
+	defineGlobal("phenotypeLines", NULL);
+	defineGlobal("genotypeLines", NULL);
+	defineGlobal("ind_lines", Dictionary());
+	defineGlobal("mut_lines", Dictionary());
+	defineGlobal("varsLines", NULL);
+	defineGlobal("group_vars", float(N));
+	defineGlobal("group_psis", float(N));
+    defineGlobal("abs_fit", float(N));
+	defineGlobal("psi_lines", NULL);
+	defineGlobal("gpsiLines", NULL);
+    defineGlobal("fitnessLines", NULL);
+
+	defineGlobal("mu_psi", 0);
+	defineGlobal("psi_source", "fixed"); // fixed: predefined psi; mut: psi calculated from genome
+
+    // m1: genotype
+	script_a = "a=sqrt(rexp(1, mu=1)); if (runif(1) < 0.5) -a; else a;";
+	initializeMutationType("m1", 0.5, "s", script_a);
+	m1.color = "red";
+	
+    // m2: psi
+	script_psi = "if (runif(1) < 0.5) 0; else 1;";
+	initializeMutationType("m2", 0.5, "s", script_psi);
+	m2.color = "yellow";
+	m2.mutationStackPolicy = "l";
+	m2.convertToSubstitution = F;
+	
+	initializeGenomicElementType("g1", m1, 1.0);
+	initializeGenomicElementType("g2", m2, 1.0);
+	
+	initializeGenomicElement(g1, L_psi, L_psi+maxL-1);
+	initializeGenomicElement(g2, 0, L_psi-1);
+
+	initializeMutationRate(c(mu_psi, U/L, 0), c(L_psi - 1, L + L_psi - 1, L_psi + maxL - 1));
+	initializeRecombinationRate(c(0.5, 0), c(L + L_psi - 1, L_psi + maxL - 1));
+}
+
+1 late() {
+	if(!exists("burnin_fn")){ 
+		print("no burnin file found, simulate from the start...");
+		sim.addSubpop("p1", N);
+	} else{
+		print("reading burnin from "+burnin_fn);
+		sim.readFromPopulationFile(burnin_fn);
+	}
+}
+
+late(){
+	if(community.tick % 100 == 0){
+		catn("at tick "+community.tick);
+	}
+}
+
+mutationEffect(m1) { return 1.0; }
+mutationEffect(m2) { return 1.0; }
+
+mutation(m1) {
+	// mutation exist at mut.position, reject the new mutation
+	if (any(p1.haplosomes.containsMarkerMutation(m1, mut.position))){
+		if (L<(maxL-1)){
+			defineGlobal("mutToAdd_a", mutToAdd_a+1);
+		}else{
+			print("max L has reached");
+			sim.simulationFinished();
+		}
+		return F;
+	}
+	return T;
+}
+
+shift_time late(){
+	print("shift time; no shift in optimum, shift psi_source from fixed to mut");
+    a=p1.individuals.sumOfMutationsOfType(m1)+2*sum(sim.substitutions[sim.substitutions.mutationType == m1].selectionCoeff);
+	//defineGlobal("optimum", optimum+shift_size);
+	//print("new opt is " + optimum);
+	defineGlobal("psi_source", "mut");
+	lucky_ind = sample(p1.haplosomes, 1);
+	isOne = asLogical(rbinom(L_psi, 1, start_psi));
+
+	for (i in 0:(L_psi-1)){
+		if (isOne[i]){
+			lucky_ind.addNewMutation(m2, 1.0, i);
+		}else{
+			lucky_ind.addNewMutation(m2, 0.0, i);
+		}
+	}
+	
+	defineGlobal("Va0_sqrt", sqrt(var(a)));
+}
+
+late() {
+	if(mutToAdd_a != 0){
+		mutations = unique(p1.haplosomes.mutations[p1.haplosomes.mutations.mutationType==m1]);
+		mutatedPos_a = mutations.position;
+		
+		if (L + mutToAdd_a <= maxL){
+			// within maxL
+			if (length(mutatedPos_a) + mutToAdd_a> L){
+				//extend the region
+				if (length(mutatedPos_a) + mutToAdd_a> L) defineGlobal("L", mutToAdd_a + length(mutatedPos_a));
+				
+				p1.haplosomes.chromosome.setMutationRate(c(mu_psi, U/L, 0), c(L_psi - 1, L + L_psi - 1, L_psi + maxL - 1));
+				p1.haplosomes.chromosome.setRecombinationRate(c(0.5, 0), c(L + L_psi - 1, L_psi + maxL - 1));
+			}
+			
+			if (mutToAdd_a != 0){
+				// add m1
+				availableSites_a = setDifference(L_psi:(L+L_psi-1), mutatedPos_a);
+				haplosomes = sample(p1.haplosomes, mutToAdd_a, replace=T);
+				for (i in 0:(length(availableSites_a)-1)){
+					if (i== mutToAdd_a) break;
+					haplosomes[i].addNewDrawnMutation(m1, availableSites_a[i]);
+				}
+			}
+		}else{
+			print(community.tick+": max L has reached with current L="+L+" and "+(mutToAdd_a)+" new mut");
+			sim.simulationFinished();
+		}
+		defineGlobal("mutToAdd_a", 0);
+	}
+	
+	calculate_phenotype(p1);
+}
+
+shift_time-29 late(){
+	sim.outputFull(filePath=pop_output, binary=T, pedigreeIDs=T, objectTags=T, substitutions=T); 
+}
+
+2: early(){
+	defineGlobal("last_gen_z", p1.individuals.tagF);
+	defineGlobal("last_gen_g", p1.individuals.sumOfMutationsOfType(m1)+2*sum(sim.substitutions[sim.substitutions.mutationType == m1].selectionCoeff));
+}
+
+1 late(){
+	print("logging at cycle "+sim.cycle);
+	// log results
+	log = community.createLogFile(fre_output, sep="\t");
+	log.addTick();
+
+	log.addCustomColumn("N", "N;");
+    log.addCustomColumn("Vs", "Vs;");
+    log.addCustomColumn("Va0_sqrt", "Va0_sqrt;");
+    log.addCustomColumn("start_psi", "start_psi;");
+
+	log.addMeanSDColumns("z", "p1.individuals.tagF;");
+    log.addMeanSDColumns("a", "p1.individuals.sumOfMutationsOfType(m1) + (2 * sum(sim.substitutions[sim.substitutions.mutationType == m1].selectionCoeff));");
+    log.addMeanSDColumns("fitness", "abs_fit;");   
+    log.addMeanSDColumns("psi", "p1.individuals.sumOfMutationsOfType(m2) / (2*L_psi);");
+    
+    log.addMeanSDColumns("group_vars", "group_vars;");
+	log.addMeanSDColumns("group_psis", "group_psis;");
+
+	log.addCustomColumn("seg_site_a", "length(sim.mutations[sim.mutations.mutationType == m1]);");
+	log.addCustomColumn("z_opt", "optimum-mean(p1.individuals.tagF);");
+    log.addCustomColumn("optimum", "optimum;");
+
+	log.addCustomColumn("dz1", " mean(p1.individuals.tagF) - mean(last_gen_z);");
+	log.addCustomColumn("par_gen_meanz", "mean(last_gen_z);");
+	log.addCustomColumn("par_mean", "mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]);");
+	log.addCustomColumn("h2", "var(last_gen_g)/var(last_gen_z);");
+	log.addCustomColumn("s", "parent_mean=mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]); parent_mean-mean(last_gen_z);");
+	log.addCustomColumn("dz1_pred", "parent_mean=mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]); var(last_gen_g)/var(last_gen_z)*(parent_mean-mean(last_gen_z));");
+	
+    log.addCustomColumn("rep", "ID;");
+	log.addCustomColumn("psi_source", "psi_source;");
+	log.addCustomColumn("seed", "seed;");
+
+	defineGlobal("log", log);
+}
+
+c(2, seq(25, shift_time - 50, by=25), seq(shift_time-30, end_time, by=1)) late(){
+	log.logRow();
+}
+
+c((shift_time-5):(shift_time+9), seq(shift_time+10, end_time, by=5)) late(){
+	print("recoding at cycle "+sim.cycle);
+	record_phenotype(p1);
+	record_genotype(p1);
+	record_vars(p1);
+	record_psis(p1);
+	record_group_psis(p1);
+    record_fitness(p1);
+}
+
+c((shift_time-2):(shift_time+4), seq(shift_time+5, end_time, by=10))  late(){
+	print("recoding at cycle "+sim.cycle);
+	record_effectsize(p1);
+}
+
+end_time late() 
+{
+	if (record_phenotype(p1, write = T)){
+		print("written phenotype to "+phenotype_fn);
+	}
+	if (record_genotype(p1, write = T)){
+		print("written genotype to "+genotype_fn);
+	}
+	if (record_effectsize(p1, write = T)){
+		print("written effectsize to file "+ind_fn);
+	}
+	if (record_vars(p1, write = T)){
+		print("written vars to file "+ind_fn);
+	}
+	if (record_psis(p1, write = T)){
+		print("written psis to file "+psi_fn);
+	}
+	if (record_group_psis(p1, write = T)){
+		print("written group psis to file "+gpsi_fn);
+	}
+    if (record_fitness(p1, write = T)){
+		print("written fitness to file "+fitness_fn);
+	}
+}
+
+function (logical) record_phenotype(o<Subpopulation>$ p, [logical$ write = F]){
+	if(!exists("phenotype_fn")){ 
+		defineConstant("phenotype_fn", "phenotypes_"+ID+".tsv");
+		print("no phenotype_fn supplied. using default filename: " + phenotype_fn);
+	} 
+    line = paste(sim.cycle, p.individuals.tagF, sep = "\t");
+    defineGlobal("phenotypeLines", c(phenotypeLines, line));
+	if (write) {
+    	header = paste(c("generation", p.individuals.index), sep="\t");
+    	return writeFile(phenotype_fn, header + "\n"+ paste(phenotypeLines, sep="\n"), append=F);
+	}
+
+    return T;
+}
+
+function (logical) record_genotype(o<Subpopulation>$ p, [logical$ write = F]){
+	if(!exists("genotype_fn")){ 
+		defineConstant("genotype_fn", "rec_genotype_"+ID+".tsv");
+		print("no genotype_fn supplied. using default filename: " + genotype_fn);
+	} 
+
+    line = paste(sim.cycle, p.individuals.sumOfMutationsOfType(m1)+2*sum(sim.substitutions[sim.substitutions.mutationType == m1].selectionCoeff), sep = "\t");
+    defineGlobal("genotypeLines", c(genotypeLines, line));
+
+	if (write) {
+    	header = paste(c("generation", p.individuals.index), sep="\t");
+    	return writeFile(genotype_fn, header + "\n"+ paste(genotypeLines, sep="\n"), append=F);
+    }
+		
+    return T;
+	
+}
+
+function (logical) record_effectsize(o<Subpopulation>$ p, [logical$ write = F]){
+    // output the mutation carried by each individual
+    indline = "";
+    subsline = NULL;
+
+    muts = NULL;
+    for(m in sim.substitutions[sim.substitutions.mutationType == m1]){
+        sub_eff = paste(m.id, m.selectionCoeff, sep=":");
+        subsline = c(subsline, sub_eff, sub_eff);
+
+        muts = c(muts, paste(m.id, "\t", m.selectionCoeff));
+    }
+
+    for (i in p.individuals){
+        mutline = NULL;
+        for(m in i.mutationsFromHaplosomes(category="all", mutType = m1)){
+            mutline = c(mutline, paste(m.id, m.selectionCoeff, sep=":"));
+        }
+        
+        indline = paste(indline, paste(i.index, mutline, subsline, sep="\t"), sep="\n");
+    }
+    ind_lines.setValue(community.tick, indline);
+    
+    // output all unique mutations in the population
+    for (mut in sim.mutations[sim.mutations.mutationType == m1]){
+        muts = c(muts, paste(mut.id, "\t", mut.selectionCoeff));
+    }
+    
+    mutline = paste(muts, sep="\n");
+    mut_lines.setValue(community.tick, mutline);
+
+    if (write) {
+    	ind_header = "id\tmut";
+        mut_header = "id\tsize";
+		
+        for (g in ind_lines.allKeys){
+            ind_fn_gen = paste0(ind_fn, "_", g, ".tsv");
+            writeFile(ind_fn_gen, ind_header + paste(ind_lines.getValue(g), sep="\n"), append=F);
+            mut_fn_gen = paste0(mut_fn, "_", g, ".tsv");
+            writeFile(mut_fn_gen, mut_header + paste(mut_lines.getValue(g), sep="\n"), append=F);
+        }
+
+        print("wrote indfile to " + ind_fn + " with generation");
+		print("wrote mutfile to " + mut_fn + " with generation");
+	}
+    return T;
+}
+
+function (logical) record_vars(o<Subpopulation>$ p, [logical$ write = F]){
+	if(!exists("vars_fn")){ 
+		defineConstant("vars_fn", "varstype_"+ID+".tsv");
+		print("no vars_fn supplied. using default filename: " + vars_fn);
+	} 
+
+    line = paste(sim.cycle, group_vars, sep = "\t");
+    defineGlobal("varsLines", c(varsLines, line));
+
+	if (write) {
+    	header = paste(c("generation", seq(1, asInteger(N/n))), sep="\t");
+    	return writeFile(vars_fn, header + "\n"+ paste(varsLines, sep="\n"), append=F);
+	}
+
+    return T;
+}
+
+function (logical) record_psis(o<Subpopulation>$ p, [logical$ write = F]){
+	if(!exists("psi_fn")){ 
+		defineConstant("psi_fn", "psis_"+ID+".tsv");
+		print("no psi_fn supplied. using default filename: " + psi_fn);
+	} 
+
+    line = paste(sim.cycle, p.individuals.sumOfMutationsOfType(m2) / (2*L_psi), sep = "\t");
+    defineGlobal("psi_lines", c(psi_lines, line));
+
+    if (write) {
+    	header = paste(c("generation", p.individuals.index), sep="\t");
+    	return writeFile(psi_fn, header + "\n"+ paste(psi_lines, sep="\n"), append=F);
+	}
+
+    return T;
+}
+
+function (logical) record_group_psis(o<Subpopulation>$ p, [logical$ write = F]){
+	if(!exists("gpsi_fn")){ 
+		defineConstant("gpsi_fn", "gpsi_fn_"+ID+".tsv");
+		print("no gpsi_fn supplied. using default filename: " + gpsi_fn);
+	} 
+
+    line = paste(sim.cycle, group_psis, sep = "\t");
+    defineGlobal("gpsiLines", c(gpsiLines, line));
+
+	if (write) {
+    	header = paste(c("generation", seq(1, asInteger(N/n))), sep="\t");
+    	return writeFile(vars_fn, header + "\n"+ paste(gpsiLines, sep="\n"), append=F);
+	}
+	
+    return T;
+}
+
+function (logical) record_fitness(o<Subpopulation>$ p, [logical$ write = F]){
+	if(!exists("fitness_fn")){ 
+		defineConstant("fitness_fn", "fitness_"+ID+".tsv");
+		print("no fitness_fn supplied. using default filename: " + fitness_fn);
+	} 
+
+    line = paste(sim.cycle, abs_fit, sep = "\t");
+    defineGlobal("fitnessLines", c(fitnessLines, line));
+	if (write) {
+    	header = paste(c("generation", p.individuals.index), sep="\t");
+    	return writeFile(fitness_fn, header + "\n"+ paste(fitnessLines, sep="\n"), append=F);
+	}
+
+    return T;
+}
+
+function (void) calculate_phenotype(o<Subpopulation>$ p){
+	// evaluate and save the additive effects of QTLs
+	inds = p.individuals;
+	
+	a = inds.sumOfMutationsOfType(m1) + 2 * sum(sim.substitutions[sim.substitutions.mutationType == m1].selectionCoeff);
+	if (psi_source == "mut"){
+		psis = inds.sumOfMutationsOfType(m2) / (2*L_psi);
+	}else{
+		psis = rep(start_psi, N);
+	}
+	
+	shuffled = sample(inds, N, replace=F);
+	phenotype = float(N);
+	vars = float(N);
+	group_psi_ave = float(N);
+	
+	for (i in seq(0, N-n, by=n)) {
+		group = shuffled[i:(i+n-1)];
+        as = a[group.index];
+
+        // phenotype for extreme model
+        mean_a = mean(as);
+        dist = abs(as-mean_a);
+        extreme_i = whichMax(dist);
+        extreme_a = as[extreme_i];
+        phenotype[group.index] = (1-psis[group.index]) * as + psis[group.index] * extreme_a;
+		
+		vars[group.index] = var(as);
+		group_psi_ave[group.index] = mean(psis[group.index]);
+	}
+	
+	abs_fitness = dnorm(phenotype, optimum, sqrt(Vs));
+    // no fitness adjustment needed
+    adj_fitness = abs_fitness;
+    
+	inds.fitnessScaling = adj_fitness;
+	inds.tagF = phenotype;
+	
+	if(community.tick >= shift_time-30){
+		defineGlobal("group_vars", vars);
+		defineGlobal("group_psis", group_psi_ave);
+        defineGlobal("abs_fit", adj_fitness);
+	}
+}
