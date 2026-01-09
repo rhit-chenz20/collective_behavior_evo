@@ -1,6 +1,6 @@
 #!/bin/bash
 
-dir_name="psi_invasion"
+dir_name="psi_invasion_mendelian"
 
 mkdir -p ../../data/${dir_name}
 mkdir -p ../../data/${dir_name}/phenotype
@@ -41,7 +41,7 @@ for rep in {1..5}; do
                     -d "fitness_fn='../../data/${dir_name}/fitness/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}.tsv'" \
                     ${reg}.slim &> ../../data/${dir_name}/log/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}.txt &
                     ((c++))
-                    if (( c > 9)); 
+                    if (( c > 39)); 
                     then
                         wait
                         c=0

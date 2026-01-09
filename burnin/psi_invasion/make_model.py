@@ -74,7 +74,10 @@ if __name__ == "__main__":
     # ↓↓↓ Fill these blocks with your actual SLiM code (multiline strings OK) ↓↓↓
     # Variant 1
     PHENO_1 = """// phenotype for ave model
-phenotype[group.index] = ((n-1)*(1-psis[group.index])*a[group.index]+psis[group.index]*sum(as)) / (n-1+psis[group.index]);
+first_term = (a[group.index] * (n-1))) / (n-1+psis[group.index]);
+second_term = psis[group.index] / (n-1+psis[group.index]);
+third_term = ((n-1)/n * sum(a[group.index]/(n-1+psis[group.index]))) / (1 - (1/n * sum(psis[group.index]/(n-1+psis[group.index]))));
+phenotype[group.index] = first_term + second_term * third_term;
 """
     FIT_1 = """// no fitness adjustment needed
 adj_fitness = abs_fitness;

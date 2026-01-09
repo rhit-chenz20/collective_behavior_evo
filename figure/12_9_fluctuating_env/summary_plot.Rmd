@@ -1,0 +1,115 @@
+---
+title: "plot evolutionary trajectory for multiple models"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+# parameter for plotting
+```{r setup, include=FALSE}
+wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
+setwd(wd_path)
+base_plot_folder <- "../plots/12_16/fluctuating_env/"
+plot_n <- c(2, 8, 20, 50) # group sizes to plot for both models
+plot_shift_sizes <- c(40,80,120) # shift sizes to plot for both models
+regimes <- c("inv", "fit", "ext", "ave")  # "inv" = inverse variance model, "fit" = fittest individual model
+plot_reps <- TRUE  # whether to plot individual replicate series 
+hcl_color_palette <- "Dark 2" # color pattern for lines 
+tick_seq <- 9970:10300 # ticks to plot
+```
+
+# load evolutionary trajectory data
+```{r}
+data_df <- readRDS("../r_data/fluctuate_env_constant_psi/data_summary.rds")
+```
+
+```{r}
+data_df <- summary_stat_df
+```
+
+```{r}
+reg = "ave"          # choose from "inv", "fit", "ext", "ave"
+n = 50               # choose from 2, 8, 20, 50
+shift_size = 120     # choose from 40, 80, 120
+colname = "dz1"  # column to plot
+plot_folder = paste0(base_plot_folder, colname, "/")
+
+if (!dir.exists(plot_folder)) {
+  dir.create(plot_folder, recursive = TRUE)
+}
+
+for (n in c(2,8,20,50)){
+  for (gap in c(1,10,100)){
+    for (sz in c(20, 40, 60)){
+  for (reg in c("fit", "ext", "ave")){
+      # for (reg in c("fit")){
+        # for (opt in c(0, sz)){
+          filt_A <- list(reg = reg, psi = 0.0, fluctuate_gap = gap, n = n, shift_size = sz)
+          filt_B <- list(reg = reg, psi = 0.5, fluctuate_gap = gap, n = n, shift_size = sz)
+          filt_C <- list(reg = reg, psi = 0.9, fluctuate_gap = gap, n = n, shift_size = sz)
+          png(paste0(plot_folder, "reg_", reg, "_n_", n, "_gap_", gap, "_sz_", sz, ".png"), width = 2200, height = 1800, res = 150)
+          
+          # filt_A <- list(reg = reg, psi = 0.0, fluctuate_gap = gap, shift_size = sz, optimum = opt, n = n)
+          # filt_B <- list(reg = reg, psi = 0.5, fluctuate_gap = gap, shift_size = sz, optimum = opt, n = n)
+          # filt_C <- list(reg = reg, psi = 0.9, fluctuate_gap = gap, shift_size = sz, optimum = opt, n = n)
+          # png(paste0(plot_folder, "reg_", reg, "_n_", n, "_gap_", gap, "_sz_", sz, "_opt_", opt, ".png"), width = 2200, height = 1800, res = 150)
+          
+          # filt_A <- list(reg = reg, psi = 0.0, tick = 10000)
+          # filt_B <- list(reg = reg, psi = 0.5, tick = 10000)
+          # filt_C <- list(reg = reg, psi = 0.9, tick = 10000)
+          # png(paste0(plot_folder, "reg_", reg, ".png"), width = 2200, height = 1800, res = 150)
+          
+          title <- paste0(
+          if (reg == "inv") "Homogenous group" else
+              if (reg == "fit") "copy the best" else
+              if (reg == "ext") "copy the extreme" else
+                  if (reg == "ave") "copy the average",
+          " model (n = ", n, ")"
+          )
+
+          
+          par(cex.axis = 1.6, cex.lab = 2.0, cex.main = 1.0, mar = c(4.5, 6, 3, 1))
+
+          plot_lines_multi(
+              df      = data_df,
+              filters = list(filt_A, filt_B, filt_C),
+              ycol    = colname,  # << choose the column to plot
+              labels  = list(
+                  title = title,
+                  x = "dz1 prediction",
+                  y = "dz1 actual"      # or any y label you want
+              ),
+              show_rep = TRUE,       # faded per-rep lines? TRUE/FALSE
+              cols = c(
+                  hcl.colors(3, hcl_color_palette, rev = TRUE)[1],
+                  hcl.colors(3, hcl_color_palette, rev = TRUE)[2],
+                  hcl.colors(3, hcl_color_palette, rev = TRUE)[3]
+              ),
+              # ylim = c(-5, 5),
+              # xlim = c(-5, 5),
+              xcol = "dz1_pred"
+          )
+          
+          abline(a = 0, b = 1, lty = 2, col = "black", lwd = 2)
+
+          leg_expr <- as.expression(lapply(c(filt_A$psi, filt_B$psi, filt_C$psi),
+                                          function(v) bquote(psi == .(v))))
+          legend("topright", bty = "n", legend = leg_expr,
+              col = c(
+                  hcl.colors(3, hcl_color_palette, rev = TRUE)[1],
+                  hcl.colors(3, hcl_color_palette, rev = TRUE)[2],
+                  hcl.colors(3, hcl_color_palette, rev = TRUE)[3]
+              ),
+              lwd = 3, cex = 2.2)
+          dev.off()
+        # }
+      }
+    }
+  }
+}
+```
+
+```{r}
+data_df$dz1_pred_abs <- abs(data_df$dz1_pred)
+data_df$dz1_abs <- abs(data_df$dz1)
+```

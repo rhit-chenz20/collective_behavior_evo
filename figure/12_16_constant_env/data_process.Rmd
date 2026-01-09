@@ -9,8 +9,8 @@ output: pdf_document
 ```{r setup, include=FALSE}
 wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
 setwd(wd_path)
-base_data_folders <- c("../../data/fluctuate_env_constant_psi_gap_1", "../../data/fluctuate_env_constant_psi_gap_10", "../../data/fluctuate_env_constant_psi_gap_100")
-regimes <- c("inv", "fit", "ave", "ext")  # "inv" = inverse_variance, "var" = variance
+base_data_folders <- c("../../data/multi_model")
+regimes <- c("fit", "ave", "ext")  # "inv" = inverse_variance, "var" = variance
 
 # ---- Helper: choose the generation key column name ----
 .gen_key <- function(d) {
@@ -26,11 +26,11 @@ regimes <- c("inv", "fit", "ave", "ext")  # "inv" = inverse_variance, "var" = va
 folders <- file.path(base_data_folders, "data")
 
 extract_sum_metadata <- function(path) {
-    rx <- "n_(\\d+)_(psi|beta)_(-?[0-9.]+)_sz_(\\d+)_reg_(inv|fit|ext|ave)_(\\d+)\\.tsv"
+    rx <- "data/n_(\\d+)_psi_(-?[0-9.]+)_sz_(\\d+)_reg_(inv|fit|ext|ave)_(\\d+)\\.tsv"
     m  <- regexec(rx, path)
     p  <- regmatches(path, m)[[1]]
 
-    if (length(p) != 7) {
+    if (length(p) != 6) {
         # Try to extract the reg part manually (for logging or skipping)
         reg_match <- sub(".*_reg_([a-zA-Z0-9]+)_\\d+\\.tsv$", "\\1", path)
         
@@ -45,11 +45,10 @@ extract_sum_metadata <- function(path) {
     
     data.frame(
         n          = as.integer(p[2]),
-        var = p[3],
-        value      = as.numeric(p[4]),
-        shift_size = as.integer(p[5]),
-        reg        = p[6],               
-        rep        = as.integer(p[7]),
+        psi        = as.numeric(p[3]),
+        shift_size = as.integer(p[4]),
+        reg        = p[5],               
+        rep        = as.integer(p[6]),
         file_id    = basename(path),
         stringsAsFactors = FALSE
     )
@@ -79,14 +78,6 @@ dfs <- lapply(folders, function(folder) {
 
         meta <- extract_sum_metadata(file)
         if (nrow(meta) == 0) return(NULL)
-      if (meta$var == "beta"){
-        df$psi = NA
-        df$beta = meta$value
-      } 
-      if (meta$var == "psi"){
-        df$beta = NA
-        df$psi = meta$value
-      } 
 
         # # Attach metadata columns
         df$n          <- meta$n
@@ -94,6 +85,7 @@ dfs <- lapply(folders, function(folder) {
         df$reg        <- meta$reg
         df$rep        <- meta$rep
         df$file_id    <- meta$file_id
+        df$psi = meta$psi
 
         df
     }))
@@ -116,7 +108,7 @@ unique(summary_stat_df[summary_stat_df$reg == "inv" & summary_stat_df$psi == 0.5
 
 ```{r}
 # Save
-saveRDS(summary_stat_df, file = "../r_data/fluc_env_cpsi/data_summary.rds")
+saveRDS(summary_stat_df, file = "../r_data/constant_env/data_summary.rds")
 ```
 
 ```{r}

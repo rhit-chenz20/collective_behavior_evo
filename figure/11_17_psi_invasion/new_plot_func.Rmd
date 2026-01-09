@@ -1,0 +1,120 @@
+---
+title: "plotting functions"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r}
+# ---- Multi-filter time-series plot (base R) ----
+# df columns expected: tick (time), rep (replicate), plus parameters (e.g., reg, n, psi, shift_size, ...)
+# You choose which numeric column to plot on y via ycol.
+#
+# Arguments:
+#   df        : data.frame
+#   filters   : list of named lists, each like list(reg="ave", n=1000, psi=0.5, shift_size=200)
+#               Values can be length >1 vectors for OR-matching, e.g., psi=c(0,0.5)
+#   ycol      : character name of the numeric column to plot (e.g., "psi_mean", "seg_site", etc.)
+#   labels    : list(title=..., x=..., y=...)
+#   show_rep  : logical; if TRUE, plot faint per-rep lines in background
+#   cols      : vector of colors, one per filter
+#   xlim, ylim: numeric length-2; optional axis limits
+#   tick_col  : name of the time column (default "tick")
+#   lwd_mean  : line width for averaged line
+#   lwd_rep   : line width for replicate lines
+#   rep_alpha : alpha for replicate lines (0..1)
+#
+plot_lines_multi <- function(
+  df,
+  filters,
+  ycol,
+  labels = list(title = NULL, x = "Tick", y = ycol),
+  show_rep = TRUE,
+  cols = NULL,
+  xlim = NULL,
+  ylim = NULL,
+  tick_col = "tick",
+  lwd_mean = 3,
+  lwd_rep  = 1,
+  rep_alpha = 0.35
+) {
+  stopifnot(is.data.frame(df), length(filters) >= 1, is.character(ycol), ycol %in% names(df))
+  if (!tick_col %in% names(df)) stop("tick column '", tick_col, "' not found.")
+  if (is.null(cols)) cols <- rep("black", length(filters))
+  if (length(cols) < length(filters)) {
+    cols <- rep(cols, length.out = length(filters))
+  }
+
+  # helper: apply one filter list to df (AND across named fields; OR within a vector value)
+  apply_filter <- function(d, f) {
+    keep <- rep(TRUE, nrow(d))
+    for (nm in names(f)) {
+      if (!nm %in% names(d)) next
+      v <- f[[nm]]
+      keep <- keep & (d[[nm]] %in% v)
+    }
+    d[keep, , drop = FALSE]
+  }
+
+  # prepare objects for ranges
+  all_ticks <- numeric(0)
+  all_vals  <- numeric(0)
+
+  # precompute per-filter summaries
+  summaries <- lapply(seq_along(filters), function(i) {
+    f <- filters[[i]]
+    d <- apply_filter(df, f)
+    # coerce types we need
+    d[[tick_col]] <- suppressWarnings(as.integer(d[[tick_col]]))
+    d$rep         <- suppressWarnings(as.integer(d$rep))
+    d[[ycol]]     <- suppressWarnings(as.numeric(d[[ycol]]))
+    d <- d[is.finite(d[[tick_col]]) & is.finite(d$rep) & is.finite(d[[ycol]]), , drop = FALSE]
+    if (nrow(d) == 0) {
+      return(list(reps = list(), mean = data.frame(tick = integer(0), y = numeric(0))))
+    }
+
+    # split by rep for optional background
+    by_rep <- split(d[, c(tick_col, ycol)], d$rep)
+    by_rep <- lapply(by_rep, function(x) {
+      o <- order(x[[tick_col]])
+      data.frame(tick = x[[tick_col]][o], y = x[[ycol]][o])
+    })
+
+    # across-rep mean per tick
+    # aggregate mean(y | tick)
+    mean_df <- aggregate(d[[ycol]], by = list(tick = d[[tick_col]]), FUN = mean, na.rm = TRUE)
+    names(mean_df)[2] <- "y"
+    mean_df <- mean_df[order(mean_df$tick), ]
+
+    all_ticks <<- c(all_ticks, mean_df$tick)
+    all_vals  <<- c(all_vals,  mean_df$y)
+
+    list(reps = by_rep, mean = mean_df)
+  })
+
+  # set up plot region
+  if (is.null(xlim)) xlim <- range(all_ticks, na.rm = TRUE)
+  if (is.null(ylim)) ylim <- range(all_vals,  na.rm = TRUE)
+
+  plot(NA, NA, xlim = xlim, ylim = ylim, xlab = labels$x, ylab = labels$y, main = labels$title)
+
+  # draw, filter by filter
+  for (i in seq_along(summaries)) {
+    col_i <- cols[i]
+    s <- summaries[[i]]
+
+    # background replicate lines
+    if (show_rep && length(s$reps)) {
+      col_rep <- tryCatch(adjustcolor(col_i, alpha.f = rep_alpha), error = function(e) col_i)
+      for (rp in s$reps) {
+        if (nrow(rp) > 1) points(rp$tick, rp$y, col = col_rep, lwd = lwd_rep, pch = 16)
+      }
+    }
+    # averaged line
+    if (nrow(s$mean) > 1) lines(s$mean$tick, s$mean$y, col = col_i, lwd = lwd_mean)
+  }
+
+  invisible(NULL)
+}
+
+```

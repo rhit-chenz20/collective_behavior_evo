@@ -26,11 +26,11 @@ regimes <- c("inv", "fit", "ave", "ext")  # "inv" = inverse_variance, "var" = va
 folders <- file.path(base_data_folders, "data")
 
 extract_sum_metadata <- function(path) {
-    rx <- "n_(\\d+)_(psi|beta)_(-?[0-9.]+)_sz_(\\d+)_reg_(inv|fit|ext|ave)_(\\d+)\\.tsv"
+    rx <- "fluctuate_env_constant_psi_gap_(\\d+)/data/n_(\\d+)_(psi|beta)_(-?[0-9.]+)_sz_(\\d+)_reg_(inv|fit|ext|ave)_(\\d+)\\.tsv"
     m  <- regexec(rx, path)
     p  <- regmatches(path, m)[[1]]
 
-    if (length(p) != 7) {
+    if (length(p) != 8) {
         # Try to extract the reg part manually (for logging or skipping)
         reg_match <- sub(".*_reg_([a-zA-Z0-9]+)_\\d+\\.tsv$", "\\1", path)
         
@@ -44,12 +44,13 @@ extract_sum_metadata <- function(path) {
     }
     
     data.frame(
-        n          = as.integer(p[2]),
-        var = p[3],
-        value      = as.numeric(p[4]),
-        shift_size = as.integer(p[5]),
-        reg        = p[6],               
-        rep        = as.integer(p[7]),
+        fluctuate_gap = as.integer(p[2]),
+        n          = as.integer(p[3]),
+        var        = p[4],
+        value      = as.numeric(p[5]),
+        shift_size = as.integer(p[6]),
+        reg        = p[7],               
+        rep        = as.integer(p[8]),
         file_id    = basename(path),
         stringsAsFactors = FALSE
     )
@@ -94,6 +95,7 @@ dfs <- lapply(folders, function(folder) {
         df$reg        <- meta$reg
         df$rep        <- meta$rep
         df$file_id    <- meta$file_id
+        df$fluctuate_gap <- meta$fluctuate_gap
 
         df
     }))
@@ -116,7 +118,7 @@ unique(summary_stat_df[summary_stat_df$reg == "inv" & summary_stat_df$psi == 0.5
 
 ```{r}
 # Save
-saveRDS(summary_stat_df, file = "../r_data/fluc_env_cpsi/data_summary.rds")
+saveRDS(summary_stat_df, file = "../r_data/fluctuate_env_constant_psi/data_summary.rds")
 ```
 
 ```{r}

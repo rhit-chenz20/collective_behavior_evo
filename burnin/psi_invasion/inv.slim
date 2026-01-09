@@ -11,7 +11,7 @@ initialize() {
     // variable parameters
 	defineConstant("shift_time", 10*N);
 	defineConstant("end_time", shift_time+300);
-    defineGlobal("L_psi", 100);
+    defineGlobal("L_psi", 1);
     // defineConstant("start_psi", 0.5);
 	
     // book keeping
@@ -100,14 +100,12 @@ shift_time late(){
 	//print("new opt is " + optimum);
 	defineGlobal("psi_source", "mut");
 	lucky_ind = sample(p1.haplosomes, 1);
-	isOne = asLogical(rbinom(L_psi, 1, start_psi));
+	// isOne = asLogical(rbinom(L_psi, 1, start_psi));
 
 	for (i in 0:(L_psi-1)){
-		if (isOne[i]){
-			lucky_ind.addNewMutation(m2, 1.0, i);
-		}else{
-			lucky_ind.addNewMutation(m2, 0.0, i);
-		}
+		// if (isOne[i]){
+			lucky_ind.addNewMutation(m2, start_psi, i);
+		// }
 	}
 	
 	defineGlobal("Va0_sqrt", sqrt(var(a)));
@@ -162,16 +160,15 @@ shift_time-29 late(){
 	log = community.createLogFile(fre_output, sep="\t");
 	log.addTick();
 
-	log.addCustomColumn("N", "N;");
-    log.addCustomColumn("Vs", "Vs;");
-    log.addCustomColumn("Va0_sqrt", "Va0_sqrt;");
     log.addCustomColumn("start_psi", "start_psi;");
+	log.addCustomColumn("psi_freq", "muts = sim.mutationsOfType(m2); freq = sim.mutationFrequencies(p1, muts); if(length(freq)==0 | length(freq)>1) NULL; else freq[0];");
 
+	log.addCustomColumn("psi_source", "psi_source;");
 	log.addMeanSDColumns("z", "p1.individuals.tagF;");
+    log.addMeanSDColumns("psi", "p1.individuals.sumOfMutationsOfType(m2) / (2*L_psi);");
     log.addMeanSDColumns("a", "p1.individuals.sumOfMutationsOfType(m1) + (2 * sum(sim.substitutions[sim.substitutions.mutationType == m1].selectionCoeff));");
     log.addMeanSDColumns("fitness", "abs_fit;");   
-    log.addMeanSDColumns("psi", "p1.individuals.sumOfMutationsOfType(m2) / (2*L_psi);");
-    
+
     log.addMeanSDColumns("group_vars", "group_vars;");
 	log.addMeanSDColumns("group_psis", "group_psis;");
 
@@ -187,8 +184,10 @@ shift_time-29 late(){
 	log.addCustomColumn("dz1_pred", "parent_mean=mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]); var(last_gen_g)/var(last_gen_z)*(parent_mean-mean(last_gen_z));");
 	
     log.addCustomColumn("rep", "ID;");
-	log.addCustomColumn("psi_source", "psi_source;");
 	log.addCustomColumn("seed", "seed;");
+	log.addCustomColumn("N", "N;");
+    log.addCustomColumn("Vs", "Vs;");
+    log.addCustomColumn("Va0_sqrt", "Va0_sqrt;");
 
 	defineGlobal("log", log);
 }
@@ -393,7 +392,7 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 	if (psi_source == "mut"){
 		psis = inds.sumOfMutationsOfType(m2) / (2*L_psi);
 	}else{
-		psis = rep(start_psi, N);
+		psis = rep(0, N);
 	}
 	
 	shuffled = sample(inds, N, replace=F);
