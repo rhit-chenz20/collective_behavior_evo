@@ -1,0 +1,132 @@
+---
+title: "plot genotype, phenotype data for multiple models"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+## evolving sociality data
+```{r setup, include=FALSE}
+wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
+setwd(wd_path)
+base_data_folders <- c("../../data/fluctuate_env_gap_150", "../../data/fluctuate_env_gap_50", "../../data/fluctuate_env_gap_100")
+r_data_folder <- "../r_data/fluctuate_env"
+if(!dir.exists(r_data_folder)){
+    dir.create(r_data_folder, recursive = TRUE)
+}
+regimes <- c("fit", "ave", "ext")  # "inv" = inverse_variance, "var" = variance
+
+# ---- Helper: choose the generation key column name ----
+.gen_key <- function(d) {
+  if ("tick" %in% names(d)) return("tick")
+  if ("generation" %in% names(d)) return("generation")
+  names(d)[1]
+}
+```
+
+# load SUMMARY STATS data
+```{r}
+data_type_to_load <- c("data", "genotype", "phenotype", "fitness")
+
+for (data_type in data_type_to_load) {
+  for (gap in c(50, 150, 100)) {
+    base_data_folders <- paste0("../../data/fluctuate_env_gap_", gap)
+    cat("Loading data type:", data_type, "\n")
+
+    folders <- file.path(base_data_folders, data_type)
+
+    extract_fluctuate_metadata <- function(path) {
+        rx <- paste0("fluctuate_env_gap_(\\d+)/", data_type, "/n_(\\d+)_psi_(-?[0-9.]+)_sz_(\\d+)_reg_(fit|ext|ave)_(\\d+)\\.tsv")
+        m  <- regexec(rx, path)
+        p  <- regmatches(path, m)[[1]]
+
+        if (length(p) != 7) {
+            # Try to extract the reg part manually (for logging or skipping)
+            reg_match <- sub(".*_reg_([a-zA-Z0-9]+)_\\d+\\.tsv$", "\\1", path)
+            
+            # If the reg is not one of the regimes you care about, just skip silently
+            if (!reg_match %in% regimes) return(data.frame())
+
+            # Otherwise, keep the warning for genuine regex mismatches
+            warning("Could not extract metadata from path: ", path,
+                    " with match: ", paste(p, collapse = ", "))
+            return(data.frame())
+        }
+        
+        data.frame(
+            fluctuate_gap = as.integer(p[2]),
+            n          = as.integer(p[3]),
+            psi        = as.numeric(p[4]),
+            shift_size = as.integer(p[5]),
+            reg        = p[6],               
+            rep        = as.integer(p[7]),
+            file_id    = basename(path),
+            stringsAsFactors = FALSE
+          )
+    }
+
+    dfs <- lapply(folders, function(folder) {
+        if (!dir.exists(folder)) {
+            warning("Folder does not exist: ", folder)
+            next
+        }
+
+        file_list <- list.files(
+            path = folder,
+            pattern = "\\.tsv$",
+            full.names = TRUE,
+            recursive = TRUE
+        )
+
+        file_list <- file_list[! grepl("psi_1\\.0", file_list)]
+
+        # print(file_list)
+        # stop()
+
+        # Read and combine all files
+        stat_df <- do.call(rbind, lapply(file_list, function(file) {
+            df <- tryCatch(read.table(file, header = TRUE, sep = "\t", check.names = FALSE),
+                        error = function(e) NULL)
+            if (is.null(df)) {
+                warning("Failed to read: ", file)
+                return(NULL)
+            }
+
+            meta <- extract_fluctuate_metadata(file)
+            if (nrow(meta) == 0) return(NULL)
+            df$psi        <- meta$psi
+            # # Attach metadata columns
+            df$n          <- meta$n
+            df$shift_size <- meta$shift_size
+            df$reg        <- meta$reg
+            df$rep        <- meta$rep
+            df$file_id    <- meta$file_id
+            df$fluctuate_gap <- meta$fluctuate_gap
+
+            df
+        }))
+        stat_df <- stat_df[ , sort(names(stat_df))]
+      
+        return(stat_df)
+    })
+    
+    df <- do.call(rbind, dfs)
+      
+    if (data_type == "data") {
+      saveRDS(df, file = paste0(r_data_folder, "/data_summary_gap_", gap, ".rds"))
+    }else if (data_type == "genotype") {
+      # genotype_df <- df
+      saveRDS(df, file = paste0(r_data_folder, "/genotype_gap_", gap, ".rds"))
+    }else if (data_type == "phenotype") {
+      # phenotype_df <- df
+      saveRDS(df, file = paste0(r_data_folder, "/phenotype_gap_", gap, ".rds"))
+    }else if (data_type == "fitness") {
+      # fitness_df <- df
+      saveRDS(df, file = paste0(r_data_folder, "/fitness_gap_", gap, ".rds"))
+    }
+
+    cat("Done loading data type:", data_type, "\n")
+  }
+}
+```
+

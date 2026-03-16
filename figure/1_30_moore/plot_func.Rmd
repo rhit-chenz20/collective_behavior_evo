@@ -6,322 +6,6 @@ output: pdf_document
 ---
 
 ```{r}
-# ---- Multi-filter time-series plot (base R) ----
-# df columns expected: tick (time), rep (replicate), plus parameters (e.g., reg, n, psi, shift_size, ...)
-# You choose which numeric column to plot on y via ycol.
-#
-# Arguments:
-#   df        : data.frame
-#   filters   : list of named lists, each like list(reg="ave", n=1000, psi=0.5, shift_size=200)
-#               Values can be length >1 vectors for OR-matching, e.g., psi=c(0,0.5)
-#   ycol      : character name of the numeric column to plot (e.g., "psi_mean", "seg_site", etc.)
-#   labels    : list(title=..., x=..., y=...)
-#   show_rep  : logical; if TRUE, plot faint per-rep lines in background
-#   cols      : vector of colors, one per filter
-#   xlim, ylim: numeric length-2; optional axis limits
-#   tick_col  : name of the time column (default "tick")
-#   lwd_mean  : line width for averaged line
-#   lwd_rep   : line width for replicate lines
-#   rep_alpha : alpha for replicate lines (0..1)
-#
-plot_lines_multi <- function(
-  df,
-  filters,
-  ycol,
-  labels = list(title = NULL, x = "Tick", y = ycol),
-  show_rep = TRUE,
-  cols = NULL,
-  xlim = NULL,
-  ylim = NULL,
-  tick_col = "tick",
-  lwd_mean = 3,
-  lwd_rep  = 1,
-  rep_alpha = 0.35
-) {
-  stopifnot(is.data.frame(df), length(filters) >= 1, is.character(ycol), ycol %in% names(df))
-  if (!tick_col %in% names(df)) stop("tick column '", tick_col, "' not found.")
-  if (is.null(cols)) cols <- rep("black", length(filters))
-  if (length(cols) < length(filters)) {
-    cols <- rep(cols, length.out = length(filters))
-  }
-
-  # helper: apply one filter list to df (AND across named fields; OR within a vector value)
-  apply_filter <- function(d, f) {
-    keep <- rep(TRUE, nrow(d))
-    for (nm in names(f)) {
-      if (!nm %in% names(d)) next
-      v <- f[[nm]]
-      keep <- keep & (d[[nm]] %in% v)
-    }
-    d[keep, , drop = FALSE]
-  }
-
-  # prepare objects for ranges
-  all_ticks <- numeric(0)
-  all_vals  <- numeric(0)
-
-  # precompute per-filter summaries
-  summaries <- lapply(seq_along(filters), function(i) {
-    f <- filters[[i]]
-    d <- apply_filter(df, f)
-    # coerce types we need
-    d[[tick_col]] <- suppressWarnings(as.integer(d[[tick_col]]))
-    d$rep         <- suppressWarnings(as.integer(d$rep))
-    d[[ycol]]     <- suppressWarnings(as.numeric(d[[ycol]]))
-    d <- d[is.finite(d[[tick_col]]) & is.finite(d$rep) & is.finite(d[[ycol]]), , drop = FALSE]
-    if (nrow(d) == 0) {
-      return(list(reps = list(), mean = data.frame(tick = integer(0), y = numeric(0))))
-    }
-
-    # split by rep for optional background
-    by_rep <- split(d[, c(tick_col, ycol)], d$rep)
-    by_rep <- lapply(by_rep, function(x) {
-      o <- order(x[[tick_col]])
-      data.frame(tick = x[[tick_col]][o], y = x[[ycol]][o])
-    })
-
-    # across-rep mean per tick
-    # aggregate mean(y | tick)
-    mean_df <- aggregate(d[[ycol]], by = list(tick = d[[tick_col]]), FUN = mean, na.rm = TRUE)
-    names(mean_df)[2] <- "y"
-    mean_df <- mean_df[order(mean_df$tick), ]
-
-    all_ticks <<- c(all_ticks, mean_df$tick)
-    all_vals  <<- c(all_vals,  mean_df$y)
-
-    list(reps = by_rep, mean = mean_df)
-  })
-
-  # set up plot region
-  if (is.null(xlim)) xlim <- range(all_ticks, na.rm = TRUE)
-  if (is.null(ylim)) ylim <- range(all_vals,  na.rm = TRUE)
-
-  plot(NA, NA, xlim = xlim, ylim = ylim, xlab = labels$x, ylab = labels$y, main = labels$title)
-
-  # draw, filter by filter
-  for (i in seq_along(summaries)) {
-    col_i <- cols[i]
-    s <- summaries[[i]]
-
-    # background replicate lines
-    if (show_rep && length(s$reps)) {
-      col_rep <- tryCatch(adjustcolor(col_i, alpha.f = rep_alpha), error = function(e) col_i)
-      for (rp in s$reps) {
-        if (nrow(rp) > 1) points(rp$tick, rp$y, col = col_rep, lwd = lwd_rep, pch = 16)
-      }
-    }
-    # averaged line
-    if (nrow(s$mean) > 1) lines(s$mean$tick, s$mean$y, col = col_i, lwd = lwd_mean)
-  }
-
-  invisible(NULL)
-}
-
-```
-
-```{r}
-# ---- Multi-filter time-series / generic-x plot (base R) ----
-plot_lines_multi <- function(
-  df,
-  filters,
-  ycol,
-  labels = list(title = NULL, x = "Tick", y = ycol),
-  show_rep = TRUE,
-  cols = NULL,
-  xlim = NULL,
-  ylim = NULL,
-  tick_col = "tick",
-  lwd_mean = 3,
-  lwd_rep  = 1,
-  rep_alpha = 0.35,
-  xcol = tick_col       # NEW: which column to use on x-axis
-) {
-  stopifnot(is.data.frame(df), length(filters) >= 1,
-            is.character(ycol), ycol %in% names(df))
-  
-  # xcol default: use tick_col
-  if (is.null(xcol)) xcol <- tick_col
-  
-  # Only require tick_col to exist if we are actually using it as x
-  if (identical(xcol, tick_col) && !tick_col %in% names(df)) {
-    stop("tick column '", tick_col, "' not found.")
-  }
-  
-  # Colors
-  if (is.null(cols)) cols <- rep("black", length(filters))
-  if (length(cols) < length(filters)) {
-    cols <- rep(cols, length.out = length(filters))
-  }
-  
-  # Helper: apply one filter list to df (AND across fields; OR within vectors)
-  apply_filter <- function(d, f) {
-    keep <- rep(TRUE, nrow(d))
-    for (nm in names(f)) {
-      if (!nm %in% names(d)) next
-      v <- f[[nm]]
-      keep <- keep & (d[[nm]] %in% v)
-    }
-    d[keep, , drop = FALSE]
-  }
-  
-  # Fix labels if needed
-  if (is.null(labels$y)) labels$y <- ycol
-  if (is.null(labels$x) ||
-      (identical(labels$x, "Tick") && !identical(xcol, tick_col))) {
-    labels$x <- xcol
-  }
-  
-  use_tick_mode <- identical(xcol, tick_col)
-  
-  if (use_tick_mode) {
-    # ------------------ ORIGINAL "tick mode" ------------------
-    all_ticks <- numeric(0)
-    all_vals  <- numeric(0)
-    
-    summaries <- lapply(seq_along(filters), function(i) {
-      f <- filters[[i]]
-      d <- apply_filter(df, f)
-      # coerce types we need
-      d[[tick_col]] <- suppressWarnings(as.integer(d[[tick_col]]))
-      d$rep         <- suppressWarnings(as.integer(d$rep))
-      d[[ycol]]     <- suppressWarnings(as.numeric(d[[ycol]]))
-      d <- d[is.finite(d[[tick_col]]) & is.finite(d$rep) & is.finite(d[[ycol]]),
-             , drop = FALSE]
-      if (nrow(d) == 0) {
-        return(list(reps = list(),
-                    mean = data.frame(tick = integer(0), y = numeric(0))))
-      }
-      
-      # split by rep for optional background
-      by_rep <- split(d[, c(tick_col, ycol)], d$rep)
-      by_rep <- lapply(by_rep, function(x) {
-        o <- order(x[[tick_col]])
-        data.frame(tick = x[[tick_col]][o], y = x[[ycol]][o])
-      })
-      
-      # across-rep mean per tick
-      mean_df <- aggregate(d[[ycol]],
-                           by = list(tick = d[[tick_col]]),
-                           FUN = mean, na.rm = TRUE)
-      names(mean_df)[2] <- "y"
-      mean_df <- mean_df[order(mean_df$tick), ]
-      
-      all_ticks <<- c(all_ticks, mean_df$tick)
-      all_vals  <<- c(all_vals,  mean_df$y)
-      
-      list(reps = by_rep, mean = mean_df)
-    })
-    
-    # set up plot region
-    if (is.null(xlim)) xlim <- range(all_ticks, na.rm = TRUE)
-    if (is.null(ylim)) ylim <- range(all_vals,  na.rm = TRUE)
-    
-    plot(NA, NA, xlim = xlim, ylim = ylim,
-         xlab = labels$x, ylab = labels$y, main = labels$title)
-    
-    # draw, filter by filter
-    for (i in seq_along(summaries)) {
-      col_i <- cols[i]
-      s <- summaries[[i]]
-      
-      # background replicate points
-      if (show_rep && length(s$reps)) {
-        col_rep <- tryCatch(adjustcolor(col_i, alpha.f = rep_alpha),
-                            error = function(e) col_i)
-        for (rp in s$reps) {
-          if (nrow(rp) > 1) {
-            points(rp$tick, rp$y, col = col_rep,
-                   lwd = lwd_rep, pch = 16)
-          }
-        }
-      }
-      # averaged line
-      if (nrow(s$mean) > 1) {
-        lines(s$mean$tick, s$mean$y, col = col_i, lwd = lwd_mean)
-      }
-    }
-    
-  } else {
-    # ------------------ NEW "generic x mode" ------------------
-    all_x <- numeric(0)
-    all_y <- numeric(0)
-    subsets <- vector("list", length(filters))
-    
-    for (i in seq_along(filters)) {
-      f <- filters[[i]]
-      d <- apply_filter(df, f)
-      if (nrow(d) == 0) {
-        subsets[[i]] <- NULL
-        next
-      }
-      
-      d[[xcol]]  <- suppressWarnings(as.numeric(d[[xcol]]))
-      d[[ycol]]  <- suppressWarnings(as.numeric(d[[ycol]]))
-      d <- d[is.finite(d[[xcol]]) & is.finite(d[[ycol]]),
-             , drop = FALSE]
-      
-      if (nrow(d) == 0) {
-        subsets[[i]] <- NULL
-        next
-      }
-      
-      subsets[[i]] <- d
-      all_x <- c(all_x, d[[xcol]])
-      all_y <- c(all_y, d[[ycol]])
-    }
-    
-    if (!length(all_x) || !length(all_y)) {
-      warning("No data to plot after filtering.")
-      return(invisible(NULL))
-    }
-    
-    if (is.null(xlim)) xlim <- range(all_x, na.rm = TRUE)
-    if (is.null(ylim)) ylim <- range(all_y, na.rm = TRUE)
-    
-    plot(NA, NA, xlim = xlim, ylim = ylim,
-         xlab = labels$x, ylab = labels$y, main = labels$title)
-    
-    # For each filter: all points in background (no replicate distinction),
-    # plus one fit line (loess) across all its points.
-    for (i in seq_along(subsets)) {
-      d <- subsets[[i]]
-      if (is.null(d) || nrow(d) == 0) next
-      
-      col_i <- cols[i]
-      col_pts <- tryCatch(adjustcolor(col_i, alpha.f = rep_alpha),
-                          error = function(e) col_i)
-      x <- d[[xcol]]
-      y <- d[[ycol]]
-      
-      # background points (respect show_rep switch)
-      if (show_rep) {
-        points(x, y, col = col_pts, pch = 16)
-      }
-      
-      # smooth fit line over all points (no aggregation by x)
-      if (length(unique(x)) > 1 && length(x) >= 3) {
-        fit <- tryCatch(
-          loess(y ~ x, data = data.frame(x = x, y = y)),
-          error = function(e) NULL
-        )
-        if (!is.null(fit)) {
-          x_new <- seq(min(x, na.rm = TRUE),
-                       max(x, na.rm = TRUE),
-                       length.out = 200)
-          y_pred <- predict(fit, newdata = data.frame(x = x_new))
-          lines(x_new, y_pred, col = col_i, lwd = lwd_mean)
-        }
-      }
-    }
-  }
-  
-  invisible(NULL)
-}
-
-
-```
-
-```{r}
 
 plot_lines_multi <- function(
   df,
@@ -792,7 +476,6 @@ plot_lines_mean_sd_band <- function(
 ```
 
 
-
 ```{r}
 # --- helpers ---------------------------------------------------------------
 
@@ -884,3 +567,398 @@ plot_hist_lines_multi <- function(
   invisible(series)
 }
 ```
+
+```{r}
+compute_aurc_one <- function(
+  df,
+  filter,
+  ycol,
+  tick_pre = 9999,
+  tmin = 10000,
+  tmax = 10100
+) {
+  d <- df
+  for (nm in names(filter)) {
+    if (nm %in% names(d)) d <- d[d[[nm]] == filter[[nm]], , drop = FALSE]
+  }
+  if (!nrow(d)) return(NA_real_)
+
+  # average across reps per tick
+  avg <- aggregate(d[[ycol]], by = list(tick = d$tick), FUN = mean)
+  names(avg) <- c("tick", "y")
+  avg <- avg[order(avg$tick), , drop = FALSE]
+
+  # baseline
+  b <- avg$y[avg$tick == tick_pre]
+  if (!length(b) || !is.finite(b[1])) return(NA_real_)
+  W_pre <- b[1]
+
+  # window
+  w <- avg[avg$tick >= tmin & avg$tick <= tmax, , drop = FALSE]
+  if (!nrow(w)) return(NA_real_)
+
+  sum(W_pre - w$y, na.rm = TRUE)
+}
+
+compute_aurc_grid <- function(
+  df,
+  reg_value,
+  ns,
+  psis,
+  shift_sizes,
+  ycol,
+  tick_pre = 9999,
+  tmin = 10000,
+  tmax = 10100
+) {
+  out <- list()
+  k <- 1
+
+  for (sz in shift_sizes) {
+    for (n in ns) {
+      for (psi in psis) {
+        filt <- list(reg = reg_value, shift_size = sz, n = n, psi = psi)
+        aurc <- compute_aurc_one(
+          df = df,
+          filter = filt,
+          ycol = ycol,
+          tick_pre = tick_pre,
+          tmin = tmin,
+          tmax = tmax
+        )
+        out[[k]] <- data.frame(
+          shift_size = sz,
+          n = n,
+          psi = psi,
+          aurc = aurc,
+          stringsAsFactors = FALSE
+        )
+        k <- k + 1
+      }
+    }
+  }
+  do.call(rbind, out)
+}
+
+plot_aurc_heatmap_simple <- function(
+  aurc_df,
+  ns,
+  psis,
+  shift_size,
+  zlim = NULL,
+  main = NULL,
+  palette = "RdYlBu",
+  na_col = "grey90",
+  ncols = 100,
+  legend_title = "AURC"
+) {
+  ss <- aurc_df[aurc_df$shift_size == shift_size, , drop = FALSE]
+
+  # matrix: rows = psi, cols = n
+  mat <- matrix(NA_real_,
+                nrow = length(psis),
+                ncol = length(ns),
+                dimnames = list(psis, ns))
+
+  ii <- match(ss$psi, psis)
+  jj <- match(ss$n, ns)
+  ok <- !is.na(ii) & !is.na(jj)
+  mat[cbind(ii[ok], jj[ok])] <- ss$aurc[ok]
+
+  if (is.null(zlim)) {
+    vals <- mat[is.finite(mat)]
+    if (!length(vals)) stop("No finite AURC values for plotting.")
+    zlim <- range(vals)
+  }
+
+  cols <- hcl.colors(ncols, palette, rev = TRUE)
+
+  # ---- layout: plot + legend ----
+  layout(matrix(c(1, 2), nrow = 1), widths = c(1, 0.15))
+
+  # ---- main heatmap ----
+  par(mar = c(5, 5, 4, 1))
+  image(
+    x = seq_along(ns),
+    y = seq_along(psis),
+    z = t(mat),
+    col = cols,
+    zlim = zlim,
+    xaxt = "n",
+    yaxt = "n",
+    xlab = "Group size n",
+    ylab = expression(psi),
+    main = main
+  )
+  axis(1, at = seq_along(ns), labels = ns)
+  axis(2, at = seq_along(psis), labels = psis, las = 1)
+  box()
+
+  # overlay NA tiles
+  for (i in seq_along(psis)) {
+    for (j in seq_along(ns)) {
+      if (!is.finite(mat[i, j])) {
+        rect(j - 0.5, i - 0.5, j + 0.5, i + 0.5,
+             col = na_col, border = NA)
+      }
+    }
+  }
+
+  # ---- legend ----
+  par(mar = c(5, 1, 4, 4))
+  plot.new()
+  plot.window(xlim = c(0, 1), ylim = zlim)
+
+  yseq <- seq(zlim[1], zlim[2], length.out = ncols + 1)
+  for (i in seq_len(ncols)) {
+    rect(0.2, yseq[i], 0.8, yseq[i + 1],
+         col = cols[i], border = NA)
+  }
+
+  axis(4, las = 1)
+  mtext(legend_title, side = 4, line = 2)
+
+  invisible(mat)
+}
+
+```
+
+
+```{r}
+fit_exp_decay_window <- function(
+  df,
+  filter,
+  tmin = 10000,
+  tmax = 10100,
+  time_col = "tick",
+  y_col = "z_opt",
+  rep_col = "rep",
+  model = c("offset", "no_offset"),
+  nls_control = nls.control(maxiter = 500, warnOnly = TRUE)
+) {
+  model <- match.arg(model)
+
+  # 1) filter
+  sub <- df
+  for (nm in names(filter)) sub <- sub[sub[[nm]] == filter[[nm]], , drop = FALSE]
+
+  # 2) window
+  sub <- sub[sub[[time_col]] >= tmin & sub[[time_col]] <= tmax, , drop = FALSE]
+  sub <- sub[is.finite(sub[[time_col]]) & is.finite(sub[[y_col]]), , drop = FALSE]
+
+  if (nrow(sub) < 3) {
+    return(list(converged = FALSE, message = "Not enough rows in window", params = NA, averaged = NULL, fit = NULL))
+  }
+
+  # 3) average reps per tick
+  avg <- aggregate(sub[[y_col]], by = list(tick = sub[[time_col]]), FUN = mean)
+  names(avg) <- c("tick", "z")
+  avg <- avg[order(avg$tick), , drop = FALSE]
+
+  if (nrow(avg) < 3) {
+    return(list(converged = FALSE, message = "Not enough unique ticks after averaging", params = NA, averaged = avg, fit = NULL))
+  }
+
+  # 4) re-center time at tmin for numerical stability
+  avg$t <- avg$tick - tmin
+
+  # 5) starting values (robust for your shape)
+  c0 <- tail(avg$z, 1)
+  a0 <- avg$z[1] - c0
+  if (!is.finite(a0) || abs(a0) < 1e-8) a0 <- sign(a0 + 1e-8) * 1e-3
+
+  # pick b0 from early-to-late change if possible
+  tspan <- max(avg$t)
+  b0 <- 1 / max(tspan, 1)
+  st <- if (model == "offset") list(a = a0, b = abs(b0), c = c0) else list(a = avg$z[1], b = abs(b0))
+
+  # 6) fit
+  if (model == "offset") {
+    form <- z ~ c + a * exp(-b * t)
+    fit <- try(nls(form, data = avg, start = st, control = nls_control), silent = TRUE)
+  } else {
+    form <- z ~ a * exp(-b * t)
+    fit <- try(nls(form, data = avg, start = st[c("a","b")], control = nls_control), silent = TRUE)
+  }
+
+  if (inherits(fit, "try-error")) {
+    return(list(converged = FALSE, message = as.character(fit), params = NA, averaged = avg, fit = NULL))
+  }
+
+  list(
+    converged = TRUE,
+    message = NULL,
+    params = coef(fit),   # a, b, (c)
+    averaged = avg,
+    fit = fit
+  )
+}
+
+```
+
+```{r}
+plot_first_jump_heatmap2 <- function(
+  df,
+  reg_value = "fit",
+  ns,
+  psis,
+  shift_sizes,
+  tick_pre = 9999,
+  tick_post = 10000,
+  time_col = "tick",
+  rep_col = "rep",
+  value_col = "z_mean",
+  reg_col = "reg",
+  n_col = "n",
+  psi_col = "psi",
+  shift_col = "shift_size",
+  main_prefix = "First-generation jump (copy-the-best)",
+  zlim = NULL,                    # recommend fixed across panels
+  palette_name = "RdYlBu",
+  ncols = 100,
+  na_col = "grey90",
+  file = NULL,
+  width = 2200, height = 1800, res = 150
+) {
+  # --- filter to reg and two ticks ---
+  sub <- df[df[[reg_col]] == reg_value &
+              df[[time_col]] %in% c(tick_pre, tick_post), , drop = FALSE]
+
+  needed <- c(time_col, rep_col, value_col, n_col, psi_col, shift_col)
+  miss <- setdiff(needed, names(sub))
+  if (length(miss)) stop("Missing columns: ", paste(miss, collapse = ", "))
+
+  # --- per-rep jump ---
+  wide <- reshape(
+    sub[, c(rep_col, n_col, psi_col, shift_col, time_col, value_col)],
+    idvar = c(rep_col, n_col, psi_col, shift_col),
+    timevar = time_col,
+    direction = "wide"
+  )
+  pre_name  <- paste0(value_col, ".", tick_pre)
+  post_name <- paste0(value_col, ".", tick_post)
+  if (!(pre_name %in% names(wide)) || !(post_name %in% names(wide))) {
+    stop("Missing tick columns after reshape: ", pre_name, " / ", post_name)
+  }
+  wide$dz1 <- wide[[post_name]] - wide[[pre_name]]
+
+  # --- average across replicates ---
+  avg <- aggregate(
+    wide$dz1,
+    by = list(
+      n = wide[[n_col]],
+      psi = wide[[psi_col]],
+      shift_size = wide[[shift_col]]
+    ),
+    FUN = mean,
+    na.rm = TRUE
+  )
+  names(avg)[4] <- "dz1_mean"
+
+  # --- build mats per shift_size ---
+  build_mat <- function(sz) {
+    ss <- avg[avg$shift_size == sz, , drop = FALSE]
+    mat <- matrix(NA_real_, nrow = length(psis), ncol = length(ns),
+                  dimnames = list(psis, ns))
+    ii <- match(ss$psi, psis)
+    jj <- match(ss$n, ns)
+    ok <- !is.na(ii) & !is.na(jj)
+    mat[cbind(ii[ok], jj[ok])] <- ss$dz1_mean[ok]
+    mat
+  }
+  mats <- lapply(shift_sizes, build_mat)
+  names(mats) <- as.character(shift_sizes)
+
+  # --- global zlim if not provided ---
+  if (is.null(zlim)) {
+    allv <- unlist(mats)
+    zlim <- range(allv, na.rm = TRUE)
+    if (!all(is.finite(zlim))) zlim <- c(0, 1)
+  }
+
+  cols <- hcl.colors(ncols, palette_name, rev = TRUE)
+
+  # map z -> color index
+  z_to_col <- function(z) {
+    if (!is.finite(z)) return(na_col)
+    # clamp into zlim and convert to 1..ncols
+    u <- (z - zlim[1]) / (zlim[2] - zlim[1])
+    u <- max(0, min(1, u))
+    cols[1 + floor(u * (ncols - 1))]
+  }
+
+  # draw a tile heatmap for one matrix
+  draw_tiles <- function(mat, sz) {
+    # layout coordinates: columns are ns, rows are psis
+    # We'll plot x as 1..length(ns), y as 1..length(psis)
+    plot(NA,
+         xlim = c(0.5, length(ns) + 0.5),
+         ylim = c(0.5, length(psis) + 0.5),
+         xaxt = "n", yaxt = "n",
+         xlab = "Group size n",
+         ylab = expression(psi),
+         main = paste0("shift_size = ", sz, "\n",
+                       expression(Delta*z == z - z))
+    )
+    axis(1, at = seq_along(ns), labels = ns)
+    axis(2, at = seq_along(psis), labels = psis, las = 1)
+
+    for (j in seq_along(ns)) {
+      for (i in seq_along(psis)) {
+        rect(xleft = j - 0.5, xright = j + 0.5,
+             ybottom = i - 0.5, ytop = i + 0.5,
+             col = z_to_col(mat[i, j]),
+             border = "white", lwd = 1)
+      }
+    }
+    box()
+  }
+
+  # --- device ---
+  if (!is.null(file)) {
+    png(file, width = width, height = height, res = res)
+    on.exit(dev.off(), add = TRUE)
+  }
+
+  # --- multi-panel + one shared legend column ---
+  k <- length(shift_sizes)
+  # left panels + right legend column
+  lay <- matrix(seq_len(k + 1), nrow = ceiling((k + 0) / 2), byrow = TRUE)
+  # Force a 2-column panel grid, last column reserved for legend
+  # Example for 4 sz: panels in 2x2, legend on right spanning rows
+  layout(matrix(c(1, 2, 5,
+                  3, 4, 5), nrow = 2, byrow = TRUE),
+         widths = c(1, 1, 0.18))
+
+  op <- par(no.readonly = TRUE)
+  on.exit(par(op), add = TRUE)
+
+  par(mar = c(4.5, 5, 4, 1))
+  draw_tiles(mats[[1]], shift_sizes[1])
+  par(mar = c(4.5, 5, 4, 1))
+  draw_tiles(mats[[2]], shift_sizes[2])
+  par(mar = c(4.5, 5, 4, 1))
+  draw_tiles(mats[[3]], shift_sizes[3])
+  par(mar = c(4.5, 5, 4, 1))
+  draw_tiles(mats[[4]], shift_sizes[4])
+
+  # legend (shared)
+  par(mar = c(4.5, 1, 4, 4))
+  plot.new()
+  plot.window(xlim = c(0, 1), ylim = zlim)
+  # draw color bar
+  yseq <- seq(zlim[1], zlim[2], length.out = ncols + 1)
+  for (i in seq_len(ncols)) {
+    rect(0.2, yseq[i], 0.8, yseq[i + 1], col = cols[i], border = NA)
+  }
+  axis(4, las = 1)
+  mtext(expression(Delta*z), side = 4, line = 2)
+
+  # page title
+  mtext(main_prefix, side = 3, outer = TRUE, line = 1, cex = 1.3)
+
+  invisible(list(avg = avg, mats = mats, zlim = zlim))
+}
+
+```
+

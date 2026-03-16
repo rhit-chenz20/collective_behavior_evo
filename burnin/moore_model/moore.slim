@@ -10,9 +10,7 @@ initialize() {
 
     // variable parameters
 	defineConstant("shift_time", 10*N);
-	defineConstant("end_time", shift_time+300);
-	//defineConstant("fluc_interval", 10);
-	//defineConstant("fluc_opt", 20);
+	defineConstant("end_time", shift_time+200);
 	
     // book keeping
 	defineGlobal("Va0_sqrt", -1);	
@@ -56,9 +54,18 @@ initialize() {
 	}
 }
 
-seq(50, end_time, by = fluc_interval) late(){
-	if (optimum <= 0) defineGlobal("optimum", asInteger(fluc_opt/2));
-	else if (optimum > 0) defineGlobal("optimum", asInteger(-fluc_opt/2));
+shift_time late(){
+	print("shift");
+    a=p1.individuals.sumOfMutationsOfType(m1)+2*sum(sim.substitutions[sim.substitutions.mutationType == m1].selectionCoeff);
+	defineGlobal("optimum", optimum+shift_size);
+	print("new opt is " + optimum);
+	defineGlobal("Va0_sqrt", sqrt(var(a)));
+}
+
+end_time late(){
+	print("shift back to opt = 0");
+	defineGlobal("optimum", 0.0);
+	print("new opt is " + optimum);
 }
 
 late(){
@@ -117,14 +124,6 @@ late() {
 	calculate_phenotype(p1);
 }
 
-shift_time late(){
-	print("shift; no shift happens");
-    a=p1.individuals.sumOfMutationsOfType(m1)+2*sum(sim.substitutions[sim.substitutions.mutationType == m1].selectionCoeff);
-	//defineGlobal("optimum", optimum+shift_size);
-	//print("new opt is " + optimum);
-	defineGlobal("Va0_sqrt", sqrt(var(a)));
-}
-
 shift_time-31 late(){
 	sim.outputFull(filePath=pop_output, binary=T, pedigreeIDs=T, objectTags=T, substitutions=T); 
 }
@@ -167,20 +166,33 @@ shift_time-30 late(){
 	log.addCustomColumn("seed", "seed;");
 }
 
-c(seq(shift_time-30, shift_time-6, by=5), (shift_time-5):(shift_time+9), seq(shift_time+10, end_time, by=5)) late(){
-	print("recoding at cycle "+sim.cycle);
+c(seq(shift_time-50, shift_time-6, by=5), (shift_time-5):(shift_time+9), seq(shift_time+10, end_time, by=5)) late(){
+	print("recoding all stats at cycle "+sim.cycle);
 	record_phenotype(p1);
 	record_genotype(p1);
 	record_vars(p1);
     record_fitness(p1);
 }
 
-c(seq(shift_time-30, shift_time-6, by=5), (shift_time-2):(shift_time+4), seq(shift_time+5, end_time, by=10))  late(){
-	print("recoding at cycle "+sim.cycle);
+c(seq(end_time-50, end_time-6, by=5), (end_time-5):(end_time+9), seq(end_time+10, end_time+200, by=5)) late(){
+	print("after shift back to 0: recoding all stats at cycle "+sim.cycle);
+	record_phenotype(p1);
+	record_genotype(p1);
+	record_vars(p1);
+    record_fitness(p1);
+}
+
+c(seq(shift_time-50, shift_time-5, by=5), (shift_time-2):(shift_time+4), seq(shift_time+5, end_time, by=10))  late(){
+	print("recoding effect size at cycle "+sim.cycle);
 	record_effectsize(p1);
 }
 
-end_time late() 
+c(seq(end_time-50, end_time-5, by=5), (end_time-2):(end_time+4), seq(end_time+5, end_time+200, by=10))  late(){
+	print("after shift back to 0: recoding effect size at cycle "+sim.cycle);
+	record_effectsize(p1);
+}
+
+end_time+200 late() 
 {
 	if (record_phenotype(p1, write = T)){
 		print("written phenotype to "+phenotype_fn);
@@ -327,23 +339,21 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 		group = shuffled[i:(i+n-1)];
         as = a[group.index];
 
-        // no phenotype for inverse-variance model; record group variance to tagF
-        phenotype[group.index] = a[group.index];
-        a_var = var(as);
-        group.tagF = a_var;
+        // phenotype for ave model
+        phenotype[group.index] = ((n-1)/(n-1+psi))*a[group.index]+((psi*n)/((n-1+psi)*(1-psi)))*mean(as);
 		
 		vars[group.index] = var(as);
 	}
 	
 	abs_fitness = dnorm(phenotype, optimum, sqrt(Vs));
-    // adjust the fitness of individuals
-    adj_fitness = abs_fitness / (1 + psi * inds.tagF);
+    // no fitness adjustment needed
+    adj_fitness = abs_fitness;
     
 	inds.fitnessScaling = adj_fitness;
 	inds.tagF = phenotype;
 	
 	if(community.tick >= shift_time-30){
 		defineGlobal("group_vars", vars);
-        defineGlobal("abs_fit", adj_fitness);
+        defineGlobal("abs_fit", abs_fitness);
 	}
 }

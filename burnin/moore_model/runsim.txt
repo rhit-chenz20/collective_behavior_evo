@@ -1,0 +1,481 @@
+Wrote: moore.slim
+Submitting job, psi=0.0, n=2, sz=20, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.0_sz_20_reg_moore_1.pop
+Submitting job, psi=0.5, n=2, sz=20, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.5_sz_20_reg_moore_1.pop
+Submitting job, psi=0.7, n=2, sz=20, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.7_sz_20_reg_moore_1.pop
+Submitting job, psi=0.9, n=2, sz=20, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.9_sz_20_reg_moore_1.pop
+Submitting job, psi=0.0, n=8, sz=20, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.0_sz_20_reg_moore_1.pop
+Submitting job, psi=0.5, n=8, sz=20, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.5_sz_20_reg_moore_1.pop
+Submitting job, psi=0.7, n=8, sz=20, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.7_sz_20_reg_moore_1.pop
+Submitting job, psi=0.9, n=8, sz=20, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.9_sz_20_reg_moore_1.pop
+Submitting job, psi=0.0, n=20, sz=20, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.0_sz_20_reg_moore_1.pop
+Submitting job, psi=0.5, n=20, sz=20, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.5_sz_20_reg_moore_1.pop
+Submitting job, psi=0.7, n=20, sz=20, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.7_sz_20_reg_moore_1.pop
+Submitting job, psi=0.9, n=20, sz=20, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.9_sz_20_reg_moore_1.pop
+Submitting job, psi=0.0, n=50, sz=20, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.0_sz_20_reg_moore_1.pop
+Submitting job, psi=0.5, n=50, sz=20, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.5_sz_20_reg_moore_1.pop
+Submitting job, psi=0.7, n=50, sz=20, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.7_sz_20_reg_moore_1.pop
+Submitting job, psi=0.9, n=50, sz=20, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.9_sz_20_reg_moore_1.pop
+Submitting job, psi=0.0, n=2, sz=40, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.0_sz_40_reg_moore_1.pop
+Submitting job, psi=0.5, n=2, sz=40, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.5_sz_40_reg_moore_1.pop
+Submitting job, psi=0.7, n=2, sz=40, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.7_sz_40_reg_moore_1.pop
+Submitting job, psi=0.9, n=2, sz=40, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.9_sz_40_reg_moore_1.pop
+Submitting job, psi=0.0, n=8, sz=40, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.0_sz_40_reg_moore_1.pop
+Submitting job, psi=0.5, n=8, sz=40, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.5_sz_40_reg_moore_1.pop
+Submitting job, psi=0.7, n=8, sz=40, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.7_sz_40_reg_moore_1.pop
+Submitting job, psi=0.9, n=8, sz=40, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.9_sz_40_reg_moore_1.pop
+Submitting job, psi=0.0, n=20, sz=40, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.0_sz_40_reg_moore_1.pop
+Submitting job, psi=0.5, n=20, sz=40, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.5_sz_40_reg_moore_1.pop
+Submitting job, psi=0.7, n=20, sz=40, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.7_sz_40_reg_moore_1.pop
+Submitting job, psi=0.9, n=20, sz=40, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.9_sz_40_reg_moore_1.pop
+Submitting job, psi=0.0, n=50, sz=40, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.0_sz_40_reg_moore_1.pop
+Submitting job, psi=0.5, n=50, sz=40, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.5_sz_40_reg_moore_1.pop
+Submitting job, psi=0.7, n=50, sz=40, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.7_sz_40_reg_moore_1.pop
+Submitting job, psi=0.9, n=50, sz=40, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.9_sz_40_reg_moore_1.pop
+Submitting job, psi=0.0, n=2, sz=60, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.0_sz_60_reg_moore_1.pop
+Submitting job, psi=0.5, n=2, sz=60, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.5_sz_60_reg_moore_1.pop
+Submitting job, psi=0.7, n=2, sz=60, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.7_sz_60_reg_moore_1.pop
+Submitting job, psi=0.9, n=2, sz=60, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.9_sz_60_reg_moore_1.pop
+Submitting job, psi=0.0, n=8, sz=60, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.0_sz_60_reg_moore_1.pop
+Submitting job, psi=0.5, n=8, sz=60, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.5_sz_60_reg_moore_1.pop
+Submitting job, psi=0.7, n=8, sz=60, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.7_sz_60_reg_moore_1.pop
+Submitting job, psi=0.9, n=8, sz=60, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.9_sz_60_reg_moore_1.pop
+Submitting job, psi=0.0, n=20, sz=60, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.0_sz_60_reg_moore_1.pop
+Submitting job, psi=0.5, n=20, sz=60, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.5_sz_60_reg_moore_1.pop
+Submitting job, psi=0.7, n=20, sz=60, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.7_sz_60_reg_moore_1.pop
+Submitting job, psi=0.9, n=20, sz=60, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.9_sz_60_reg_moore_1.pop
+Submitting job, psi=0.0, n=50, sz=60, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.0_sz_60_reg_moore_1.pop
+Submitting job, psi=0.5, n=50, sz=60, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.5_sz_60_reg_moore_1.pop
+Submitting job, psi=0.7, n=50, sz=60, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.7_sz_60_reg_moore_1.pop
+Submitting job, psi=0.9, n=50, sz=60, rep=1, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.9_sz_60_reg_moore_1.pop
+Submitting job, psi=0.0, n=2, sz=20, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.0_sz_20_reg_moore_2.pop
+Submitting job, psi=0.5, n=2, sz=20, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.5_sz_20_reg_moore_2.pop
+Submitting job, psi=0.7, n=2, sz=20, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.7_sz_20_reg_moore_2.pop
+Submitting job, psi=0.9, n=2, sz=20, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.9_sz_20_reg_moore_2.pop
+Submitting job, psi=0.0, n=8, sz=20, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.0_sz_20_reg_moore_2.pop
+Submitting job, psi=0.5, n=8, sz=20, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.5_sz_20_reg_moore_2.pop
+Submitting job, psi=0.7, n=8, sz=20, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.7_sz_20_reg_moore_2.pop
+Submitting job, psi=0.9, n=8, sz=20, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.9_sz_20_reg_moore_2.pop
+Submitting job, psi=0.0, n=20, sz=20, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.0_sz_20_reg_moore_2.pop
+Submitting job, psi=0.5, n=20, sz=20, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.5_sz_20_reg_moore_2.pop
+Submitting job, psi=0.7, n=20, sz=20, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.7_sz_20_reg_moore_2.pop
+Submitting job, psi=0.9, n=20, sz=20, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.9_sz_20_reg_moore_2.pop
+Submitting job, psi=0.0, n=50, sz=20, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.0_sz_20_reg_moore_2.pop
+Submitting job, psi=0.5, n=50, sz=20, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.5_sz_20_reg_moore_2.pop
+Submitting job, psi=0.7, n=50, sz=20, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.7_sz_20_reg_moore_2.pop
+Submitting job, psi=0.9, n=50, sz=20, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.9_sz_20_reg_moore_2.pop
+Submitting job, psi=0.0, n=2, sz=40, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.0_sz_40_reg_moore_2.pop
+Submitting job, psi=0.5, n=2, sz=40, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.5_sz_40_reg_moore_2.pop
+Submitting job, psi=0.7, n=2, sz=40, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.7_sz_40_reg_moore_2.pop
+Submitting job, psi=0.9, n=2, sz=40, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.9_sz_40_reg_moore_2.pop
+Submitting job, psi=0.0, n=8, sz=40, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.0_sz_40_reg_moore_2.pop
+Submitting job, psi=0.5, n=8, sz=40, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.5_sz_40_reg_moore_2.pop
+Submitting job, psi=0.7, n=8, sz=40, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.7_sz_40_reg_moore_2.pop
+Submitting job, psi=0.9, n=8, sz=40, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.9_sz_40_reg_moore_2.pop
+Submitting job, psi=0.0, n=20, sz=40, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.0_sz_40_reg_moore_2.pop
+Submitting job, psi=0.5, n=20, sz=40, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.5_sz_40_reg_moore_2.pop
+Submitting job, psi=0.7, n=20, sz=40, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.7_sz_40_reg_moore_2.pop
+Submitting job, psi=0.9, n=20, sz=40, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.9_sz_40_reg_moore_2.pop
+Submitting job, psi=0.0, n=50, sz=40, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.0_sz_40_reg_moore_2.pop
+Submitting job, psi=0.5, n=50, sz=40, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.5_sz_40_reg_moore_2.pop
+Submitting job, psi=0.7, n=50, sz=40, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.7_sz_40_reg_moore_2.pop
+Submitting job, psi=0.9, n=50, sz=40, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.9_sz_40_reg_moore_2.pop
+Submitting job, psi=0.0, n=2, sz=60, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.0_sz_60_reg_moore_2.pop
+Submitting job, psi=0.5, n=2, sz=60, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.5_sz_60_reg_moore_2.pop
+Submitting job, psi=0.7, n=2, sz=60, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.7_sz_60_reg_moore_2.pop
+Submitting job, psi=0.9, n=2, sz=60, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.9_sz_60_reg_moore_2.pop
+Submitting job, psi=0.0, n=8, sz=60, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.0_sz_60_reg_moore_2.pop
+Submitting job, psi=0.5, n=8, sz=60, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.5_sz_60_reg_moore_2.pop
+Submitting job, psi=0.7, n=8, sz=60, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.7_sz_60_reg_moore_2.pop
+Submitting job, psi=0.9, n=8, sz=60, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.9_sz_60_reg_moore_2.pop
+Submitting job, psi=0.0, n=20, sz=60, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.0_sz_60_reg_moore_2.pop
+Submitting job, psi=0.5, n=20, sz=60, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.5_sz_60_reg_moore_2.pop
+Submitting job, psi=0.7, n=20, sz=60, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.7_sz_60_reg_moore_2.pop
+Submitting job, psi=0.9, n=20, sz=60, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.9_sz_60_reg_moore_2.pop
+Submitting job, psi=0.0, n=50, sz=60, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.0_sz_60_reg_moore_2.pop
+Submitting job, psi=0.5, n=50, sz=60, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.5_sz_60_reg_moore_2.pop
+Submitting job, psi=0.7, n=50, sz=60, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.7_sz_60_reg_moore_2.pop
+Submitting job, psi=0.9, n=50, sz=60, rep=2, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.9_sz_60_reg_moore_2.pop
+Submitting job, psi=0.0, n=2, sz=20, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.0_sz_20_reg_moore_3.pop
+Submitting job, psi=0.5, n=2, sz=20, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.5_sz_20_reg_moore_3.pop
+Submitting job, psi=0.7, n=2, sz=20, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.7_sz_20_reg_moore_3.pop
+Submitting job, psi=0.9, n=2, sz=20, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.9_sz_20_reg_moore_3.pop
+Submitting job, psi=0.0, n=8, sz=20, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.0_sz_20_reg_moore_3.pop
+Submitting job, psi=0.5, n=8, sz=20, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.5_sz_20_reg_moore_3.pop
+Submitting job, psi=0.7, n=8, sz=20, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.7_sz_20_reg_moore_3.pop
+Submitting job, psi=0.9, n=8, sz=20, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.9_sz_20_reg_moore_3.pop
+Submitting job, psi=0.0, n=20, sz=20, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.0_sz_20_reg_moore_3.pop
+Submitting job, psi=0.5, n=20, sz=20, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.5_sz_20_reg_moore_3.pop
+Submitting job, psi=0.7, n=20, sz=20, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.7_sz_20_reg_moore_3.pop
+Submitting job, psi=0.9, n=20, sz=20, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.9_sz_20_reg_moore_3.pop
+Submitting job, psi=0.0, n=50, sz=20, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.0_sz_20_reg_moore_3.pop
+Submitting job, psi=0.5, n=50, sz=20, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.5_sz_20_reg_moore_3.pop
+Submitting job, psi=0.7, n=50, sz=20, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.7_sz_20_reg_moore_3.pop
+Submitting job, psi=0.9, n=50, sz=20, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.9_sz_20_reg_moore_3.pop
+Submitting job, psi=0.0, n=2, sz=40, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.0_sz_40_reg_moore_3.pop
+Submitting job, psi=0.5, n=2, sz=40, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.5_sz_40_reg_moore_3.pop
+Submitting job, psi=0.7, n=2, sz=40, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.7_sz_40_reg_moore_3.pop
+Submitting job, psi=0.9, n=2, sz=40, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.9_sz_40_reg_moore_3.pop
+Submitting job, psi=0.0, n=8, sz=40, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.0_sz_40_reg_moore_3.pop
+Submitting job, psi=0.5, n=8, sz=40, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.5_sz_40_reg_moore_3.pop
+Submitting job, psi=0.7, n=8, sz=40, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.7_sz_40_reg_moore_3.pop
+Submitting job, psi=0.9, n=8, sz=40, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.9_sz_40_reg_moore_3.pop
+Submitting job, psi=0.0, n=20, sz=40, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.0_sz_40_reg_moore_3.pop
+Submitting job, psi=0.5, n=20, sz=40, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.5_sz_40_reg_moore_3.pop
+Submitting job, psi=0.7, n=20, sz=40, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.7_sz_40_reg_moore_3.pop
+Submitting job, psi=0.9, n=20, sz=40, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.9_sz_40_reg_moore_3.pop
+Submitting job, psi=0.0, n=50, sz=40, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.0_sz_40_reg_moore_3.pop
+Submitting job, psi=0.5, n=50, sz=40, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.5_sz_40_reg_moore_3.pop
+Submitting job, psi=0.7, n=50, sz=40, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.7_sz_40_reg_moore_3.pop
+Submitting job, psi=0.9, n=50, sz=40, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.9_sz_40_reg_moore_3.pop
+Submitting job, psi=0.0, n=2, sz=60, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.0_sz_60_reg_moore_3.pop
+Submitting job, psi=0.5, n=2, sz=60, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.5_sz_60_reg_moore_3.pop
+Submitting job, psi=0.7, n=2, sz=60, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.7_sz_60_reg_moore_3.pop
+Submitting job, psi=0.9, n=2, sz=60, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.9_sz_60_reg_moore_3.pop
+Submitting job, psi=0.0, n=8, sz=60, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.0_sz_60_reg_moore_3.pop
+Submitting job, psi=0.5, n=8, sz=60, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.5_sz_60_reg_moore_3.pop
+Submitting job, psi=0.7, n=8, sz=60, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.7_sz_60_reg_moore_3.pop
+Submitting job, psi=0.9, n=8, sz=60, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.9_sz_60_reg_moore_3.pop
+Submitting job, psi=0.0, n=20, sz=60, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.0_sz_60_reg_moore_3.pop
+Submitting job, psi=0.5, n=20, sz=60, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.5_sz_60_reg_moore_3.pop
+Submitting job, psi=0.7, n=20, sz=60, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.7_sz_60_reg_moore_3.pop
+Submitting job, psi=0.9, n=20, sz=60, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.9_sz_60_reg_moore_3.pop
+Submitting job, psi=0.0, n=50, sz=60, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.0_sz_60_reg_moore_3.pop
+Submitting job, psi=0.5, n=50, sz=60, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.5_sz_60_reg_moore_3.pop
+Submitting job, psi=0.7, n=50, sz=60, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.7_sz_60_reg_moore_3.pop
+Submitting job, psi=0.9, n=50, sz=60, rep=3, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.9_sz_60_reg_moore_3.pop
+Submitting job, psi=0.0, n=2, sz=20, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.0_sz_20_reg_moore_4.pop
+Submitting job, psi=0.5, n=2, sz=20, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.5_sz_20_reg_moore_4.pop
+Submitting job, psi=0.7, n=2, sz=20, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.7_sz_20_reg_moore_4.pop
+Submitting job, psi=0.9, n=2, sz=20, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.9_sz_20_reg_moore_4.pop
+Submitting job, psi=0.0, n=8, sz=20, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.0_sz_20_reg_moore_4.pop
+Submitting job, psi=0.5, n=8, sz=20, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.5_sz_20_reg_moore_4.pop
+Submitting job, psi=0.7, n=8, sz=20, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.7_sz_20_reg_moore_4.pop
+Submitting job, psi=0.9, n=8, sz=20, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.9_sz_20_reg_moore_4.pop
+Submitting job, psi=0.0, n=20, sz=20, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.0_sz_20_reg_moore_4.pop
+Submitting job, psi=0.5, n=20, sz=20, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.5_sz_20_reg_moore_4.pop
+Submitting job, psi=0.7, n=20, sz=20, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.7_sz_20_reg_moore_4.pop
+Submitting job, psi=0.9, n=20, sz=20, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.9_sz_20_reg_moore_4.pop
+Submitting job, psi=0.0, n=50, sz=20, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.0_sz_20_reg_moore_4.pop
+Submitting job, psi=0.5, n=50, sz=20, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.5_sz_20_reg_moore_4.pop
+Submitting job, psi=0.7, n=50, sz=20, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.7_sz_20_reg_moore_4.pop
+Submitting job, psi=0.9, n=50, sz=20, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.9_sz_20_reg_moore_4.pop
+Submitting job, psi=0.0, n=2, sz=40, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.0_sz_40_reg_moore_4.pop
+Submitting job, psi=0.5, n=2, sz=40, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.5_sz_40_reg_moore_4.pop
+Submitting job, psi=0.7, n=2, sz=40, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.7_sz_40_reg_moore_4.pop
+Submitting job, psi=0.9, n=2, sz=40, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.9_sz_40_reg_moore_4.pop
+Submitting job, psi=0.0, n=8, sz=40, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.0_sz_40_reg_moore_4.pop
+Submitting job, psi=0.5, n=8, sz=40, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.5_sz_40_reg_moore_4.pop
+Submitting job, psi=0.7, n=8, sz=40, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.7_sz_40_reg_moore_4.pop
+Submitting job, psi=0.9, n=8, sz=40, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.9_sz_40_reg_moore_4.pop
+Submitting job, psi=0.0, n=20, sz=40, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.0_sz_40_reg_moore_4.pop
+Submitting job, psi=0.5, n=20, sz=40, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.5_sz_40_reg_moore_4.pop
+Submitting job, psi=0.7, n=20, sz=40, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.7_sz_40_reg_moore_4.pop
+Submitting job, psi=0.9, n=20, sz=40, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.9_sz_40_reg_moore_4.pop
+Submitting job, psi=0.0, n=50, sz=40, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.0_sz_40_reg_moore_4.pop
+Submitting job, psi=0.5, n=50, sz=40, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.5_sz_40_reg_moore_4.pop
+Submitting job, psi=0.7, n=50, sz=40, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.7_sz_40_reg_moore_4.pop
+Submitting job, psi=0.9, n=50, sz=40, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.9_sz_40_reg_moore_4.pop
+Submitting job, psi=0.0, n=2, sz=60, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.0_sz_60_reg_moore_4.pop
+Submitting job, psi=0.5, n=2, sz=60, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.5_sz_60_reg_moore_4.pop
+Submitting job, psi=0.7, n=2, sz=60, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.7_sz_60_reg_moore_4.pop
+Submitting job, psi=0.9, n=2, sz=60, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.9_sz_60_reg_moore_4.pop
+Submitting job, psi=0.0, n=8, sz=60, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.0_sz_60_reg_moore_4.pop
+Submitting job, psi=0.5, n=8, sz=60, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.5_sz_60_reg_moore_4.pop
+Submitting job, psi=0.7, n=8, sz=60, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.7_sz_60_reg_moore_4.pop
+Submitting job, psi=0.9, n=8, sz=60, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.9_sz_60_reg_moore_4.pop
+Submitting job, psi=0.0, n=20, sz=60, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.0_sz_60_reg_moore_4.pop
+Submitting job, psi=0.5, n=20, sz=60, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.5_sz_60_reg_moore_4.pop
+Submitting job, psi=0.7, n=20, sz=60, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.7_sz_60_reg_moore_4.pop
+Submitting job, psi=0.9, n=20, sz=60, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.9_sz_60_reg_moore_4.pop
+Submitting job, psi=0.0, n=50, sz=60, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.0_sz_60_reg_moore_4.pop
+Submitting job, psi=0.5, n=50, sz=60, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.5_sz_60_reg_moore_4.pop
+Submitting job, psi=0.7, n=50, sz=60, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.7_sz_60_reg_moore_4.pop
+Submitting job, psi=0.9, n=50, sz=60, rep=4, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.9_sz_60_reg_moore_4.pop
+Submitting job, psi=0.0, n=2, sz=20, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.0_sz_20_reg_moore_5.pop
+Submitting job, psi=0.5, n=2, sz=20, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.5_sz_20_reg_moore_5.pop
+Submitting job, psi=0.7, n=2, sz=20, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.7_sz_20_reg_moore_5.pop
+Submitting job, psi=0.9, n=2, sz=20, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.9_sz_20_reg_moore_5.pop
+Submitting job, psi=0.0, n=8, sz=20, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.0_sz_20_reg_moore_5.pop
+Submitting job, psi=0.5, n=8, sz=20, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.5_sz_20_reg_moore_5.pop
+Submitting job, psi=0.7, n=8, sz=20, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.7_sz_20_reg_moore_5.pop
+Submitting job, psi=0.9, n=8, sz=20, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.9_sz_20_reg_moore_5.pop
+Submitting job, psi=0.0, n=20, sz=20, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.0_sz_20_reg_moore_5.pop
+Submitting job, psi=0.5, n=20, sz=20, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.5_sz_20_reg_moore_5.pop
+Submitting job, psi=0.7, n=20, sz=20, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.7_sz_20_reg_moore_5.pop
+Submitting job, psi=0.9, n=20, sz=20, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.9_sz_20_reg_moore_5.pop
+Submitting job, psi=0.0, n=50, sz=20, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.0_sz_20_reg_moore_5.pop
+Submitting job, psi=0.5, n=50, sz=20, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.5_sz_20_reg_moore_5.pop
+Submitting job, psi=0.7, n=50, sz=20, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.7_sz_20_reg_moore_5.pop
+Submitting job, psi=0.9, n=50, sz=20, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.9_sz_20_reg_moore_5.pop
+Submitting job, psi=0.0, n=2, sz=40, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.0_sz_40_reg_moore_5.pop
+Submitting job, psi=0.5, n=2, sz=40, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.5_sz_40_reg_moore_5.pop
+Submitting job, psi=0.7, n=2, sz=40, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.7_sz_40_reg_moore_5.pop
+Submitting job, psi=0.9, n=2, sz=40, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.9_sz_40_reg_moore_5.pop
+Submitting job, psi=0.0, n=8, sz=40, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.0_sz_40_reg_moore_5.pop
+Submitting job, psi=0.5, n=8, sz=40, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.5_sz_40_reg_moore_5.pop
+Submitting job, psi=0.7, n=8, sz=40, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.7_sz_40_reg_moore_5.pop
+Submitting job, psi=0.9, n=8, sz=40, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.9_sz_40_reg_moore_5.pop
+Submitting job, psi=0.0, n=20, sz=40, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.0_sz_40_reg_moore_5.pop
+Submitting job, psi=0.5, n=20, sz=40, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.5_sz_40_reg_moore_5.pop
+Submitting job, psi=0.7, n=20, sz=40, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.7_sz_40_reg_moore_5.pop
+Submitting job, psi=0.9, n=20, sz=40, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.9_sz_40_reg_moore_5.pop
+Submitting job, psi=0.0, n=50, sz=40, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.0_sz_40_reg_moore_5.pop
+Submitting job, psi=0.5, n=50, sz=40, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.5_sz_40_reg_moore_5.pop
+Submitting job, psi=0.7, n=50, sz=40, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.7_sz_40_reg_moore_5.pop
+Submitting job, psi=0.9, n=50, sz=40, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.9_sz_40_reg_moore_5.pop
+Submitting job, psi=0.0, n=2, sz=60, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.0_sz_60_reg_moore_5.pop
+Submitting job, psi=0.5, n=2, sz=60, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.5_sz_60_reg_moore_5.pop
+Submitting job, psi=0.7, n=2, sz=60, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.7_sz_60_reg_moore_5.pop
+Submitting job, psi=0.9, n=2, sz=60, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_2_psi_0.9_sz_60_reg_moore_5.pop
+Submitting job, psi=0.0, n=8, sz=60, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.0_sz_60_reg_moore_5.pop
+Submitting job, psi=0.5, n=8, sz=60, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.5_sz_60_reg_moore_5.pop
+Submitting job, psi=0.7, n=8, sz=60, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.7_sz_60_reg_moore_5.pop
+Submitting job, psi=0.9, n=8, sz=60, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_8_psi_0.9_sz_60_reg_moore_5.pop
+Submitting job, psi=0.0, n=20, sz=60, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.0_sz_60_reg_moore_5.pop
+Submitting job, psi=0.5, n=20, sz=60, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.5_sz_60_reg_moore_5.pop
+Submitting job, psi=0.7, n=20, sz=60, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.7_sz_60_reg_moore_5.pop
+Submitting job, psi=0.9, n=20, sz=60, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_20_psi_0.9_sz_60_reg_moore_5.pop
+Submitting job, psi=0.0, n=50, sz=60, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.0_sz_60_reg_moore_5.pop
+Submitting job, psi=0.5, n=50, sz=60, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.5_sz_60_reg_moore_5.pop
+Submitting job, psi=0.7, n=50, sz=60, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.7_sz_60_reg_moore_5.pop
+Submitting job, psi=0.9, n=50, sz=60, rep=5, reg=moore, gap=.
+Found pop file: ../../data/moore_model/pop/n_50_psi_0.9_sz_60_reg_moore_5.pop

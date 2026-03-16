@@ -9,8 +9,9 @@ output: pdf_document
 ```{r setup, include=FALSE}
 wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
 setwd(wd_path)
-base_data_folders <- c("../../data/fluctuate_env_constant_psi_gap_1", "../../data/fluctuate_env_constant_psi_gap_10", "../../data/fluctuate_env_constant_psi_gap_100")
-regimes <- c("inv", "fit", "ave", "ext")  # "inv" = inverse_variance, "var" = variance
+# base_data_folders <- c("../../data/fluctuate_env_constant_psi_gap_1", "../../data/fluctuate_env_constant_psi_gap_10", "../../data/fluctuate_env_constant_psi_gap_100")
+base_data_folders <- c("../../data/fluctuate_env_constant_psi_gap_100")
+regimes <- c("fit", "ave", "ext")  # "inv" = inverse_variance, "var" = variance
 
 # ---- Helper: choose the generation key column name ----
 .gen_key <- function(d) {
@@ -136,13 +137,13 @@ print(unique(summary_stat_df$reg))
 folders <- file.path(base_data_folders, "genotype")
 
 # ---- Metadata extractor for genotype paths ----
-# Matches: genotype/n_<n>_(beta|psi)_<val>_sz_<sz>_reg_(inv|fit|ext|ave)_<rep>.tsv
+# Matches: genotype/n_<n>_(beta|psi)_<val>_sz_<sz>_reg_(fit|ext|ave)_<rep>.tsv
 extract_geno_metadata <- function(path) {
-  pat <- "genotype/n_(\\d+)_psi_(-?[0-9.]+)_sz_(\\d+)_reg_(inv|fit|ext|ave)_(\\d+)\\.tsv$"
+  pat <- "fluctuate_env_constant_psi_gap_(\\d+)/genotype/n_(\\d+)_psi_(-?[0-9.]+)_sz_(\\d+)_reg_(fit|ext|ave)_(\\d+)\\.tsv$"
   matches <- regexec(pat, path)
   parts <- regmatches(path, matches)[[1]]
 
-  if (length(parts) != 6) {
+  if (length(parts) != 7) {
     reg_match <- sub(".*_reg_([a-zA-Z0-9]+)_\\d+\\.tsv$", "\\1", path)
     if (!exists("regimes") || !reg_match %in% regimes) return(data.frame())
     warning("Could not extract metadata from path: ", path,
@@ -151,11 +152,12 @@ extract_geno_metadata <- function(path) {
   }
 
   data.frame(
-    n          = as.integer(parts[2]),          # "beta" or "psi"
-    psi      = as.numeric(parts[3]),
-    shift_size = as.integer(parts[4]),
-    reg        = parts[5],                 # "inv"|"fit"|"ext"|"ave"
-    rep        = as.integer(parts[6]),
+    fluctuate_gap = as.integer(parts[2]),
+    n          = as.integer(parts[3]),     
+    psi      = as.numeric(parts[4]),
+    shift_size = as.integer(parts[5]),
+    reg        = parts[6],              
+    rep        = as.integer(parts[7]),
     file_id    = basename(path),
     stringsAsFactors = FALSE
   )
@@ -174,6 +176,7 @@ dfs <- lapply(folders, function(folder) {
     recursive = TRUE
   )
   if (!length(file_list)) return(NULL)
+  file_list <- file_list[!grepl("_reg_inv_", file_list)]
 
   geno_df <- do.call(rbind, lapply(file_list, function(file) {
     # Read genotype file
@@ -188,6 +191,7 @@ dfs <- lapply(folders, function(folder) {
     if (nrow(meta) == 0) return(NULL)
 
     # Attach metadata columns
+    df$fluctuate_gap <- meta$fluctuate_gap
     df$n <- meta$n
     df$psi  <- meta$psi
     df$shift_size <- meta$shift_size
@@ -211,7 +215,7 @@ geno_df <- genotype_df[genotype_df$generation >= 9999 & genotype_df$generation <
 ```
 
 ```{r}
-saveRDS(genotype_df, file = "../r_data/fluc_env_cpsi/genotypes.rds")
+saveRDS(genotype_df, file = "../r_data/fluctuate_env_constant_psi/genotypes_gap100.rds")
 ```
 
 ```{r}
@@ -233,12 +237,12 @@ regimes <- c("fit", "ave", "ext")  # only non-variacne model has phenotype data
 folders <- file.path(base_data_folders, "phenotype")
 
 # Helper: extract metadata from phenotype path
-extract_geno_metadata <- function(path) {
-  pat <- "phenotype/n_(\\d+)_psi_(-?[0-9.]+)_sz_(\\d+)_reg_(fit|ext|ave)_(\\d+)\\.tsv$"
+extract_pheno_metadata <- function(path) {
+  pat <- "fluctuate_env_constant_psi_gap_(\\d+)/phenotype/n_(\\d+)_psi_(-?[0-9.]+)_sz_(\\d+)_reg_(fit|ext|ave)_(\\d+)\\.tsv$"
   matches <- regexec(pat, path)
   parts <- regmatches(path, matches)[[1]]
 
-  if (length(parts) != 6) {
+  if (length(parts) != 7) {
     reg_match <- sub(".*_reg_([a-zA-Z0-9]+)_\\d+\\.tsv$", "\\1", path)
     if (!exists("regimes") || !reg_match %in% regimes) return(data.frame())
     warning("Could not extract metadata from path: ", path,
@@ -247,22 +251,15 @@ extract_geno_metadata <- function(path) {
   }
 
   data.frame(
-    n          = as.integer(parts[2]),       # "beta" or "psi"
-    psi      = as.numeric(parts[3]),
-    shift_size = as.integer(parts[4]),
-    reg        = parts[5],                 # "fit"|"ext"|"ave"
-    rep        = as.integer(parts[6]),
+    fluctuate_gap = as.integer(parts[2]),
+    n          = as.integer(parts[3]),     
+    psi      = as.numeric(parts[4]),
+    shift_size = as.integer(parts[5]),
+    reg        = parts[6],              
+    rep        = as.integer(parts[7]),
     file_id    = basename(path),
     stringsAsFactors = FALSE
   )
-}
-
-# Helper: find the generation key column name in a df
-.gen_key <- function(d) {
-  if ("tick" %in% names(d)) return("tick")
-  if ("generation" %in% names(d)) return("generation")
-  # Fallback: first column (last resort)
-  names(d)[1]
 }
 
 dfs <- lapply(folders, function(folder) {
@@ -278,6 +275,7 @@ dfs <- lapply(folders, function(folder) {
     recursive = TRUE
   )
   if (!length(file_list)) return(NULL)
+  file_list <- file_list[!grepl("_reg_inv_", file_list)]
 
   pheno_df <- do.call(rbind, lapply(file_list, function(file) {
     # Read phenotype file
@@ -288,10 +286,11 @@ dfs <- lapply(folders, function(folder) {
       return(NULL)
     }
 
-    meta <- extract_geno_metadata(file)
+    meta <- extract_pheno_metadata(file)
     if (nrow(meta) == 0) return(NULL)
 
     # Attach metadata columns
+    df$fluctuate_gap <- meta$fluctuate_gap
     df$n <- meta$n
     df$psi  <- meta$psi
     df$shift_size <- meta$shift_size
@@ -320,7 +319,7 @@ unique(phenotype_df$psi)
 ```
 
 ```{r}
-saveRDS(phenotype_df, file = "../r_data/fluc_env_cpsi/phenotypes.rds")
+saveRDS(phenotype_df, file = "../r_data/fluctuate_env_constant_psi/phenotype_gap100.rds")
 ```
 
 ```{r}

@@ -1,0 +1,848 @@
+---
+title: "plot evolutionary trajectory for multiple models"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+# parameter for plotting
+```{r setup, include=FALSE}
+wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
+setwd(wd_path)
+base_plot_folder <- "../plots/3_9/constant_env/"
+if (!dir.exists(base_plot_folder)) {
+  dir.create(base_plot_folder, recursive = TRUE)
+}
+hcl_color_palette <- "Dark 2" # color pattern for lines 
+```
+
+# load evolutionary trajectory data
+```{r}
+data_df <- readRDS("../r_data/constant_env_batch/data_summary.rds")
+```
+
+```{r}
+data_df <- summary_stat_df
+```
+
+```{r}
+norm_const <- 0.0087186
+data_df$fitness_mean_norm <- data_df$fitness_mean / norm_const
+```
+
+```{r}
+colname = c("seg_site_pop")  # column to plot
+plot_folder = paste0(base_plot_folder, paste(colname, collapse = "_"), "/")
+
+ltys = c(1, 2) # per ycol: solid, dashed
+
+if (!dir.exists(plot_folder)) {
+  dir.create(plot_folder, recursive = TRUE)
+}
+
+n=2
+sz=60
+
+# data_df <- summary_stat_df[summary_stat_df$tick < 10000, ]
+# for (n in c(2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 50)){
+for (n in c(2, 5, 8, 20, 50)){
+    for (sz in c(20, 40, 60)){
+        for (reg in c("ext")){
+            # for (reg in c("fit")){
+                # for (opt in c(0, sz)){
+                filt_A <- list(reg = reg, psi = 0.0, n = n, shift_size = sz)
+                filt_B <- list(reg = reg, psi = 0.5, n = n, shift_size = sz)
+                filt_C <- list(reg = reg, psi = 0.9, n = n, shift_size = sz)
+                png(paste0(plot_folder, "reg_", reg, "_n_", n, "_sz_", sz, ".png"), width = 2200, height = 1800, res = 150)
+
+                title <- paste0(
+                if (reg == "inv") "Homogenous group" else
+                    if (reg == "fit") "copy the best" else
+                    if (reg == "ext") "copy the extreme" else
+                        if (reg == "ave") "copy the average",
+                " model (n = ", n, ")"
+                )
+
+                par(cex.axis = 2.5, cex.lab = 2.5, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
+
+                plot_lines_multi(
+                    df      = data_df,
+                    filters = list(filt_A, filt_B, filt_C),
+                    ycol    = colname,  # << choose the column to plot
+                    labels  = list(
+                        title = title,
+                        x = "Generation",  # or any x label you want
+                        y = "Average number of segregating sites among individuals"      # or any y label you want
+                    ),
+                    show_rep = TRUE,       # faded per-rep lines? TRUE/FALSE
+                    cols = c(
+                        hcl.colors(3, hcl_color_palette)[1],
+                        hcl.colors(3, hcl_color_palette)[2],
+                        hcl.colors(3, hcl_color_palette)[3]
+                    ),
+                    ylim = c(850, 1050),
+                    xlim = c(9990, 10050),
+                    # xcol = "dz1"
+                    ltys = ltys
+                )
+                
+                # abline(a = 0, b = 1, lty = 2, col = "black", lwd = 2)
+
+                leg_expr <- as.expression(lapply(c(filt_A$psi, filt_B$psi, filt_C$psi),
+                                                function(v) bquote(psi == .(v))))
+                legend("topright", bty = "n", legend = leg_expr,
+                    col = c(
+                        hcl.colors(3, hcl_color_palette)[1],
+                        hcl.colors(3, hcl_color_palette)[2],
+                        hcl.colors(3, hcl_color_palette)[3]
+                    ),
+                    lwd = 3, cex = 2.2)
+                dev.off()
+                # }
+        }
+    }
+}
+```
+
+```{r}
+data_df$a_z_diff <- data_df$z_mean - data_df$a_mean
+```
+
+```{r}
+ns  <- c(2,3,4,5,6,7,8,9,10,20,50)
+psis <- c(0.0, 0.5, 0.9)
+szs <- c(20, 40, 60, 120)
+
+plot_folder = paste0(base_plot_folder, "AURC", "/")
+
+# compute once
+aurc_df <- compute_aurc_grid(
+  df = data_df,
+  reg_value = "ext",     # or "ave", "ext"
+  ns = ns,
+  psis = psis,
+  shift_sizes = szs,
+  ycol = "fitness_mean_norm"  # column to compute AURC on
+)
+
+# fixed scale across panels (recommended)
+zlim <- range(aurc_df$aurc, na.rm = TRUE)
+
+# plot one file per shift_size
+for (sz in szs) {
+  png(file.path(plot_folder, paste0("aurc_ext_sz_", sz, ".png")),
+      width = 1800, height = 1600, res = 150)
+  plot_aurc_heatmap_simple(
+    aurc_df,
+    ns = ns,
+    psis = psis,
+    shift_size = sz,
+    zlim = zlim,
+    main = paste0("AURC of fitness deficit (copy-the-extreme), shift_size = ", sz)
+  )
+  dev.off()
+}
+
+```
+
+```{r, echo=FALSE}
+data_df$fitness_mean_norm <- data_df$fitness_mean / 0.0087186
+data_df$fitness_sd_norm <- data_df$fitness_sd / 0.0005019642
+
+```
+
+
+```{r}
+plot_folder = paste0(base_plot_folder, "delta_decay_k", "/")
+
+if (!dir.exists(plot_folder)) {
+  dir.create(plot_folder, recursive = TRUE)
+}
+# --- SETTINGS ---
+ns  <- c(2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 50)
+szs <- c(20, 40, 60, 120)
+
+# ns  <- c(2)
+# szs <- c(20)
+regs <- c("fit", "ext", "ave")
+
+# choose the time window you want the decay fit over
+# (adjust to match your plotting window if you want)
+data_fit_df <- data_df[data_df$tick >= 10000 & data_df$tick <= 10100, ]
+
+# --- COLLECT DELTA b ---
+out <- list()
+k <- 1
+
+for (reg in regs) {
+  for (sz in szs) {
+    for (n in ns) {
+
+      filt_0 <- list(reg = reg, psi = 0.0, n = n, shift_size = sz)
+      filt_5 <- list(reg = reg, psi = 0.5, n = n, shift_size = sz)
+      filt_9 <- list(reg = reg, psi = 0.9, n = n, shift_size = sz)
+
+      res0 <- fit_exp_decay_window(
+        df = data_fit_df,
+        filter = filt_0,
+        model = "offset"
+      )
+
+      res5 <- fit_exp_decay_window(
+        df = data_fit_df,
+        filter = filt_5,
+        model = "offset"
+      )
+      
+      res9 <- fit_exp_decay_window(
+        df = data_fit_df,
+        filter = filt_9,
+        model = "offset"
+      )
+
+      b0 <- if (res0$converged) unname(res0$params["b"]) else NA
+      b5 <- if (res5$converged) unname(res5$params["b"]) else NA
+      b9 <- if (res9$converged) unname(res9$params["b"]) else NA
+
+      out[[k]] <- data.frame(
+        reg = reg,
+        shift_size = sz,
+        n = n,
+        b_psi0 = b0,
+        b_psi5 = b5,
+        b_psi9 = b9,
+        delta_b = b0 - b9,
+        stringsAsFactors = FALSE
+      )
+      k <- k + 1
+    }
+  }
+}
+
+delta_df <- do.call(rbind, out)
+
+```
+
+```{r}
+plot_folder = paste0(base_plot_folder, "first_jump_heatmap", "/")
+
+if (!dir.exists(plot_folder)) {
+  dir.create(plot_folder, recursive = TRUE)
+}
+ns  <- c(2,3,4,5,6,7,8,9,10,20,50)
+psis <- c(0.0, 0.5, 0.9)
+szs <- c(20, 40, 60, 120)
+
+plot_first_jump_heatmap2(
+  df = data_df,
+  reg_value = "fit",
+  ns = ns,
+  psis = psis,
+  shift_sizes = szs,
+  file = file.path(plot_folder, "first_jump_heatmap_fit_clean.png"),
+  palette_name = "RdYlBu",
+  zlim = c(0, 30)   # set fixed so all panels comparable
+)
+
+
+```
+
+```{r}
+data_df$a_var <- data_df$a_sd^2
+data_df$z_var <- data_df$z_sd^2
+```
+
+```{r}
+colname = c("a_sd", "n")  # column to plot
+plot_folder = paste0(base_plot_folder, paste(colname, collapse = "_"), "/")
+
+if (!dir.exists(plot_folder)) {
+  dir.create(plot_folder, recursive = TRUE)
+}
+
+for (r in c("fit", "ext", "ave")) {
+    pre_data <- data_df[
+      data_df$tick >= 9970 &
+      data_df$tick <= 9999 &
+      data_df$reg == r &
+      data_df$psi %in% c(0.0, 0.5, 0.9),
+    ]
+    
+    filt_A <- list(reg = r, psi = 0.0)
+    filt_B <- list(reg = r, psi = 0.5)
+    filt_C <- list(reg = r, psi = 0.9)
+    pdf(paste0(plot_folder, "reg_", r, ".pdf"), width = 11.5, height = 8)
+
+    title <- paste0(
+    if (r == "inv") "Homogenous group" else
+        if (r == "fit") "copy the best" else
+        if (r == "ext") "copy the extreme" else
+            if (r == "ave") "copy the average",
+    " model"
+    )
+
+    par(cex.axis = 2.5, cex.lab = 2.5, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
+
+    plot_lines_multi(
+        df      = pre_data,
+        filters = list(filt_A, filt_B, filt_C),
+        ycol    = "a_sd",  # << choose the column to plot
+        labels  = list(
+            title = title,
+            x = "n",  # or any x label you want
+            y = expression(g[sd])      # or any y label you want
+        ),
+        show_rep = TRUE,       # faded per-rep lines? TRUE/FALSE
+        cols = c(
+            hcl.colors(3, hcl_color_palette)[1],
+            hcl.colors(3, hcl_color_palette)[2],
+            hcl.colors(3, hcl_color_palette)[3]
+        ),
+        ylim = c(8, 13),
+        xlim = c(2, 50),
+        xcol = "n",
+        ltys = ltys
+    )
+    
+    # abline(a = 0, b = 1, lty = 2, col = "black", lwd = 2)
+
+    leg_expr <- as.expression(lapply(c(filt_A$psi, filt_B$psi, filt_C$psi),
+                                    function(v) bquote(psi == .(v))))
+    legend("topright", bty = "n", legend = leg_expr,
+        col = c(
+            hcl.colors(3, hcl_color_palette)[1],
+            hcl.colors(3, hcl_color_palette)[2],
+            hcl.colors(3, hcl_color_palette)[3]
+        ),
+        lwd = 3, cex = 2.2)
+    dev.off()
+}
+```
+
+
+```{r}
+pre_shift_data_df <- data_df[data_df$tick >= 9970 & data_df$tick <= 9999, ]
+
+for (reg in c("ave", "ext", "fit")){
+  for (n in c(8, 50)){
+    for (psi in c(0.5, 0.9)){
+      after_filter_data <- pre_shift_data_df[
+        pre_shift_data_df$n == n &
+        pre_shift_data_df$reg == reg &
+        pre_shift_data_df$psi == psi, 
+      ]
+      for (col in c("fitness_mean_norm","abs_effect_mean", "abs_effect_sd", "num_seg_mean", "num_seg_sd", "seg_site_pop")){
+        # get the average and sd of each column across ticks and reps in the after_filter_data df and print them in a nice format
+        # avg_value <- mean(after_filter_data[[col]], na.rm = TRUE)
+        # sd_value <- sd(after_filter_data[[col]], na.rm = TRUE)
+        # cat(paste0("reg = ", reg,", n = ", n, ", psi = ", psi, ", col = ", col, ": ", round(avg_value, 4), " (", round(sd_value, 4), ")\n"))
+      }
+      cat("--------------------------------------------------\n")
+    }
+  }
+}
+
+```
+
+```{r}
+# pre-shift window
+pre_shift_data_df <- data_df[data_df$tick >= 9970 & data_df$tick <= 9999, ]
+
+# output folder
+out_dir <- file.path(base_plot_folder, "pre_shift_summary_trends")
+dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+
+# metrics to plot (rows)
+plot_cols <- c(
+  "fitness_mean",
+  "abs_effect_mean",
+  "abs_effect_sd",
+  "num_seg_mean",
+  "num_seg_sd",
+  "seg_site_pop"
+)
+
+# nicer y-axis labels
+ylab_map <- c(
+  fitness_mean_norm = "Average fitness",
+  abs_effect_mean   = expression(paste("|g| mean")),
+  abs_effect_sd     = expression(paste("|g| sd")),
+  num_seg_mean      = "Seg. sites / individual (mean)",
+  num_seg_sd        = "Seg. sites / individual (sd)",
+  seg_site_pop      = "Total seg. sites"
+)
+
+col_combos <- data.frame(
+  reg = rep(c("ave", "ext", "fit"), each = 2),
+  n   = rep(c(5, 50), times = 3),
+  stringsAsFactors = FALSE
+)
+
+# x values
+psi_vals <- c(0, 0.3, 0.5, 0.7, 0.9)
+
+# helper for drawing error bars
+draw_error_bars <- function(x, y, y_sd, cap = 0.03) {
+  ok <- !(is.na(x) | is.na(y) | is.na(y_sd))
+  if (!any(ok)) return(invisible(NULL))
+  
+  arrows(
+    x0 = x[ok], y0 = y[ok] - y_sd[ok],
+    x1 = x[ok], y1 = y[ok] + y_sd[ok],
+    angle = 90, code = 3, length = cap
+  )
+}
+
+# precompute summaries:
+# summary_list[[col]][[panel_index]] = list(mean=..., sd=...)
+summary_list <- vector("list", length(plot_cols))
+names(summary_list) <- plot_cols
+
+for (col in plot_cols) {
+  summary_list[[col]] <- vector("list", nrow(col_combos))
+  
+  for (j in seq_len(nrow(col_combos))) {
+    reg_j <- col_combos$reg[j]
+    n_j   <- col_combos$n[j]
+    
+    mean_vals <- rep(NA_real_, length(psi_vals))
+    sd_vals   <- rep(NA_real_, length(psi_vals))
+    
+    for (i in seq_along(psi_vals)) {
+      psi_i <- psi_vals[i]
+      
+      sub_df <- pre_shift_data_df[
+        pre_shift_data_df$reg == reg_j &
+        pre_shift_data_df$n   == n_j &
+        pre_shift_data_df$psi == psi_i,
+      ]
+      
+      if (nrow(sub_df) > 0) {
+        mean_vals[i] <- mean(sub_df[[col]], na.rm = TRUE)
+        sd_vals[i]   <- sd(sub_df[[col]], na.rm = TRUE)
+      }
+    }
+    
+    summary_list[[col]][[j]] <- list(mean = mean_vals, sd = sd_vals)
+  }
+}
+
+# one common y-limit per row (per summary stat), so panels are comparable across columns
+row_ylims <- vector("list", length(plot_cols))
+names(row_ylims) <- plot_cols
+
+for (col in plot_cols) {
+  all_ymin <- c()
+  all_ymax <- c()
+  
+  for (j in seq_len(nrow(col_combos))) {
+    mean_vals <- summary_list[[col]][[j]]$mean
+    sd_vals   <- summary_list[[col]][[j]]$sd
+    
+    ok <- !(is.na(mean_vals) | is.na(sd_vals))
+    if (any(ok)) {
+      all_ymin <- c(all_ymin, mean_vals[ok] - sd_vals[ok])
+      all_ymax <- c(all_ymax, mean_vals[ok] + sd_vals[ok])
+    }
+  }
+  
+  ymin <- min(all_ymin, na.rm = TRUE)
+  ymax <- max(all_ymax, na.rm = TRUE)
+  yrng <- ymax - ymin
+  if (!is.finite(yrng) || yrng == 0) yrng <- 1
+  
+  row_ylims[[col]] <- c(
+    ymin - 0.08 * yrng,
+    ymax + 0.08 * yrng
+  )
+}
+
+# output file
+pdf(
+  file.path(out_dir, "pre_shift_summary_trends_multipanel.pdf"),
+  width = 18, height = 16
+)
+
+# margins:
+# mar = c(bottom, left, top, right)
+# oma = outer margins
+par(
+  mfrow = c(length(plot_cols), nrow(col_combos)),
+  mar = c(2.2, 2.6, 2.0, 0.8),
+  oma = c(4, 6, 3, 1)
+)
+
+for (r in seq_along(plot_cols)) {
+  col_name <- plot_cols[r]
+  ylim_use <- row_ylims[[col_name]]
+  
+  for (j in seq_len(nrow(col_combos))) {
+    reg_j <- col_combos$reg[j]
+    n_j   <- col_combos$n[j]
+    
+    mean_vals <- summary_list[[col_name]][[j]]$mean
+    sd_vals   <- summary_list[[col_name]][[j]]$sd
+    
+    plot(
+      psi_vals, mean_vals,
+      type = "b",
+      pch = 16,
+      lwd = 2,
+      xaxt = "n",
+      yaxt = "n",
+      xlab = "",
+      ylab = "",
+      ylim = ylim_use
+    )
+    
+    draw_error_bars(psi_vals, mean_vals, sd_vals)
+    abline(v = 0, lty = 2, col = "grey50")
+    
+    # x-axis only on bottom row
+    if (r == length(plot_cols)) {
+      axis(1, at = psi_vals, labels = c("0", "0.3", "0.5", "0.7", "0.9"), cex.axis = 0.9)
+    } else {
+      axis(1, at = psi_vals, labels = FALSE, tck = -0.02)
+    }
+    
+    # y-axis only on first column
+    if (j %% nrow(col_combos) == 1) {
+      axis(2, cex.axis = 0.9)
+      mtext(ylab_map[[col_name]], side = 2, line = 3.8, cex = 0.9)
+    } else {
+      axis(2, labels = FALSE, tck = -0.02)
+    }
+    
+    # titles only on top row
+    if (r == 1) {
+      title(main = paste0(reg_j, ", n = ", n_j), cex.main = 1)
+    }
+    
+    box()
+  }
+}
+
+mtext(expression(psi), side = 1, outer = TRUE, line = 2.2, cex = 1.2)
+mtext("Pre-shift summary statistics", side = 3, outer = TRUE, line = 1, cex = 1.3)
+
+dev.off()
+```
+
+
+```{r}
+# post-shift window
+post_shift_data_df <- data_df[data_df$tick >= 10000 & data_df$tick <= 10300 & data_df$shift_size == 60, ]
+
+# output folder
+out_dir <- file.path(base_plot_folder, "post_shift_summary_compare")
+dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+
+# metrics to plot (rows)
+plot_cols <- c(
+  "fitness_mean",
+  "abs_effect_mean",
+  "abs_effect_sd",
+  "num_seg_mean",
+  "num_seg_sd",
+  "seg_site_pop"
+)
+
+# nicer y-axis labels
+ylab_map <- list(
+  fitness_mean    = "Average fitness",
+  abs_effect_mean = expression(paste("|g| mean")),
+  abs_effect_sd   = expression(paste("|g| sd")),
+  num_seg_mean    = "Seg. sites / individual (mean)",
+  num_seg_sd      = "Seg. sites / individual (sd)",
+  seg_site_pop    = "Total seg. sites"
+)
+
+col_combos <- data.frame(
+  reg = rep(c("ave", "ext", "fit"), each = 2),
+  n   = rep(c(5, 50), times = 3),
+  stringsAsFactors = FALSE
+)
+
+# x values
+psi_vals <- c(0, 0.3, 0.5, 0.7, 0.9)
+
+# --------------------------------------------------
+# CUSTOMIZE THESE TICKS
+# names are used in the legend
+# values are the exact generations to summarize
+# --------------------------------------------------
+tick_points <- c(
+  start = 10000,
+  mid1  = 10010,
+  end   = 10020
+)
+
+# customize colors / symbols / line types
+point_cols <- c(
+  start = "black",
+  mid1  = "dodgerblue3",
+  end   = "red3"
+)
+
+point_pchs <- c(
+  start = 16,
+  mid1  = 15,
+  end   = 18
+)
+
+point_ltys <- c(
+  start = 1,
+  mid1  = 1,
+  end   = 1
+)
+
+# helper for drawing error bars
+draw_error_bars <- function(x, y, y_sd, cap = 0.03, col = "black") {
+  ok <- !(is.na(x) | is.na(y) | is.na(y_sd))
+  if (!any(ok)) return(invisible(NULL))
+  
+  arrows(
+    x0 = x[ok], y0 = y[ok] - y_sd[ok],
+    x1 = x[ok], y1 = y[ok] + y_sd[ok],
+    angle = 90, code = 3, length = cap, col = col
+  )
+}
+
+# summary structure:
+# summary_list[[col]][[tick_name]][[panel_index]] = list(mean=..., sd=...)
+summary_list <- vector("list", length(plot_cols))
+names(summary_list) <- plot_cols
+
+for (col in plot_cols) {
+  summary_list[[col]] <- vector("list", length(tick_points))
+  names(summary_list[[col]]) <- names(tick_points)
+  
+  for (pname in names(tick_points)) {
+    tick_val <- tick_points[[pname]]
+    summary_list[[col]][[pname]] <- vector("list", nrow(col_combos))
+    
+    for (j in seq_len(nrow(col_combos))) {
+      reg_j <- col_combos$reg[j]
+      n_j   <- col_combos$n[j]
+      
+      mean_vals <- rep(NA_real_, length(psi_vals))
+      sd_vals   <- rep(NA_real_, length(psi_vals))
+      
+      for (i in seq_along(psi_vals)) {
+        psi_i <- psi_vals[i]
+        
+        sub_df <- post_shift_data_df[
+          post_shift_data_df$reg  == reg_j &
+          post_shift_data_df$n    == n_j &
+          post_shift_data_df$psi  == psi_i &
+          post_shift_data_df$tick == tick_val,
+        ]
+        
+        if (nrow(sub_df) > 0) {
+          mean_vals[i] <- mean(sub_df[[col]], na.rm = TRUE)
+          sd_vals[i]   <- sd(sub_df[[col]], na.rm = TRUE)
+        }
+      }
+      
+      summary_list[[col]][[pname]][[j]] <- list(mean = mean_vals, sd = sd_vals)
+    }
+  }
+}
+
+# one common y-limit per row, across all selected ticks and all panels
+row_ylims <- vector("list", length(plot_cols))
+names(row_ylims) <- plot_cols
+
+for (col in plot_cols) {
+  all_ymin <- c()
+  all_ymax <- c()
+  
+  for (pname in names(tick_points)) {
+    for (j in seq_len(nrow(col_combos))) {
+      mean_vals <- summary_list[[col]][[pname]][[j]]$mean
+      sd_vals   <- summary_list[[col]][[pname]][[j]]$sd
+      
+      ok <- !(is.na(mean_vals) | is.na(sd_vals))
+      if (any(ok)) {
+        all_ymin <- c(all_ymin, mean_vals[ok] - sd_vals[ok])
+        all_ymax <- c(all_ymax, mean_vals[ok] + sd_vals[ok])
+      }
+    }
+  }
+  
+  ymin <- min(all_ymin, na.rm = TRUE)
+  ymax <- max(all_ymax, na.rm = TRUE)
+  yrng <- ymax - ymin
+  
+  if (!is.finite(yrng) || yrng == 0) yrng <- 1
+  
+  row_ylims[[col]] <- c(
+    ymin - 0.08 * yrng,
+    ymax + 0.08 * yrng
+  )
+}
+
+# output file
+pdf(
+  file.path(out_dir, "post_shift_summary_compare_multipanel.pdf"),
+  width = 18, height = 16
+)
+
+par(
+  mfrow = c(length(plot_cols), nrow(col_combos)),
+  mar = c(2.2, 2.6, 2.0, 0.8),
+  oma = c(4, 6, 4, 1)
+)
+
+for (r in seq_along(plot_cols)) {
+  col_name <- plot_cols[r]
+  ylim_use <- row_ylims[[col_name]]
+  
+  for (j in seq_len(nrow(col_combos))) {
+    reg_j <- col_combos$reg[j]
+    n_j   <- col_combos$n[j]
+    
+    plot(
+      NA, NA,
+      xlim = range(psi_vals),
+      ylim = ylim_use,
+      xaxt = "n",
+      yaxt = "n",
+      xlab = "",
+      ylab = ""
+    )
+    
+    for (pname in names(tick_points)) {
+      mean_vals <- summary_list[[col_name]][[pname]][[j]]$mean
+      sd_vals   <- summary_list[[col_name]][[pname]][[j]]$sd
+      
+      lines(
+        psi_vals, mean_vals,
+        type = "b",
+        pch = point_pchs[pname],
+        lwd = 2,
+        lty = point_ltys[pname],
+        col = point_cols[pname]
+      )
+      
+      draw_error_bars(
+        psi_vals, mean_vals, sd_vals,
+        col = point_cols[pname]
+      )
+    }
+    
+    abline(v = 0, lty = 2, col = "grey50")
+    
+    # x-axis only on bottom row
+    if (r == length(plot_cols)) {
+      axis(1, at = psi_vals, labels = c("0", "0.3", "0.5", "0.7", "0.9"), cex.axis = 0.9)
+    } else {
+      axis(1, at = psi_vals, labels = FALSE, tck = -0.02)
+    }
+    
+    # y-axis only on first column
+    if (j == 1) {
+      axis(2, cex.axis = 0.9)
+      mtext(ylab_map[[col_name]], side = 2, line = 3.8, cex = 0.9)
+    } else {
+      axis(2, labels = FALSE, tck = -0.02)
+    }
+    
+    # titles only on top row
+    if (r == 1) {
+      title(main = paste0(reg_j, ", n = ", n_j), cex.main = 1)
+    }
+    
+    box()
+  }
+}
+
+legend(
+  "top",
+  inset = -0.02,
+  xpd = NA,
+  horiz = TRUE,
+  bty = "n",
+  legend = paste0(names(tick_points), " (", tick_points, ")"),
+  col = point_cols[names(tick_points)],
+  pch = point_pchs[names(tick_points)],
+  lty = point_ltys[names(tick_points)],
+  lwd = 2,
+  cex = 1.0
+)
+
+mtext(expression(psi), side = 1, outer = TRUE, line = 2.2, cex = 1.2)
+mtext("Post-shift summary statistics at selected generations", side = 3, outer = TRUE, line = 1.5, cex = 1.3)
+
+dev.off()
+```
+
+```{r}
+plot_folder = paste0(base_plot_folder, "reach90/")
+if(!dir.exists(plot_folder)) {
+  dir.create(plot_folder, recursive = TRUE)
+}
+
+for (n in c(2, 5, 8, 20, 50)) {
+  for (sz in c(20, 40, 60)) {
+    for (reg in c("fit", "ext", "ave")) {
+      
+      filt_A <- list(reg = reg, psi = 0.0, n = n, shift_size = sz)
+      filt_B <- list(reg = reg, psi = 0.5, n = n, shift_size = sz)
+      filt_C <- list(reg = reg, psi = 0.9, n = n, shift_size = sz)
+      
+      pdf(
+        paste0(plot_folder, "reach90_reg_", reg, "_n_", n, "_sz_", sz, ".pdf"),
+        width = 11.5, height = 8
+      )
+      
+      title <- paste0(
+          if (reg == "fit") "copy the best" else
+            if (reg == "ext") "copy the extreme" else
+              if (reg == "ave") "copy the average",
+        " model (n = ", n, ", shift size = ", sz, ")"
+      )
+      
+      par(
+        cex.axis = 2.5, cex.lab = 2.5, cex.main = 1.0,
+        mar = c(6, 6, 3, 1) + 0.2,
+        mgp = c(3.8, 1.5, 0)
+      )
+      
+      leg_expr <- as.expression(
+        lapply(c(filt_A$psi, filt_B$psi, filt_C$psi),
+               function(v) bquote(psi == .(v)))
+      )
+      
+      plot_reach_tick_multi(
+        df = data_df,
+        filters = list(filt_A, filt_B, filt_C),
+        labels = list(
+          title = title,
+          x = "Tick reaching 90% of new optimum",
+          y = "Number of replicates"
+        ),
+        frac = 0.9,
+        shift_tick = 10000,
+        ycol = "z_mean",
+        opt_col = "optimum",
+        tick_col = "tick",
+        rep_col = "rep",
+        cols = c(
+          hcl.colors(3, hcl_color_palette)[1],
+          hcl.colors(3, hcl_color_palette)[2],
+          hcl.colors(3, hcl_color_palette)[3]
+        ),
+        pchs = c(16, 16, 16),
+        plot_type = "points",
+        xlim = c(10000, 10300),
+        ylim = NULL,
+        legend_labels = leg_expr,
+        legend_loc = "topright"
+      )
+      
+      dev.off()
+    }
+  }
+}
+```

@@ -11,7 +11,7 @@ initialize() {
     // variable parameters
 	defineConstant("shift_time", 10*N);
 	defineConstant("end_time", shift_time+300);
-	defineConstant("fluc_interval", 10);
+	//defineConstant("fluc_interval", 10);
 	//defineConstant("fluc_opt", 20);
 	
     // book keeping
@@ -57,8 +57,8 @@ initialize() {
 }
 
 seq(50, end_time, by = fluc_interval) late(){
-	if (optimum == 0) defineGlobal("optimum", fluc_opt);
-	else if (optimum == fluc_opt) defineGlobal("optimum", 0);
+	if (optimum <= 0) defineGlobal("optimum", asInteger(fluc_opt/2));
+	else if (optimum > 0) defineGlobal("optimum", asInteger(-fluc_opt/2));
 }
 
 late(){
@@ -167,7 +167,7 @@ shift_time-30 late(){
 	log.addCustomColumn("seed", "seed;");
 }
 
-c((shift_time-5):(shift_time+9), seq(shift_time+10, end_time, by=5)) late(){
+c(seq(shift_time-30, shift_time-6, by=5), (shift_time-5):(shift_time+9), seq(shift_time+10, end_time, by=5)) late(){
 	print("recoding at cycle "+sim.cycle);
 	record_phenotype(p1);
 	record_genotype(p1);
@@ -175,7 +175,7 @@ c((shift_time-5):(shift_time+9), seq(shift_time+10, end_time, by=5)) late(){
     record_fitness(p1);
 }
 
-c((shift_time-2):(shift_time+4), seq(shift_time+5, end_time, by=10))  late(){
+c(seq(shift_time-30, shift_time-6, by=5), (shift_time-2):(shift_time+4), seq(shift_time+5, end_time, by=10))  late(){
 	print("recoding at cycle "+sim.cycle);
 	record_effectsize(p1);
 }

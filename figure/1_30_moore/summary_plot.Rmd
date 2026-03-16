@@ -1,0 +1,298 @@
+---
+title: "plot evolutionary trajectory for multiple models"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+# parameter for plotting
+```{r setup, include=FALSE}
+wd_path <- normalizePath(dirname(rstudioapi::getActiveDocumentContext()$path))
+setwd(wd_path)
+base_plot_folder <- "../plots/1_30/moore_model/"
+if (!dir.exists(base_plot_folder)) {
+  dir.create(base_plot_folder, recursive = TRUE)
+}
+hcl_color_palette <- "Dark 2" # color pattern for lines 
+```
+
+# load evolutionary trajectory data
+```{r}
+data_df <- readRDS("../r_data/moore_model/data_summary.rds")
+```
+
+```{r}
+data_df <- summary_stat_df
+```
+
+```{r}
+colname = c("z_mean")  # column to plot
+plot_folder = paste0(base_plot_folder, paste(colname, collapse = "_"), "/")
+
+ltys = c(1, 2) # per ycol: solid, dashed
+
+if (!dir.exists(plot_folder)) {
+  dir.create(plot_folder, recursive = TRUE)
+}
+
+n=50
+sz=80
+
+# data_df <- summary_stat_df[summary_stat_df$tick < 10000, ]
+for (n in c(2,8, 20, 50)){
+    for (sz in c(20, 40, 60)){
+        for (reg in c("moore")){
+            # for (reg in c("fit")){
+                # for (opt in c(0, sz)){
+                filt_A <- list(reg = reg, psi = 0.0, n = n, shift_size = sz)
+                filt_B <- list(reg = reg, psi = 0.5, n = n, shift_size = sz)
+                filt_C <- list(reg = reg, psi = 0.9, n = n, shift_size = sz)
+                png(paste0(plot_folder, "reg_", reg, "_n_", n, "_sz_", sz, ".png"), width = 2300, height = 1800, res = 150)
+
+                title <- paste0(
+                if (reg == "moore") "Moore et al." else
+                    if (reg == "fit") "copy the best" else
+                    if (reg == "ext") "copy the extreme" else
+                        if (reg == "ave") "copy the average",
+                " model (n = ", n, ")"
+                )
+
+                par(cex = 1.5, cex.axis = 1.6, cex.lab = 2.0, cex.main = 1.0, mar = c(4.5, 7, 3, 1))
+
+                plot_lines_multi(
+                    df      = data_df,
+                    filters = list(filt_A, filt_B, filt_C),
+                    ycol    = colname,  # << choose the column to plot
+                    labels  = list(
+                        title = title,
+                        x = "Generation",  # or any x label you want
+                        y = "Mean Genotype"      # or any y label you want
+                    ),
+                    show_rep = FALSE,       # faded per-rep lines? TRUE/FALSE
+                    cols = c(
+                        hcl.colors(3, hcl_color_palette)[1],
+                        hcl.colors(3, hcl_color_palette)[2],
+                        hcl.colors(3, hcl_color_palette)[3]
+                    ),
+                    # ylim = c(-5, 5),
+                    xlim = c(9970, 10100),
+                    # xcol = "dz1"
+                    ltys = ltys
+                )
+                
+                # abline(a = 0, b = 1, lty = 2, col = "black", lwd = 2)
+
+                leg_expr <- as.expression(lapply(c(filt_A$psi, filt_B$psi, filt_C$psi),
+                                                function(v) bquote(psi == .(v))))
+                legend("topright", bty = "n", legend = leg_expr,
+                    col = c(
+                        hcl.colors(3, hcl_color_palette)[1],
+                        hcl.colors(3, hcl_color_palette)[2],
+                        hcl.colors(3, hcl_color_palette)[3]
+                    ),
+                    lwd = 3, cex = 2.2)
+                dev.off()
+                # }
+        }
+    }
+}
+```
+
+```{r}
+ns  <- c(2,3,4,5,6,7,8,9,10,20,50)
+psis <- c(0.0, 0.5, 0.9)
+szs <- c(20, 40, 60, 120)
+
+plot_folder = paste0(base_plot_folder, "AURC", "/")
+
+# compute once
+aurc_df <- compute_aurc_grid(
+  df = data_df,
+  reg_value = "ext",     # or "ave", "ext"
+  ns = ns,
+  psis = psis,
+  shift_sizes = szs,
+  ycol = "fitness_mean_norm"  # column to compute AURC on
+)
+
+# fixed scale across panels (recommended)
+zlim <- range(aurc_df$aurc, na.rm = TRUE)
+
+# plot one file per shift_size
+for (sz in szs) {
+  png(file.path(plot_folder, paste0("aurc_ext_sz_", sz, ".png")),
+      width = 1800, height = 1600, res = 150)
+  plot_aurc_heatmap_simple(
+    aurc_df,
+    ns = ns,
+    psis = psis,
+    shift_size = sz,
+    zlim = zlim,
+    main = paste0("AURC of fitness deficit (copy-the-extreme), shift_size = ", sz)
+  )
+  dev.off()
+}
+
+```
+
+```{r, echo=FALSE}
+data_df$fitness_mean_norm <- data_df$fitness_mean / 0.0087186
+data_df$fitness_sd_norm <- data_df$fitness_sd / 0.0005019642
+
+```
+
+
+```{r}
+plot_folder = paste0(base_plot_folder, "delta_decay_k", "/")
+
+if (!dir.exists(plot_folder)) {
+  dir.create(plot_folder, recursive = TRUE)
+}
+# --- SETTINGS ---
+ns  <- c(2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 50)
+szs <- c(20, 40, 60, 120)
+
+# ns  <- c(2)
+# szs <- c(20)
+regs <- c("fit", "ext", "ave")
+
+# choose the time window you want the decay fit over
+# (adjust to match your plotting window if you want)
+data_fit_df <- data_df[data_df$tick >= 10000 & data_df$tick <= 10100, ]
+
+# --- COLLECT DELTA b ---
+out <- list()
+k <- 1
+
+for (reg in regs) {
+  for (sz in szs) {
+    for (n in ns) {
+
+      filt_0 <- list(reg = reg, psi = 0.0, n = n, shift_size = sz)
+      filt_5 <- list(reg = reg, psi = 0.5, n = n, shift_size = sz)
+      filt_9 <- list(reg = reg, psi = 0.9, n = n, shift_size = sz)
+
+      res0 <- fit_exp_decay_window(
+        df = data_fit_df,
+        filter = filt_0,
+        model = "offset"
+      )
+
+      res5 <- fit_exp_decay_window(
+        df = data_fit_df,
+        filter = filt_5,
+        model = "offset"
+      )
+      
+      res9 <- fit_exp_decay_window(
+        df = data_fit_df,
+        filter = filt_9,
+        model = "offset"
+      )
+
+      b0 <- if (res0$converged) unname(res0$params["b"]) else NA
+      b5 <- if (res5$converged) unname(res5$params["b"]) else NA
+      b9 <- if (res9$converged) unname(res9$params["b"]) else NA
+
+      out[[k]] <- data.frame(
+        reg = reg,
+        shift_size = sz,
+        n = n,
+        b_psi0 = b0,
+        b_psi5 = b5,
+        b_psi9 = b9,
+        delta_b = b0 - b9,
+        stringsAsFactors = FALSE
+      )
+      k <- k + 1
+    }
+  }
+}
+
+delta_df <- do.call(rbind, out)
+
+```
+
+```{r}
+# --- PLOT: Δb vs n, one figure per reg, lines by sz ---
+for (reg in regs) {
+
+  sub <- delta_df[delta_df$reg == reg, , drop = FALSE]
+
+  png(
+    filename = paste0(plot_folder, "delta_decay_b_reg_", reg, ".png"),
+    width = 2200, height = 1800, res = 150
+  )
+
+  par(cex.axis = 1.6, cex.lab = 2.0, cex.main = 1.4, mar = c(4.5, 6, 3, 1))
+
+  title_txt <- paste0(
+      if (reg == "fit") "copy the best" else
+      if (reg == "ext") "copy the extreme" else
+      if (reg == "ave") "copy the average",
+    " model; diff in decay constant :  Δb = b(psi=0.0) - b(psi=0.9)"
+  )
+
+  # empty plot frame
+  plot(NA,
+       xlim = range(ns),
+       ylim = range(sub$delta_b, na.rm = TRUE),
+       xlab = "Group size n",
+       ylab = expression(Delta*b),
+       main = title_txt,
+       xaxt = "n"
+  )
+  axis(1, at = ns, labels = ns)
+
+  # reference line at 0
+  abline(h = 0, lty = 2, lwd = 2)
+
+  cols_sz <- hcl.colors(length(szs), hcl_color_palette)
+
+  for (i in seq_along(szs)) {
+    sz <- szs[i]
+    ss <- sub[sub$shift_size == sz, , drop = FALSE]
+    ss <- ss[order(ss$n), , drop = FALSE]
+
+    lines(ss$n, ss$delta_b, lwd = 3, col = cols_sz[i])
+    points(ss$n, ss$delta_b, pch = 16, cex = 1.4, col = cols_sz[i])
+  }
+
+  legend("topright",
+         bty = "n",
+         legend = paste0("sz = ", szs),
+         col = cols_sz,
+         lwd = 3,
+         pch = 16,
+         cex = 1.8
+  )
+
+  dev.off()
+}
+
+```
+
+
+```{r}
+plot_folder = paste0(base_plot_folder, "first_jump_heatmap", "/")
+
+if (!dir.exists(plot_folder)) {
+  dir.create(plot_folder, recursive = TRUE)
+}
+ns  <- c(2,3,4,5,6,7,8,9,10,20,50)
+psis <- c(0.0, 0.5, 0.9)
+szs <- c(20, 40, 60, 120)
+
+plot_first_jump_heatmap2(
+  df = data_df,
+  reg_value = "fit",
+  ns = ns,
+  psis = psis,
+  shift_sizes = szs,
+  file = file.path(plot_folder, "first_jump_heatmap_fit_clean.png"),
+  palette_name = "RdYlBu",
+  zlim = c(0, 30)   # set fixed so all panels comparable
+)
+
+
+```
