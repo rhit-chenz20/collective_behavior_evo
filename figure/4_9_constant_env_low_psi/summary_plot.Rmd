@@ -8,7 +8,7 @@ output: pdf_document
 # parameter for plotting
 ```{r setup, include=FALSE}
 dataset_name <- "constant_env_batch"
-date <- "5_19"
+date <- "4_2"
 
 # set these once for your machine / project
 analysis_root <- "../zc524/collective_behavior_evo/figure/1_26_constant_env"
@@ -26,32 +26,21 @@ met_brewer_pallete <- "Austria"  # color pattern for lines
 
 # load evolutionary trajectory data
 ```{r}
-cons_data_df <- readRDS(file.path(r_data_folder, "data_summary.rds"))
+data_df <- readRDS(file.path(r_data_folder, "data_summary.rds"))
 ```
 
 ```{r}
-unique(cons_data_df$shift_size)
-unique(cons_data_df$gap)
-unique(cons_data_df$psi)
-```
-```{r}
-cons_data_df <- summary_stat_df
+data_df <- summary_stat_df
 ```
 
 ```{r}
 norm_const <- 0.0087186
-cons_data_df$fitness_mean_norm <- cons_data_df$fitness_mean / norm_const
+data_df$fitness_mean_norm <- data_df$fitness_mean / norm_const
 ```
 
 ```{r}
-cons_data_df$g_opt <- cons_data_df$optimum - cons_data_df$a_mean
-cons_data_df$g_z <- cons_data_df$z_mean - cons_data_df$a_mean
-
-```
-
-```{r}
-colname = c("z_sd")  # column to plot
-plot_folder = file.path(base_plot_folder, paste("direc_",colname, collapse = "_"), "/")
+colname = c("z_opt")  # column to plot
+plot_folder = file.path(base_plot_folder, paste(colname, collapse = "_"), "/")
 
 ltys = c(1, 2) # per ycol: solid, dashed
 
@@ -59,11 +48,14 @@ if (!dir.exists(plot_folder)) {
   dir.create(plot_folder, recursive = TRUE)
 }
 
-# cons_data_df <- summary_stat_df[summary_stat_df$tick < 10000, ]
+n=2
+sz=60
+
+# data_df <- summary_stat_df[summary_stat_df$tick < 10000, ]
 # for (n in c(2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 50)){
-for (n in c(8)){
+for (n in c(20)){
     for (sz in c(40)){
-        for (reg in c("fit", "ave", "ext")){
+        for (reg in c("ext", "fit", "ave")){
             # for (reg in c("fit")){
                 # for (opt in c(0, sz)){
                 filt_A <- list(reg = reg, psi = 0.0, n = n, shift_size = sz)
@@ -73,32 +65,27 @@ for (n in c(8)){
                 pdf(paste0(plot_folder, "reg_", reg, "_n_", n, "_sz_", sz, ".pdf"), width=11.5, height=8)
 
                 title <- paste0(
-                if (reg == "fit") "Copy the Best" else
-                if (reg == "ext") "Copy the Extreme" else
-                if (reg == "ave") "Copy the Average",
-                  " model (n = ", n, ")"
+                if (reg == "inv") "Homogenous group" else
+                    if (reg == "fit") "Copy the Best" else
+                    if (reg == "ext") "Copy the Extreme" else
+                        if (reg == "ave") "Copy the Average",
+                " model (n = ", n, ")"
                 )
 
-                ylim <- c(0, 15)
-                if ("fitness_mean" %in% colname) {
-                  ylim <- NULL
-                } else if ("z_opt" %in% colname || "z_opt_abs" %in% colname) {
-                  ylim <- c(0, sz+5)
-                }
                 par(cex.axis = 2.5, cex.lab = 2.5, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
                 fils <- list(filt_A, filt_B, filt_C, filt_D)
                 plot_lines_multi(
-                    df      = cons_data_df,
-                    filters = fils,
+                    df      = data_df,
+                    filters = list(filt_A, filt_B, filt_C, filt_D),
                     ycol    = colname,  # << choose the column to plot
                     labels  = list(
                         title = title,
                         x = "Generation",  # or any x label you want
-                        y = expression(z_sd)      # or any y label you want
+                        y = "Distance to Optimum"      # or any y label you want
                     ),
                     show_rep = TRUE,       # faded per-rep lines? TRUE/FALSE
                     cols = met.brewer(name=met_brewer_pallete, n=length(fils), type="discrete"),
-                    ylim = ylim,
+                    ylim = c(0, sz+5),
                     xlim = c(9990, 10150),
                     # xcol = "dz1"
                     ltys = ltys
@@ -119,85 +106,19 @@ for (n in c(8)){
 
 ```{r}
 
-# psis <- c(0.0, 0.2, 0.5, 0.8)
-psis <- c(0, 0.2, 0.5, 0.8)
-ns <- unique(cons_data_df$n)
+psis <- c(0.0, 0.2, 0.5, 0.8)
+ns <- c(2, 5, 8, 20)
 szs <- c(20, 40, 60)
-# regs <- c("ext", "fit", "ave")
-regs <- c("fit")
+regs <- c("ext", "fit", "ave")
 
-cons_data_df_partial <- cons_data_df[
-  cons_data_df$tick >= 10000 &
-  cons_data_df$tick <= 10150 &
-  cons_data_df$n %in% ns &
-  cons_data_df$shift_size %in% szs &
-  cons_data_df$reg %in% regs &
-  cons_data_df$psi %in% psis,
+data_df_partial <- data_df[
+  data_df$tick >= 10000 &
+  data_df$tick <= 10150 &
+  data_df$n %in% ns &
+  data_df$shift_size %in% szs &
+  data_df$reg %in% regs &
+  data_df$psi %in% psis,
 ]
-
-plot_vs_n <- function(){
-  # -----------------------------
-  # plotting
-  # -----------------------------
-  pdf(file.path(plot_folder, paste0("reg_", reg, "_sz_", sz, ".pdf")),
-      width = 11.5, height = 8)
-  par(cex.axis = 2.5, cex.lab = 2.5, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
-  cols <- met.brewer(name = met_brewer_pallete, n = length(psi_vals), type = "discrete")
-  
-  # empty plot
-  plot(
-    n_vals, n_vals,
-    type = "n",
-    xlab = "Group size (n)",
-    ylab = "Decay constant (k)",
-    main = paste("Decay constant vs n | reg =", reg, "| sz =", sz),
-    ylim = c(0.01, 0.045)
-  )
-  
-  # draw each psi curve
-  for (j in seq_along(psi_vals)) {
-    
-    psi_val <- psi_vals[j]
-    df_plot <- decay_results_all[[as.character(psi_val)]]
-    
-    lines(
-      df_plot$n,
-      df_plot$k,
-      type = "b",
-      pch = 16,
-      lwd = 2,
-      col = cols[j]
-    )
-  }
-  
-  legend(
-    "topright",
-    legend = paste0("psi = ", psi_vals),
-    col = cols,
-    lwd = 2,
-    pch = 16,
-    bty = "n"
-  )
-  
-  dev.off()
-}
-
-find_intersection_time <- function(A1, k1, A2, k2) {
-  
-  # validity checks
-  if (!is.finite(A1) || !is.finite(A2) ||
-      !is.finite(k1) || !is.finite(k2)) return(NA)
-  
-  if (A1 <= 0 || A2 <= 0) return(NA)
-  
-  if (abs(k2 - k1) < 1e-12) return(NA)  # parallel (no intersection)
-  
-  t_star <- log(A2 / A1) / (k2 - k1)
-  
-  if (!is.finite(t_star) || t_star < 0) return(NA)
-  
-  return(t_star)
-}
 
 ```
 ```{r}
@@ -206,12 +127,14 @@ dir.create(plot_folder, recursive = TRUE, showWarnings = FALSE)
 
 agg_df <- aggregate(
   z_opt ~ tick + n + reg + shift_size + psi,
-  data = cons_data_df_partial,
+  data = data_df_partial,
   FUN = mean
 )
 
 for (sz in szs) {
+
   for (reg in regs) {
+    
     sub_agg_df <- agg_df[
       agg_df$shift_size == sz & agg_df$reg == reg, 
     ]
@@ -266,49 +189,52 @@ for (sz in szs) {
       decay_results_all[[as.character(psi_val)]] <- decay_results
     }
     
-    pdf(file.path(plot_folder, paste0("decay_const_intercept_reg_", reg, "_sz_", sz, ".pdf")),
+    # -----------------------------
+    # plotting
+    # -----------------------------
+    pdf(file.path(plot_folder, paste0("reg_", reg, "_sz_", sz, ".pdf")),
         width = 11.5, height = 8)
-    # plot_vs_n()
-
-    y_val <- c()
-    base_line <- decay_results_all[["0"]]
-    for (psi_val in psis) {
-      if (psi_val == 0) next
+    par(cex.axis = 2.5, cex.lab = 2.5, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
+    cols <- met.brewer(name = met_brewer_pallete, n = length(psi_vals), type = "discrete")
+    
+    # empty plot
+    plot(
+      n_vals, n_vals,
+      type = "n",
+      xlab = "Group size (n)",
+      ylab = "Decay constant (k)",
+      main = paste("Decay constant vs n | reg =", reg, "| sz =", sz),
+      ylim = c(0.01, 0.045)
+    )
+    
+    # draw each psi curve
+    for (j in seq_along(psi_vals)) {
+      
+      psi_val <- psi_vals[j]
       df_plot <- decay_results_all[[as.character(psi_val)]]
       
-      if (is.null(df_plot)) next
-      
-      t_star <- find_intersection_time(
-        A1 = base_line$a0,
-        k1 = base_line$k,
-        A2 = df_plot$a0,
-        k2 = df_plot$k
+      lines(
+        df_plot$n,
+        df_plot$k,
+        type = "b",
+        pch = 16,
+        lwd = 2,
+        col = cols[j]
       )
-      y_val <- c(y_val, t_star)
     }
-    par(mar = c(6, 6, 3, 1))
-    plot(
-      psis[psis != 0],
-      y_val,
-      type = "b",
-      pch = 16,
+    
+    legend(
+      "topright",
+      legend = paste0("psi = ", psi_vals),
+      col = cols,
       lwd = 2,
-      col = "blue",
-      xlab = expression(psi),
-      ylab = "Estimated intersection time (generation)",
-      main = paste("Intersection time vs psi\nreg =", reg, "| sz =", sz),
-      xlim = c(0.1, 0.9),
-      cex.lab = 2.0,
-      cex.axis = 2.0
+      pch = 16,
+      bty = "n"
     )
     
     dev.off()
   }
 }
-```
-
-```{r}
-print(unique(cons_data_df[cons_data_df$n==1000 & cons_data_df$reg == "fit" & cons_data_df$psi == 0.9 & cons_data_df$tick >= 10000, "rep"]))
 ```
 
 ```{r}
@@ -318,16 +244,11 @@ dir.create(plot_folder, recursive = TRUE, showWarnings = FALSE)
 # -----------------------------
 # filter data
 # -----------------------------
-sub_df <- cons_data_df[
-  cons_data_df$reg == "fit" &
-  cons_data_df$tick == 10000 ,
+sub_df <- data_df_partial[
+  data_df_partial$reg == "fit" &
+  data_df_partial$tick == 10000,
 ]
 
-
-#exclude the parameters with psi=0.9 and group size of 40
-# sub_df <- sub_df[!(sub_df$psi == 0.9 & sub_df$n == 40), ]
-# sub_df <- sub_df[!(sub_df$psi == 0.9) & sub_df$n >=50 , ]
-sub_df <- sub_df[sub_df$psi %in% c(0.0, 0.2, 0.5, 0.8) & sub_df$n <= 200, ]
 sub_df$diff_from_shift <- sub_df$z_mean
 
 szs <- sort(unique(sub_df$shift_size))
@@ -429,8 +350,8 @@ for (sz in szs) {
   )
 }
 
-mean_cols <- colorRampPalette(c("royalblue", "red"))(100)
-var_cols  <- colorRampPalette(c("orange", "red"))(100)
+mean_cols <- hcl.colors(100, "Berlin")
+var_cols  <- hcl.colors(100, "YlOrRd")
 
 draw_heatmap_with_colorbar <- function(zmat, xlabels, ylabels, cols, zlim,
                                        main, zlab = "") {
@@ -664,7 +585,7 @@ dir.create(plot_folder, recursive = TRUE, showWarnings = FALSE)
 # ---------------------------------
 # filter to fit model
 # ---------------------------------
-fit_df <- cons_data_df_partial[cons_data_df_partial$reg == "fit", ]
+fit_df <- data_df_partial[data_df_partial$reg == "fit", ]
 
 reps <- sort(unique(fit_df$rep))
 
@@ -794,29 +715,68 @@ for (sz in szs) {
 }
 ```
 
+## discarded
+```{r}
+data_df$a_z_diff <- data_df$z_mean - data_df$a_mean
+```
+
+```{r, echo=FALSE}
+data_df$fitness_mean_norm <- data_df$fitness_mean / 0.0087186
+data_df$fitness_sd_norm <- data_df$fitness_sd / 0.0005019642
+
+```
 
 ```{r}
-colname = c("a_sd", "n")  # column to plot
-plot_folder = file.path(base_plot_folder, paste(colname, collapse = "_"))
+plot_folder = paste0(base_plot_folder, "first_jump_heatmap", "/")
+
+if (!dir.exists(plot_folder)) {
+  dir.create(plot_folder, recursive = TRUE)
+}
+ns  <- c(2,3,4,5,6,7,8,9,10,20,50)
+psis <- c(0.0, 0.5, 0.9)
+szs <- c(20, 40, 60, 120)
+
+plot_first_jump_heatmap2(
+  df = data_df,
+  reg_value = "fit",
+  ns = ns,
+  psis = psis,
+  shift_sizes = szs,
+  file = file.path(plot_folder, "first_jump_heatmap_fit_clean.png"),
+  palette_name = "RdYlBu",
+  zlim = c(0, 30)   # set fixed so all panels comparable
+)
+
+
+```
+
+```{r}
+data_df$a_var <- data_df$a_sd^2
+data_df$z_var <- data_df$z_sd^2
+```
+
+```{r}
+colname = c("z_sd", "n")  # column to plot
+plot_folder = paste0(base_plot_folder, paste(colname, collapse = "_"), "/")
 
 if (!dir.exists(plot_folder)) {
   dir.create(plot_folder, recursive = TRUE)
 }
 
 for (r in c("fit", "ext", "ave")) {
-    pre_data <- cons_data_df[
-      cons_data_df$tick >= 9970 &
-      cons_data_df$tick <= 9999 &
-      cons_data_df$reg == r &
-      cons_data_df$psi %in% c(0.0, 0.2, 0.5, 0.8) &
-      cons_data_df$n <= 100,
+    pre_data <- data_df[
+      data_df$tick >= 9970 &
+      data_df$tick <= 9999 &
+      data_df$reg == r &
+      data_df$psi %in% c(0.0, 0.2, 0.5, 0.8) &
+      data_df$n %in% c(2, 5, 8, 20),
     ]
     
     filt_A <- list(reg = r, psi = 0.0)
     filt_B <- list(reg = r, psi = 0.2)
     filt_C <- list(reg = r, psi = 0.5)
     filt_D <- list(reg = r, psi = 0.8)
-    pdf(file.path(plot_folder, paste0("reg_", r, ".pdf")), width = 11.5, height = 8)
+    pdf(paste0(plot_folder, "reg_", r, ".pdf"), width = 11.5, height = 8)
 
     title <- paste0(
     if (r == "inv") "Homogenous group" else
@@ -828,27 +788,27 @@ for (r in c("fit", "ext", "ave")) {
 
     par(cex.axis = 2.5, cex.lab = 2.5, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
 
-    fils = list(filt_A, filt_B, filt_C, filt_D)
     plot_lines_multi(
         df      = pre_data,
-        filters = fils,
+        filters = list(filt_A, filt_B, filt_C, filt_D),
         ycol    = "z_sd",  # << choose the column to plot
         labels  = list(
             title = title,
             x = "n",  # or any x label you want
             y = expression(z[sd])      # or any y label you want
         ),
-        show_rep = FALSE,       # faded per-rep lines? TRUE/FALSE
+        show_rep = TRUE,       # faded per-rep lines? TRUE/FALSE
         cols = met.brewer(name=met_brewer_pallete, n=length(fils), type="discrete"),
         ylim = c(0, 20),
-        # xlim = c(2, 20),
+        xlim = c(2, 20),
         xcol = "n",
         ltys = ltys
     )
     
     # abline(a = 0, b = 1, lty = 2, col = "black", lwd = 2)
 
-    leg_expr <- as.expression(lapply(fils, function(v) bquote(psi == .(v$psi))))
+    leg_expr <- as.expression(lapply(c(filt_A$psi, filt_B$psi, filt_C$psi, filt_D$psi),
+                                    function(v) bquote(psi == .(v))))
     legend("topright", bty = "n", legend = leg_expr,
         col = met.brewer(name=met_brewer_pallete, n=length(fils), type="discrete"),
         lwd = 3, cex = 2.2)
@@ -858,81 +818,15 @@ for (r in c("fit", "ext", "ave")) {
 
 
 ```{r}
-
-colname = c("fitness_mean", "psi")  # column to plot
-plot_folder = file.path(base_plot_folder, paste(colname, collapse = "_"))
-
-if (!dir.exists(plot_folder)) {
-  dir.create(plot_folder, recursive = TRUE)
-}
-
-for (r in c("ave", "fit", "ext")) {
-    pre_data <- cons_data_df[
-      cons_data_df$tick >= 9970 &
-      cons_data_df$tick <= 9999 &
-      cons_data_df$reg == r &
-      cons_data_df$n %in% c(2, 5, 8, 20),
-    ]
-    
-    filt_A <- list(n = 2)
-    filt_B <- list(n = 5)
-    filt_C <- list(n = 8)
-    filt_D <- list(n = 20)
-    pdf(file.path(plot_folder, paste0("reg_", r, ".pdf")), width = 11.5, height = 8)
-
-    title <- paste0(
-    if (r == "inv") "Homogenous group" else
-        if (r == "fit") "copy the best" else
-        if (r == "ext") "copy the extreme" else
-            if (r == "ave") "copy the average",
-    " model"
-    )
-
-    par(cex.axis = 2.5, cex.lab = 2.5, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
-
-    fils = list(filt_A, filt_B, filt_C, filt_D)
-    plot_lines_multi(
-        df      = pre_data,
-        filters = fils,
-        ycol    = "fitness_mean",  # << choose the column to plot
-        labels  = list(
-            title = title,
-            x = expression(psi),  # or any x label you want
-            y = expression(bar(omega))      # or any y label you want
-        ),
-        show_rep = FALSE,       # faded per-rep lines? TRUE/FALSE
-        cols = met.brewer(name="OKeeffe2", n=length(fils), type="discrete"),
-        ylim = c(0.008, 0.009),
-        # xlim = c(2, 20),
-        xcol = "psi",
-        ltys = ltys
-    )
-    
-    # abline(a = 0, b = 1, lty = 2, col = "black", lwd = 2)
-
-    leg_expr <- as.expression(lapply(fils, function(v) bquote(n == .(v$n))))
-    legend("topright", bty = "n", legend = leg_expr,
-        col = met.brewer(name="OKeeffe2", n=length(fils), type="discrete"),
-        lwd = 3, cex = 2.2)
-    dev.off()
-}
-```
-
-```{r}
-print(length(pre_data$rep))
-print(length(pre_data[!is.na(pre_data$fitness_mean), "rep"]))
-```
-
-```{r}
-pre_shift_cons_data_df <- cons_data_df[cons_data_df$tick >= 9970 & cons_data_df$tick <= 9999, ]
+pre_shift_data_df <- data_df[data_df$tick >= 9970 & data_df$tick <= 9999, ]
 
 for (reg in c("ave", "ext", "fit")){
   for (n in c(8, 50)){
     for (psi in c(0.5, 0.9)){
-      after_filter_data <- pre_shift_cons_data_df[
-        pre_shift_cons_data_df$n == n &
-        pre_shift_cons_data_df$reg == reg &
-        pre_shift_cons_data_df$psi == psi, 
+      after_filter_data <- pre_shift_data_df[
+        pre_shift_data_df$n == n &
+        pre_shift_data_df$reg == reg &
+        pre_shift_data_df$psi == psi, 
       ]
       for (col in c("fitness_mean_norm","abs_effect_mean", "abs_effect_sd", "num_seg_mean", "num_seg_sd", "seg_site_pop")){
         # get the average and sd of each column across ticks and reps in the after_filter_data df and print them in a nice format
@@ -949,7 +843,7 @@ for (reg in c("ave", "ext", "fit")){
 
 ```{r}
 # pre-shift window
-pre_shift_cons_data_df <- cons_data_df[cons_data_df$tick <= 9999, ]
+pre_shift_data_df <- data_df[data_df$tick >= 9970 & data_df$tick <= 9999, ]
 
 # output folder
 out_dir <- file.path(base_plot_folder, "pre_shift_summary_trends")
@@ -965,16 +859,6 @@ plot_cols <- c(
   "seg_site_pop"
 )
 
-# # metrics to plot (rows)
-# plot_cols <- c(
-#   "a_sd",
-#   "num_fixed_mut",
-#   "z_sd",
-#   "num_seg_mean",
-#   "num_seg_sd",
-#   "seg_site_pop"
-# )
-
 # nicer y-axis labels
 ylab_map <- list(
   fitness_mean    = "Average fitness",
@@ -982,23 +866,20 @@ ylab_map <- list(
   abs_effect_sd   = expression(paste("|g| sd")),
   num_seg_mean    = "Seg. sites / individual (mean)",
   num_seg_sd      = "Seg. sites / individual (sd)",
-  seg_site_pop    = "Total seg. sites",
-  a_sd            = expression(g[sd]),
-  z_sd            = expression(z[sd]),
-  num_fixed_mut   = "Number of fixed mutations"
+  seg_site_pop    = "Total seg. sites"
 )
 
 col_combos <- data.frame(
   reg = rep(c("ave", "ext", "fit"), each = 2),
-  n   = rep(c(8, 20), times = 3),
+  n   = rep(c(5, 20), times = 3),
   stringsAsFactors = FALSE
 )
 
 # psi values by model
 psi_map <- list(
-  ave = c(0, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9),
-  fit = c(0, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9),
-  ext = c(0, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9)   # add extra ext psi values here
+  ave = c(0, 0.3, 0.5, 0.7, 0.9),
+  fit = c(0, 0.3, 0.5, 0.7, 0.9),
+  ext = c(0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.5, 0.7, 0.9)   # add extra ext psi values here
 )
 
 # common x range across all panels
@@ -1035,10 +916,10 @@ for (col in plot_cols) {
     for (i in seq_along(psi_vals_j)) {
       psi_i <- psi_vals_j[i]
       
-      sub_df <- pre_shift_cons_data_df[
-        pre_shift_cons_data_df$reg == reg_j &
-        pre_shift_cons_data_df$n   == n_j &
-        pre_shift_cons_data_df$psi == psi_i,
+      sub_df <- pre_shift_data_df[
+        pre_shift_data_df$reg == reg_j &
+        pre_shift_data_df$n   == n_j &
+        pre_shift_data_df$psi == psi_i,
       ]
       
       if (nrow(sub_df) > 0) {
@@ -1158,7 +1039,7 @@ dev.off()
 
 ```{r}
 # post-shift window
-post_shift_cons_data_df <- cons_data_df[cons_data_df$tick >= 10000 & cons_data_df$tick <= 10300 & cons_data_df$shift_size == 20, ]
+post_shift_data_df <- data_df[data_df$tick >= 10000 & data_df$tick <= 10300 & data_df$shift_size == 20, ]
 
 # output folder
 out_dir <- file.path(base_plot_folder, "post_shift_summary_compare")
@@ -1186,7 +1067,7 @@ ylab_map <- list(
 
 col_combos <- data.frame(
   reg = rep(c("ave", "ext", "fit"), each = 2),
-  n   = rep(c(8, 20), times = 3),
+  n   = rep(c(5, 20), times = 3),
   stringsAsFactors = FALSE
 )
 
@@ -1194,11 +1075,10 @@ col_combos <- data.frame(
 # psi values by model
 # --------------------------------------------------
 psi_map <- list(
-  ave = c(0, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9),
-  fit = c(0, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9),
-  ext = c(0, 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9)   # add extra ext psi values here
+  ave = c(0, 0.3, 0.5, 0.7, 0.9),
+  fit = c(0, 0.3, 0.5, 0.7, 0.9),
+  ext = c(0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.5, 0.7, 0.9)   # add extra psi values here
 )
-
 
 # for common x range across panels
 all_psi_vals <- sort(unique(unlist(psi_map)))
@@ -1265,11 +1145,11 @@ for (col in plot_cols) {
       for (i in seq_along(psi_vals_j)) {
         psi_i <- psi_vals_j[i]
         
-        sub_df <- post_shift_cons_data_df[
-          post_shift_cons_data_df$reg  == reg_j &
-          post_shift_cons_data_df$n    == n_j &
-          post_shift_cons_data_df$psi  == psi_i &
-          post_shift_cons_data_df$tick == tick_val,
+        sub_df <- post_shift_data_df[
+          post_shift_data_df$reg  == reg_j &
+          post_shift_data_df$n    == n_j &
+          post_shift_data_df$psi  == psi_i &
+          post_shift_data_df$tick == tick_val,
         ]
         
         if (nrow(sub_df) > 0) {
@@ -1416,23 +1296,6 @@ mtext("Post-shift summary statistics at selected generations", side = 3, outer =
 dev.off()
 ```
 
-
-## discarded
-```{r}
-cons_data_df$a_z_diff <- cons_data_df$z_mean - cons_data_df$a_mean
-```
-
-```{r, echo=FALSE}
-cons_data_df$fitness_mean_norm <- cons_data_df$fitness_mean / 0.0087186
-cons_data_df$fitness_sd_norm <- cons_data_df$fitness_sd / 0.0005019642
-
-```
-
-```{r}
-cons_data_df$a_var <- cons_data_df$a_sd^2
-cons_data_df$z_var <- cons_data_df$z_sd^2
-```
-
 ```{r}
 plot_folder = paste0(base_plot_folder, "reach90/")
 if(!dir.exists(plot_folder)) {
@@ -1471,7 +1334,7 @@ for (n in c(2, 5, 8, 20, 50)) {
       )
       
       plot_reach_tick_multi(
-        df = cons_data_df,
+        df = data_df,
         filters = list(filt_A, filt_B, filt_C),
         labels = list(
           title = title,
@@ -1496,92 +1359,6 @@ for (n in c(2, 5, 8, 20, 50)) {
         legend_labels = leg_expr,
         legend_loc = "topright"
       )
-      
-      dev.off()
-    }
-  }
-}
-```
-
-```{r}
-plot_folder <- file.path(base_plot_folder, "g_mean_vs_z_mean")
-
-if (!dir.exists(plot_folder)) {
-  dir.create(plot_folder, recursive = TRUE)
-}
-df_to_use <- cons_data_df[cons_data_df$tick >= 10000, ]
-
-for (n in c(8)) {
-  for (sz in c(40)) {
-    for (reg in c("fit", "ave", "ext")) {
-      
-      filt_A <- list(reg = reg, psi = 0.0, n = n, shift_size = sz)
-      filt_B <- list(reg = reg, psi = 0.2, n = n, shift_size = sz)
-      filt_C <- list(reg = reg, psi = 0.5, n = n, shift_size = sz)
-      filt_D <- list(reg = reg, psi = 0.8, n = n, shift_size = sz)
-      
-      fils <- list(filt_A, filt_B, filt_C, filt_D)
-      
-      pdf(
-        file.path(plot_folder, paste0("reg_", reg, "_n_", n, "_sz_", sz, ".pdf")),
-        width = 11.5,
-        height = 8
-      )
-      
-      title <- paste0(
-        if (reg == "inv") "Homogeneous group" else
-          if (reg == "fit") "Copy the Best" else
-            if (reg == "ext") "Copy the Extreme" else
-              if (reg == "ave") "Copy the Average",
-        " model (n = ", n, ")"
-      )
-      
-      par(
-        cex.axis = 2.5,
-        cex.lab = 2.5,
-        cex.main = 1.0,
-        mar = c(6, 6, 3, 1) + 0.2,
-        mgp = c(3.8, 1.5, 0)
-      )
-      
-      plot_g_vs_z_by_generation(
-        df = df_to_use,
-        filters = fils,
-        xcol = "g_mean",
-        ycol = "z_mean",
-        tick_col = "tick",
-        labels = list(
-          title = title,
-          x = expression(bar(g)),
-          y = expression(bar(z))
-        ),
-        cols = met.brewer(
-          name = met_brewer_pallete,
-          n = length(fils),
-          type = "discrete"
-        ),
-        show_rep = FALSE
-      )
-      
-      leg_expr <- as.expression(
-        lapply(fils, function(v) bquote(psi == .(v$psi)))
-      )
-      
-      # legend(
-      #   "topright",
-      #   bty = "n",
-      #   legend = leg_expr,
-      #   col = met.brewer(
-      #     name = met_brewer_pallete,
-      #     n = length(fils),
-      #     type = "discrete"
-      #   ),
-      #   pch = 16,
-      #   pt.cex = 2,
-      #   cex = 2.2
-      # )
-
-      abline(a = 0, b = 1, lty = 2, col = "black", lwd = 4)
       
       dev.off()
     }

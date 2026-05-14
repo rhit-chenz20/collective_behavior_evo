@@ -8,11 +8,11 @@ output: pdf_document
 # parameters for plotting
 ```{r setup, include=FALSE}
 # parameters for plotting
-dataset_name <- "constant_env_batch"
-date <- "5_19"
+dataset_name <- "various_group_size"
+date <- "4_15"
 
 # set these once for your machine / project
-analysis_root <- "../zc524/collective_behavior_evo/figure/1_26_constant_env"
+analysis_root <- "../zc524/collective_behavior_evo/figure/4_15_various_n"
 base_plot_folder     <- file.path("../zc524/collective_behavior_evo/figure/plots", date)
 r_data_folder    <- file.path("../zc524/collective_behavior_evo/figure", "r_data", dataset_name)
 
@@ -27,16 +27,17 @@ met_brewer_pallete <- "Austria"  # color pattern for lines
 
 # load genotype data
 ```{r}
-cons_geno_df <- readRDS(file.path(r_data_folder, "genotype.rds"))
-cons_pheno_df <- readRDS(file.path(r_data_folder, "phenotype.rds"))
-# group_tag_df <- readRDS(file.path(r_data_folder, "group_tag.rds"))
+geno_df <- readRDS(file.path(r_data_folder, "genotype.rds"))
+pheno_df <- readRDS(file.path(r_data_folder, "phenotype.rds"))
+group_tag_df <- readRDS(file.path(r_data_folder, "group_tags.rds"))
 # fitness_df <- readRDS(file.path(r_data_folder, "fitness_norm.rds"))
 # copied_val_df <- readRDS(file.path(r_data_folder, "copied_val.rds"))
+# pheno_df <- readRDS(file.path(r_data_folder, "phenotype.rds"))
 ```
 
 ```{r}
-# cons_geno_df <- genotype_df
-unique(cons_geno_df[cons_geno_df$reg == "fit", ]$psi)
+# geno_df <- genotype_df
+unique(geno_df[geno_df$reg == "fit", ]$psi)
 ```
 
 ```{r}
@@ -54,18 +55,19 @@ for (j in which(num_cols)) {
 ```{r}
 psi_val <- c(0.46)
 single_psi <- 0.2
-for (gen in list(10200)) {
+use_group_tag <- FALSE
+for (gen in list(c(9950, 9999))) {
   for (n in c(8)){
-    for (sz in c(40)){
+    for (shift_size in c("no_sz")){
       for (reg in c("fit")){
         for (type in c( "phenotype")){
-          cat("Plotting:", type, " generation:", gen, " n:", n, " sz:", sz, " reg:", reg, "\n")
+          cat("Plotting:", type, " generation:", gen, " n:", n, " shift_size:", shift_size, " reg:", reg, "\n")
      
-          breaks_vec <- seq(-0.5, 60.5, by = 0.5)  
+          breaks_vec <- seq(-40.5, 40.5, by = 1)  
           if (type == "genotype"){
-            df_to_use <- cons_geno_df
+            df_to_use <- geno_df
           } else if (type == "phenotype"){
-            df_to_use <- cons_pheno_df
+            df_to_use <- pheno_df
           } else if (type == "copied_val"){
             df_to_use <- copied_val_df
           }
@@ -77,250 +79,74 @@ for (gen in list(10200)) {
           }
 
           if(gen_title >= 10000){
-            title <- paste0(type, "_", gen_title, "/", reg, "_", sz,"_", n, "opt = ", sz)
-          }else{
-            title <- paste0(type, "_", gen_title, "/", reg, "_", sz,"_", n, "opt = ", 0)
-          }
-
-            filt_A <- list(reg=reg, n=n, psi=0.0, shift_size=sz)
-            filt_B <- list(reg=reg, n=n, psi=0.2, shift_size=sz)
-            filt_C <- list(reg=reg, n=n, psi=0.5, shift_size=sz)
-            filt_D <- list(reg=reg, n=n, psi=0.8, shift_size=sz)
-
-            filt_single <- list(reg=reg, n=n, psi=single_psi, shift_size=sz)
-
-            # filt_A <- list(reg=reg, n=n, psi=0.0)
-            # filt_B <- list(reg=reg, n=n, psi=0.2)
-            # filt_C <- list(reg=reg, n=n, psi=0.5)
-            # filt_D <- list(reg=reg, n=n, psi=0.8)
-
-            # filt_single <- list(reg=reg, n=n, psi=single_psi)
-          
-
-          fils <- list(filt_A, filt_B, filt_C, filt_D)
-          # fils <- list(filt_single)
-          if (length(fils) == 1){
-            plot_folder = file.path(base_plot_folder, paste0("direc_", type, "_", gen_title, "_", single_psi))
-          }else{
-            plot_folder = file.path(base_plot_folder, paste0("direc_", type, "_", gen_title))
-          }
-
-          dir.create(plot_folder, recursive = TRUE, showWarnings=FALSE)
-          pdf(file.path(plot_folder, paste0(reg, "_", sz,"_", n, ".pdf")), width=11.5, height=8)
-          
-          par(cex.axis = 2.0, cex.lab = 2.0, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
-          # cols <- hcl.colors(4, hcl_color_palette)
-          cols <- met.brewer(name=met_brewer_pallete, n=length(fils), type="discrete")
-          # cols <- c(cols[1], cols[2], cols[3])
-          plot_hist_lines_multi(
-            df = df_to_use,
-            # filters = list(filt_A, filt_B, filt_C),
-            filters = fils,
-            generation = gen,
-            breaks = breaks_vec,
-            labels = list(title = title,
-                          x = ifelse(type == "genotype", "Genotype value", "Phenotype value"),
-                          y = "Proportion"),
-            show_rep = TRUE,
-            ymax = if (type == "phenotype") 0.06 else 0.04,
-            cols = cols,
-            lwd = 5
-          )
-          leg_expr <- as.expression(lapply(lapply(fils, function(f) f$psi), function(v) bquote(psi == .(v))))
-                
-          legend("topright", bty = "n",
-                  legend = leg_expr,
-                col = cols, lwd = 2, cex=2.2)
-          dev.off()
-        }
-      }
-    }
-  }
-}
-```
-
-# plot skewness across generations for different psi values
-```{r}
-
-psi_val <- c(0.46)
-single_psi <- 0.5
-gen <- c(seq(9980, 9995, by=5), seq(9996, 10009, by=1), seq(10010, 10200, by=5))
-
-colors_for_psi <- met.brewer(name=met_brewer_pallete, n=4, type="discrete")
-psi_col_map <- setNames(colors_for_psi, c(0.0, 0.2, 0.5, 0.8))
-
-for (n in c(8)){
-  for (sz in c(40)){
-      for (reg in c("ave", "fit", "ext")){
-        for (type in c( "genotype", "phenotype")){
-          cat("Plotting:", type, " generation:", gen, " n:", n, " sz:", sz, " reg:", reg, "\n")
-    
-          breaks_vec <- seq(-20.5, 40.5, by = 1)  
-          if (type == "genotype"){
-            df_to_use <- cons_geno_df
-          } else if (type == "phenotype"){
-            df_to_use <- cons_pheno_df
-          } else if (type == "copied_val"){
-            df_to_use <- copied_val_df
-          } else if (type == "geno_pheno_diff"){
-            df_to_use <- diff_df
-          }
-
-          if (length(gen) > 1 ){
-            gen_title <- paste0(gen[1], "-", gen[[length(gen)]])
-          }else{
-            gen_title <- gen
-          }
-
-          if(gen_title >= 10000){
-            title <- paste0(type, "_", gen_title, "_skewness/", reg, "_", sz,"_", n, "opt = ", sz)
-          }else{
-            title <- paste0(type, "_", gen_title, "_skewness/", reg, "_", sz,"_", n, "opt = ", 0)
-          }
-
-          # if (is.integer(sz)){
-            filt_A <- list(reg=reg, n=n, psi=0.0, shift_size=sz)
-            filt_B <- list(reg=reg, n=n, psi=0.2, shift_size=sz)
-            filt_C <- list(reg=reg, n=n, psi=0.5, shift_size=sz)
-            filt_D <- list(reg=reg, n=n, psi=0.8, shift_size=sz)
-
-            filt_single <- list(reg=reg, n=n, psi=single_psi, shift_size=sz)
-          # }else{
-          #   filt_A <- list(reg=reg, n=n, psi=0.0)
-          #   filt_B <- list(reg=reg, n=n, psi=0.2)
-          #   filt_C <- list(reg=reg, n=n, psi=0.5)
-          #   filt_D <- list(reg=reg, n=n, psi=0.8)
-
-          #   filt_single <- list(reg=reg, n=n, psi=single_psi)
-          # }
-
-          fils <- list(filt_A, filt_B, filt_C, filt_D)
-          # fils <- list(filt_single)
-          if (length(fils) == 1){
-            plot_folder = file.path(base_plot_folder, paste0("direc_", type, "_", gen_title, "_", single_psi, "_skewness"))
-          }else{
-            plot_folder = file.path(base_plot_folder, paste0("direc_", type, "_", gen_title, "_skewness"))
-          }
-
-          dir.create(plot_folder, recursive = TRUE, showWarnings=FALSE)
-          pdf(file.path(plot_folder, paste0(reg, "_sz_", sz,"_n_", n,".pdf")), width=11.5, height=8)
-          
-          par(cex.axis = 2.0, cex.lab = 2.0, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
-          # cols <- hcl.colors(4, hcl_color_palette)
-          cols <- psi_col_map[as.character(sapply(fils, function(f) f$psi))]
-          # cols <- c(cols[1], cols[2], cols[3])
-          plot_skewness_multi(
-            df = df_to_use,
-            filters = fils,
-            generations = gen,
-            labels = list(
-              title = paste0(type, " distribution across generations"),
-              x = "generation",
-              y = "skewness of phenotype distribution"
-            ),
-            show_rep = TRUE,
-            cols = cols,
-          )
-          leg_expr <- as.expression(lapply(lapply(fils, function(f) f$psi), function(v) bquote(psi == .(v))))
-                
-          legend("topright", bty = "n",
-                  legend = leg_expr,
-                col = cols, lwd = 2, cex=2.2)
-          dev.off()
-        }
-      
-    }
-  }
-}
-
-```
-
-
-```{r}
-psi_val <- c(0.46)
-single_psi <- 0.5
-gen <- c(9999, 10000, 10003, 10005, 10008, 10010, 10050)
-
-colors_for_psi <- met.brewer(name=met_brewer_pallete, n=4, type="discrete")
-psi_col_map <- setNames(colors_for_psi, c(0.0, 0.2, 0.5, 0.8))
-
-for (n in c(8)){
-  for (shift_size in c(20)){
-    for (gap in c(50)){
-      for (reg in c("fit")){
-        for (type in c( "phenotype")){
-          cat("Plotting:", type, " generation:", gen, " n:", n, " shift_size:", shift_size, " reg:", reg, "\n")
-    
-          breaks_vec <- seq(-20.5, 40.5, by = 1)  
-          if (type == "genotype"){
-            df_to_use <- cons_geno_df
-          } else if (type == "phenotype"){
-            df_to_use <- cons_pheno_df
-          } else if (type == "copied_val"){
-            df_to_use <- copied_val_df
-          } else if (type == "geno_pheno_diff"){
-            df_to_use <- diff_df
-          }
-
-          if (length(gen) > 1 ){
-            gen_title <- paste0(gen[1], "-", gen[[length(gen)]])
-          }else{
-            gen_title <- gen
-          }
-
-          if(gen_title >= 10000){
             title <- paste0(type, "_", gen_title, "/", reg, "_", shift_size,"_", n, "opt = ", shift_size)
           }else{
             title <- paste0(type, "_", gen_title, "/", reg, "_", shift_size,"_", n, "opt = ", 0)
           }
 
-          # if (is.integer(shift_size)){
+          if (is.integer(shift_size)){
             filt_A <- list(reg=reg, n=n, psi=0.0, shift_size=shift_size)
             filt_B <- list(reg=reg, n=n, psi=0.2, shift_size=shift_size)
             filt_C <- list(reg=reg, n=n, psi=0.5, shift_size=shift_size)
             filt_D <- list(reg=reg, n=n, psi=0.8, shift_size=shift_size)
 
             filt_single <- list(reg=reg, n=n, psi=single_psi, shift_size=shift_size)
-          # }else{
-          #   filt_A <- list(reg=reg, n=n, psi=0.0)
-          #   filt_B <- list(reg=reg, n=n, psi=0.2)
-          #   filt_C <- list(reg=reg, n=n, psi=0.5)
-          #   filt_D <- list(reg=reg, n=n, psi=0.8)
-
-          #   filt_single <- list(reg=reg, n=n, psi=single_psi)
-          # }
-
-          # fils <- list(filt_A, filt_B, filt_C, filt_D)
-          fils <- list(filt_single)
-          if (length(fils) == 1){
-            plot_folder = file.path(base_plot_folder, paste0("direc_", type, "_", gen_title, "_", single_psi, "_multigen"))
           }else{
-            plot_folder = file.path(base_plot_folder, paste0("direc_", type, "_", gen_title, "_multigen"))
+            filt_A <- list(reg=reg, n=n, psi=0.0)
+            filt_B <- list(reg=reg, n=n, psi=0.2)
+            filt_C <- list(reg=reg, n=n, psi=0.5)
+            filt_D <- list(reg=reg, n=n, psi=0.8)
+
+            filt_single <- list(reg=reg, n=n, psi=single_psi)
+          }
+
+          fils <- list(filt_A, filt_B, filt_C, filt_D)
+          # fils <- list(filt_single)
+          if (length(fils) == 1){
+            plot_folder = file.path(base_plot_folder, paste0(type, "_", gen_title, "_", single_psi))
+          }else{
+            plot_folder = file.path(base_plot_folder, paste0(type, "_", gen_title))
           }
 
           dir.create(plot_folder, recursive = TRUE, showWarnings=FALSE)
-          pdf(file.path(plot_folder, paste0(reg, "_sz_", shift_size,"_n_", n,"_gap_", gap, ".pdf")), width=11.5, height=8)
+          pdf(file.path(plot_folder, paste0(reg, "_", shift_size,"_", n, ".pdf")), width=11.5, height=8)
           
           par(cex.axis = 2.0, cex.lab = 2.0, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
           # cols <- hcl.colors(4, hcl_color_palette)
-          cols <- psi_col_map[as.character(sapply(fils, function(f) f$psi))]
+          cols <- met.brewer(name=met_brewer_pallete, n=length(fils), type="discrete")
           # cols <- c(cols[1], cols[2], cols[3])
-          plot_hist_lines_multi_gen(
-            df = df_to_use,
-            filters = fils,
-            generations = gen,
-            breaks = breaks_vec,
-            labels = list(
-              title = paste0(type, " distribution across generations"),
-              x = if (type == "genotype") "Genotype value"  else "Phenotype value",
-              y = "Proportion"
-            ),
-            show_generation = TRUE,
-            generation_alpha = c(0.2, 1),
-            plot_mean = FALSE,
-            show_rep = FALSE,
-            cols = cols,
-          )
+          if (use_group_tag){
+           plot_hist_lines_multi(
+              df = df_to_use,
+              # filters = list(filt_A, filt_B, filt_C),
+              filters = fils,
+              generation = gen,
+              breaks = breaks_vec,
+              labels = list(title = title,
+                            x = ifelse(type == "genotype", "Genotype value", "Phenotype value"),
+                            y = "Proportion"),
+              show_rep = TRUE,
+              ymax = if (type == "phenotype") 0.15 else 0.06,
+              cols = cols,
+              lwd = 5,
+              group_df = group_tag_df
+            ) 
+          }else{
+            plot_hist_lines_multi(
+              df = df_to_use,
+              # filters = list(filt_A, filt_B, filt_C),
+              filters = fils,
+              generation = gen,
+              breaks = breaks_vec,
+              labels = list(title = title,
+                            x = ifelse(type == "genotype", "Genotype value", "Phenotype value"),
+                            y = "Proportion"),
+              show_rep = TRUE,
+              ymax = if (type == "phenotype") 0.15 else 0.06,
+              cols = cols,
+              lwd = 5
+            )
+          }
           leg_expr <- as.expression(lapply(lapply(fils, function(f) f$psi), function(v) bquote(psi == .(v))))
                 
           legend("topright", bty = "n",
@@ -332,23 +158,22 @@ for (n in c(8)){
     }
   }
 }
-
 ```
 
 ```{r}
 # get phenotype columns (assuming names are "0","1",...,"999")
-pheno_cols <- grep("^[0-9]+$", colnames(cons_pheno_df), value = TRUE)
-cons_pheno_df_to_use <- cons_pheno_df[cons_pheno_df$generation <= 9999 & cons_pheno_df$psi == 0.2 & cons_pheno_df$reg == "fit" & cons_pheno_df$n == 8, ]
+pheno_cols <- grep("^[0-9]+$", colnames(pheno_sim_0.2), value = TRUE)
+
 # convert to numeric vector
-pheno_vec <- as.numeric(unlist(cons_pheno_df_to_use[, pheno_cols]))
+pheno_vec <- as.numeric(unlist(pheno_sim_0.2[, pheno_cols]))
 
 # remove NA if any
 pheno_vec <- pheno_vec[!is.na(pheno_vec)]
 pheno_vec <- sort(pheno_vec)
 
 plot_folder = file.path(base_plot_folder, "phenotype_cdf")
-dir.create(plot_folder, recursive = TRUE, showWarnings=FALSE)
-pdf(file.path(plot_folder, paste0("fit_0.2_8_cdf.pdf")), width=11.5, height=8)
+pdf(file.path(plot_folder, paste0(reg, "_", shift_size,"_", n, ".pdf")), width=11.5, height=8)
+
 
 # plot CDF
 plot(
@@ -356,27 +181,10 @@ plot(
   main = "CDF of Phenotype (psi = 0.2)",
   xlab = "Phenotype value",
   ylab = "Cumulative probability",
-  lwd = 2,
-  # xlim = c(-2, 2),
-  # ylim = c(0.4, 0.6)
+  lwd = 2
 )
 
 dev.off()
-
-pdf(file.path(plot_folder, paste0("fit_0.2_8_pdf.pdf")), width=11.5, height=8)
-
-hist(
-  pheno_vec,
-  breaks = seq(-40.5, 40.5, by = 1),
-  main = "PDF of Phenotype (psi = 0.2)",
-  xlab = "Phenotype value",
-  ylab = "Frequency",
-  col = "lightblue",
-  border = "white"
-)
-
-dev.off()
-
 ```
 
 ```{r}
@@ -451,7 +259,7 @@ simulate_copy_best <- function(
   )
 }
 
-geno_matrix <- cons_geno_df[cons_geno_df$generation <= 9999 & cons_geno_df$psi == 0.2 & cons_geno_df$reg == "fit" & cons_geno_df$rep %in% 11:50 & cons_geno_df$n == 8, ]
+geno_matrix <- geno_df[geno_df$generation <= 9999 & geno_df$psi == 0.2 & geno_df$reg == "fit" & geno_df$rep %in% 11:50 & geno_df$n == 8, ]
 geno_cols <- grep("^[0-9]+$", colnames(geno_matrix), value = TRUE)
 geno_cols_use <- geno_cols[1:1000]
 
@@ -560,7 +368,7 @@ simulate_copy_best_with_group_tag <- function(
   )
 }
 
-geno_matrix <- cons_geno_df[cons_geno_df$generation <= 9999 & cons_geno_df$psi == 0.2 & cons_geno_df$reg == "fit" & cons_geno_df$rep %in% 11:50 & cons_geno_df$n == 8, ]
+geno_matrix <- geno_df[geno_df$generation <= 9999, ]
 geno_cols <- grep("^[0-9]+$", colnames(geno_matrix), value = TRUE)
 group_tag_cols <- grep("^[0-9]+$", colnames(group_tag_df), value = TRUE)
 geno_cols_use <- geno_cols[1:1000]
@@ -643,7 +451,7 @@ for (gen in list(c(9950, 9999))) {
       filt <- list(reg = reg, n = n_i, psi = 0.9)
 
       vd <- .var_decomp_for_filter(
-        df = cons_pheno_df,
+        df = pheno_df,
         filter = filt,
         generation = gen
       )
@@ -758,7 +566,7 @@ for (gen in c(9999, 10000)){
 
 
 ```{r}
-df_to_use<- cons_geno_df
+df_to_use<- geno_df
 for (group_size in unique(df_to_use$n)){
   for (psi_plot in unique(df_to_use$psi)){
     cat("Plotting distribution for group size:", group_size, " and psi:", psi_plot, "\n")
@@ -812,8 +620,8 @@ for (shift_size in szs) {
   breaks_vec <- seq(-1 * as.integer(shift_size) - 10, as.integer(shift_size) + 10, by = 1)
 
   for (type in types) {
-    if (type == "genotype") df_to_use <- cons_geno_df
-    else if (type == "phenotype") df_to_use <- cons_pheno_df
+    if (type == "genotype") df_to_use <- geno_df
+    else if (type == "phenotype") df_to_use <- pheno_df
     else if (type == "fitness") df_to_use <- fitness_df
 
     # decide how to read values for this type

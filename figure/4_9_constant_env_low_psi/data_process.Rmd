@@ -7,7 +7,7 @@ output: pdf_document
 
 ## evolving sociality data
 ```{r setup, include=FALSE}
-dataset_name <- "constant_env_batch"
+dataset_name <- "constant_env_low_psi"
 
 analysis_root <- "../zc524/collective_behavior_evo/figure/1_26_constant_env"
 data_root     <- "../zc524/collective_behavior_evo/data"
@@ -80,6 +80,7 @@ file_matches_filters <- function(file, psi_values, regimes, reps, group_sizes) {
     (length(reps) == 0 || meta$rep %in% reps) &&
     (length(group_sizes) == 0 || meta$n %in% group_sizes)
 }
+
 # ---- Helper: load one data type folder ----
 load_data_type <- function(data_type,
                            base_data_folder,
@@ -119,61 +120,9 @@ load_data_type <- function(data_type,
     warning("No readable files found in: ", folder)
     return(NULL)
   }
-  
-  # ---- Check and harmonize column names before rbind ----
-  colname_list <- lapply(df_list, names)
-  all_cols <- sort(unique(unlist(colname_list)))
-
-  col_diff <- lapply(seq_along(colname_list), function(i) {
-    missing_cols <- setdiff(all_cols, colname_list[[i]])
-    
-    list(
-      df_index = i,
-      file = file_list[i],
-      missing = missing_cols
-    )
-  })
-
-  any_missing <- any(sapply(col_diff, function(d) length(d$missing) > 0))
-
-  if (any_missing) {
-    warning(
-      paste0(
-        "Inconsistent columns detected in files for data type '", data_type, 
-        "'. Missing columns will be filled with NA.\n",
-        paste(
-          sapply(col_diff, function(d) {
-            if (length(d$missing) == 0) {
-              return(NULL)
-            }
-            paste0(
-              "  - File index ", d$df_index,
-              " (", basename(d$file), "): missing [",
-              paste(d$missing, collapse = ", "),
-              "]"
-            )
-          }),
-          collapse = "\n"
-        )
-      )
-    )
-  }
-
-  # Add missing columns as NA and reorder columns consistently
-  df_list <- lapply(df_list, function(d) {
-    missing_cols <- setdiff(all_cols, names(d))
-    
-    if (length(missing_cols) > 0) {
-      for (mc in missing_cols) {
-        d[[mc]] <- NA
-      }
-    }
-    
-    d <- d[, all_cols, drop = FALSE]
-    d
-  })
 
   df <- do.call(rbind, df_list)
+  df <- df[, sort(names(df)), drop = FALSE]
 
   df
 }
@@ -182,9 +131,9 @@ load_data_type <- function(data_type,
 # load all data
 ```{r}
 data_type_to_load <- c("data")
-psi_values <- c()
-regimes <- c()
-reps <- 1:20
+psi_values <- c(0.2, 0.0, 0.5, 0.8)
+regimes <- c("fit")
+reps <- 1:30
 group_sizes <- c()
 
 for (data_type in data_type_to_load) {
@@ -212,7 +161,6 @@ for (data_type in data_type_to_load) {
     "fitness"    = file.path(r_data_folder, "fitness.rds"),
     "allele"     = file.path(r_data_folder, "allele.rds"),
     "copied_val" = file.path(r_data_folder, "copied_val.rds"),
-    "group_tag" = file.path(r_data_folder, "group_tag.rds"),
     file.path(r_data_folder, paste0(data_type, ".rds"))
   )
 

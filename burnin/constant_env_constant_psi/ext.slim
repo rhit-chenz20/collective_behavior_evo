@@ -1,6 +1,7 @@
 initialize() {
 	initializeSLiMOptions(keepPedigrees=T);
 
+	defineConstant("start", clock()); 
     // Constant parameters
 	defineConstant("maxL", 10000);
 	defineConstant("U", 0.03);
@@ -23,16 +24,18 @@ initialize() {
     // output data
 	defineGlobal("phenotypeLines", NULL);
 	defineGlobal("genotypeLines", NULL);
-	defineGlobal("ind_lines", Dictionary());
-	defineGlobal("mut_lines", Dictionary());
+	defineGlobal("group_tagLines", NULL);
+	// defineGlobal("ind_lines", Dictionary());
+	// defineGlobal("mut_lines", Dictionary());
 	defineGlobal("varsLines", NULL);
-	defineGlobal("group_vars", float(N));
-	defineGlobal("group_psis", float(N));
-    defineGlobal("abs_fit", float(N));
-	defineGlobal("psi_lines", NULL);
-	defineGlobal("gpsiLines", NULL);
     defineGlobal("fitnessLines", NULL);
 	defineGlobal("alleleLines", NULL);
+	defineGlobal("copied_valLines", NULL);
+
+	// output data keeping
+	defineGlobal("group_vars", float(N));
+	defineGlobal("copied_val", float(N));
+    defineGlobal("abs_fit", float(N));
 
     // m1: genotype
 	script_a = "a=sqrt(rexp(1, mu=1)); if (runif(1) < 0.5) -a; else a;";
@@ -137,31 +140,34 @@ shift_time-30 late(){
 	log.addCustomColumn("N", "N;");
     log.addCustomColumn("Vs", "Vs;");
     log.addCustomColumn("Va0_sqrt", "Va0_sqrt;");
-    log.addCustomColumn("psi", "psi;");
 
 	log.addMeanSDColumns("z", "p1.individuals.tagF;");
-    log.addMeanSDColumns("a", "p1.individuals.sumOfMutationsOfType(m1) + (2 * sum(sim.substitutions[sim.substitutions.mutationType == m1].selectionCoeff));");
+    log.addMeanSDColumns("g", "p1.individuals.sumOfMutationsOfType(m1) + (2 * sum(sim.substitutions.selectionCoeff));");
     log.addMeanSDColumns("fitness", "abs_fit;");   
-    
+	log.addMeanSDColumns("parent_z", "mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]);");
+	log.addMeanSDColumns("parent_g", "mean(last_gen_g[p1.lifetimeReproductiveOutput != 0]);");
     log.addMeanSDColumns("group_vars", "group_vars;");
-	log.addMeanSDColumns("group_psis", "group_psis;");
+	log.addMeanSDColumns("num_seg", "len=c();for(i in p1.individuals){len=c(len, length(i.uniqueMutations));}; len;");
+	log.addMeanSDColumns("abs_effect", "abs_eff=c();abs_sub = sum(abs(sim.substitutions.selectionCoeff)); for(i in p1.individuals){abs_eff=c(abs_eff, abs_sub + sum(abs(i.mutationsFromHaplosomes(category='all', mutType = m1).selectionCoeff)));}; abs_eff;");
 
 	log.addCustomColumn("seg_site_pop", "length(sim.mutations[sim.mutations.mutationType == m1]);");
-
-	log.addMeanSDColumns("num_seg", "len=c();for(i in p1.individuals){len=c(len, length(i.uniqueMutations));}; len;");
-	log.addMeanSDColumns("abs_effect", "abs_eff=c();for(i in p1.individuals){abs_eff=c(abs_eff, sum(abs(i.mutationsFromHaplosomes(category='all', mutType = m1).selectionCoeff)));}; abs_eff;");
+	log.addCustomColumn("num_fixed_mut", "length(sim.substitutions);");
 
 	log.addCustomColumn("z_opt", "optimum-mean(p1.individuals.tagF);");
+	log.addCustomColumn("z_opt_closest", "optimum-max(p1.individuals.tagF);");
+	log.addCustomColumn("g_opt", "optimum-mean(p1.individuals.sumOfMutationsOfType(m1) + (2 * sum(sim.substitutions.selectionCoeff)));");
     log.addCustomColumn("optimum", "optimum;");
 
 	log.addCustomColumn("dz1", " mean(p1.individuals.tagF) - mean(last_gen_z);");
 	log.addCustomColumn("par_gen_meanz", "mean(last_gen_z);");
-	log.addCustomColumn("par_mean", "mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]);");
 	log.addCustomColumn("h2", "var(last_gen_g)/var(last_gen_z);");
 	log.addCustomColumn("s", "parent_mean=mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]); parent_mean-mean(last_gen_z);");
 	log.addCustomColumn("dz1_pred", "parent_mean=mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]); var(last_gen_g)/var(last_gen_z)*(parent_mean-mean(last_gen_z));");
 	
-    log.addCustomColumn("rep", "ID;");
+	log.addCustomColumn("Ne_heterozygosity", "estimateNe_Heterozygosity(p1);"); 
+	log.addCustomColumn("H", "calcHeterozygosity(p1.haplosomes);"); 
+	log.addCustomColumn("PI", "calcPi(p1.haplosomes);"); 
+	log.addCustomColumn("sfs", "paste(calcSFS(metric='count'), sep=',');"); 
 	log.addCustomColumn("seed", "seed;");
 }
 
@@ -169,7 +175,9 @@ c(seq(shift_time-50, shift_time-6, by=5), (shift_time-5):(shift_time+9), seq(shi
 	print("recoding at cycle "+sim.cycle);
 	record_phenotype(p1);
 	record_genotype(p1);
+	record_group_tag(p1);
 	record_vars(p1);
+	record_copied_val(p1);
     record_fitness(p1);
 }
 
@@ -180,8 +188,12 @@ c(seq(shift_time-50, shift_time-5, by=5), (shift_time-2):(shift_time+4), seq(shi
 
 end_time late() 
 {
+	cat("Elapsed: " + (clock() - start)); 
 	if (record_phenotype(p1, write = T)){
 		print("written phenotype to "+phenotype_fn);
+	}
+	if (record_group_tag(p1, write = T)){
+		print("written group tag to "+group_tag_fn);
 	}
 	if (record_genotype(p1, write = T)){
 		print("written genotype to "+genotype_fn);
@@ -189,8 +201,11 @@ end_time late()
 	if (record_effectsize(p1, write = T)){
 		print("written effectsize to file "+ind_fn);
 	}
+	if (record_copied_val(p1, write = T)){
+		print("written copied values to file "+copied_val_fn);
+	}
 	if (record_vars(p1, write = T)){
-		print("written vars to file "+ind_fn);
+		print("written group vars to file "+vars_fn);
 	}
     if (record_fitness(p1, write = T)){
 		print("written fitness to file "+fitness_fn);
@@ -208,7 +223,6 @@ function (logical) record_phenotype(o<Subpopulation>$ p, [logical$ write = F]){
     	header = paste(c("generation", p.individuals.index), sep="\t");
     	return writeFile(phenotype_fn, header + "\n"+ paste(phenotypeLines, sep="\n"), append=F);
 	}
-
     return T;
 }
 
@@ -217,17 +231,41 @@ function (logical) record_genotype(o<Subpopulation>$ p, [logical$ write = F]){
 		defineConstant("genotype_fn", "rec_genotype_"+ID+".tsv");
 		print("no genotype_fn supplied. using default filename: " + genotype_fn);
 	} 
-
     line = paste(sim.cycle, p.individuals.sumOfMutationsOfType(m1)+2*sum(sim.substitutions[sim.substitutions.mutationType == m1].selectionCoeff), sep = "\t");
     defineGlobal("genotypeLines", c(genotypeLines, line));
-
 	if (write) {
     	header = paste(c("generation", p.individuals.index), sep="\t");
     	return writeFile(genotype_fn, header + "\n"+ paste(genotypeLines, sep="\n"), append=F);
     }
-		
     return T;
-	
+}
+
+function (logical) record_group_tag(o<Subpopulation>$ p, [logical$ write = F]){
+	if(!exists("group_tag_fn")){ 
+		defineConstant("group_tag_fn", "rec_group_tag_"+ID+".tsv");
+		print("no group_tag_fn supplied. using default filename: " + group_tag_fn);
+	} 
+    line = paste(sim.cycle, p.individuals.tag, sep = "\t");
+    defineGlobal("group_tagLines", c(group_tagLines, line));
+	if (write) {
+    	header = paste(c("generation", p.individuals.index), sep="\t");
+    	return writeFile(group_tag_fn, header + "\n"+ paste(group_tagLines, sep="\n"), append=F);
+    }
+    return T;
+}
+
+function (logical) record_copied_val(o<Subpopulation>$ p, [logical$ write = F]){
+	if(!exists("copied_val_fn")){ 
+		defineConstant("copied_val_fn", "rec_copied_val_"+ID+".tsv");
+		print("no copied_val_fn supplied. using default filename: " + copied_val_fn);
+	} 
+    line = paste(sim.cycle, copied_val, sep = "\t");
+    defineGlobal("copied_valLines", c(copied_valLines, line));
+	if (write) {
+    	header = paste(c("generation", p.individuals.index), sep="\t");
+    	return writeFile(copied_val_fn, header + "\n"+ paste(copied_valLines, sep="\n"), append=F);
+    }
+    return T;
 }
 
 function (logical) record_effectsize(o<Subpopulation>$ p, [logical$ write = F]){
@@ -326,6 +364,20 @@ function (logical) record_fitness(o<Subpopulation>$ p, [logical$ write = F]){
     return T;
 }
 
+function (float)estimateNe_Heterozygosity(o<Subpopulation>$ subpop, [No<Chromosome>$ chromosome = NULL]){
+	if (isNULL(chromosome))
+	{
+		if (size(sim.chromosomes) == 1)
+		chromosome = sim.chromosomes;
+		else
+		stop("ERROR: in a multi-chrom model, a chromosome must be supplied.");
+	}
+	haplosomes = subpop.haplosomesForChromosomes(chromosome, includeNulls=F);
+	pi = calcHeterozygosity(haplosomes);
+	return pi / (4 * (U/L));
+}
+
+
 function (void) calculate_phenotype(o<Subpopulation>$ p){
 	// evaluate and save the additive effects of QTLs
 	inds = p.individuals;
@@ -335,7 +387,10 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 	shuffled = sample(inds, N, replace=F);
 	phenotype = float(N);
 	vars = float(N);
-	
+	copied_val = float(N);
+
+	group_tag = 0;
+
 	for (i in seq(0, N-n, by=n)) {
 		group = shuffled[i:(i+n-1)];
         as = a[group.index];
@@ -346,8 +401,11 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
         extreme_i = whichMax(dist);
         extreme_a = as[extreme_i];
         phenotype[group.index] = (1-psi) * as + psi * extreme_a;
+        copied_val[group.index] = extreme_a;
 		
 		vars[group.index] = var(as);
+		group.tag = group_tag;
+		group_tag = group_tag+1;
 	}
 	
 	abs_fitness = dnorm(phenotype, optimum, sqrt(Vs));
@@ -357,8 +415,9 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 	inds.fitnessScaling = adj_fitness;
 	inds.tagF = phenotype;
 	
-	if(community.tick >= shift_time-30){
+	if(community.tick >= shift_time-50){
 		defineGlobal("group_vars", vars);
         defineGlobal("abs_fit", abs_fitness);
+		defineGlobal("copied_val", copied_val);
 	}
 }

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-dir_name="constant_env_batch"
+dir_name="various_group_size"
 
 mkdir -p ../../data/${dir_name}
 mkdir -p ../../data/${dir_name}/phenotype
@@ -14,22 +14,19 @@ mkdir -p ../../data/${dir_name}/vars
 mkdir -p ../../data/${dir_name}/fitness
 mkdir -p ../../data/${dir_name}/allele
 mkdir -p ../../data/${dir_name}/copied_val
-mkdir -p ../../data/${dir_name}/group_tag
+mkdir -p ../../data/${dir_name}/group_tags
 
 python make_model.py 
-cp ave.slim ../../data/${dir_name}/
-cp ext.slim ../../data/${dir_name}/
-cp fit.slim ../../data/${dir_name}/
 
 reset=false # reset the simulation even if the .pop file exists
 stopIfPopfileNotFound=false # stop the simulation if the .pop file is not found. If false, it will run the simulation from the start if the .pop file is not found.
 c=0
 # burn in using sz=20
-for rep in {1..50}; do  
+for rep in {1..5}; do  
    for sz in 40; do   
-        for n in 4 10 25 40 50 100; do
+        for n in 5 8 20; do
             for psi in 0.0 0.2 0.5 0.8; do
-                for reg in ave ext fit; do
+                for reg in ave fit; do
                     echo "Submitting job, psi=${psi}, n=${n}, sz=${sz}, rep=${rep}, reg=${reg}."
                 
                     POP_FILE="../../data/${dir_name}/pop/n_${n}_psi_${psi}_reg_${reg}_${rep}.pop"
@@ -41,11 +38,11 @@ for rep in {1..50}; do
                     if [[ "$reset" == false && ( -f "$POP_FILE" || -f "$POP_FILE1" ) ]]; then
                         # ---- read the pop file if the pop file EXISTS and reset is false ----
 
-                        # if [[ -f "$POP_FILE" ]]; then
-                        #     POP_FILE="$POP_FILE"
-                        # elif [[ -f "$POP_FILE1" ]]; then
-                        #     POP_FILE="$POP_FILE1"
-                        # fi
+                        if [[ -f "$POP_FILE" ]]; then
+                            POP_FILE="$POP_FILE"
+                        elif [[ -f "$POP_FILE1" ]]; then
+                            POP_FILE="$POP_FILE1"
+                        fi
                         echo "Found pop file: $POP_FILE"
 
                         bin/slim5.0 -d psi=$psi \
@@ -61,8 +58,8 @@ for rep in {1..50}; do
                         -d "burnin_fn='$POP_FILE'" \
                         -d "fitness_fn='../../data/${dir_name}/fitness/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}.tsv'" \
                         -d "allele_fn='../../data/${dir_name}/allele/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}'" \
-                        -d "group_tag_fn='../../data/${dir_name}/group_tag/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}.tsv'" \
                         -d "copied_val_fn='../../data/${dir_name}/copied_val/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}.tsv'" \
+                        -d "group_tag_fn='../../data/${dir_name}/group_tags/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}.tsv'" \
                         ${reg}.slim &> ../../data/${dir_name}/log/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}.txt &
 
                     else
@@ -84,14 +81,14 @@ for rep in {1..50}; do
                         -d "vars_fn='../../data/${dir_name}/vars/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}.tsv'" \
                         -d "pop_output='$OUT_POP_FILE'" \
                         -d "fitness_fn='../../data/${dir_name}/fitness/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}.tsv'" \
-                        -d "group_tag_fn='../../data/${dir_name}/group_tag/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}.tsv'" \
                         -d "allele_fn='../../data/${dir_name}/allele/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}'" \
                         -d "copied_val_fn='../../data/${dir_name}/copied_val/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}.tsv'" \
+                        -d "group_tag_fn='../../data/${dir_name}/group_tags/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}.tsv'" \
                         ${reg}.slim &> ../../data/${dir_name}/log/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}.txt &
 
                     fi
                     ((c++))
-                    if (( c > 20)); 
+                    if (( c > 29)); 
                     then
                         wait
                         c=0

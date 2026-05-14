@@ -21,7 +21,7 @@ plot_lines_multi <- function(
   lwd_rep  = 1,
   rep_alpha = 0.35,
   xcol = tick_col,
-  ltys = NULL           # NEW: line types per ycol (tick mode only)
+  ltys = NULL,           # NEW: line types per ycol (tick mode only)
 ) {
   stopifnot(is.data.frame(df), length(filters) >= 1, is.character(ycol))
 
@@ -229,12 +229,10 @@ plot_generic_x_mode <- function(df, filters, ycol_single, labels, show_rep, cols
       sdv <- sd(y, na.rm = TRUE)
       if (!is.finite(sdv)) sdv <- 0
 
-      if (mu - sdv != mu + sdv) {
-        arrows(xv, mu - sdv,
-               xv, mu + sdv,
-               angle = 90, code = 3, length = 0.04,
-               col = col_i, lwd = max(1, lwd_mean * 0.5))
-      }
+      arrows(xv, mu - sdv,
+             xv, mu + sdv,
+             angle = 90, code = 3, length = 0.04,
+             col = col_i, lwd = max(1, lwd_mean * 0.5))
 
       points(xv, mu,
              pch = 21,
@@ -502,205 +500,6 @@ plot_lines_mean_sd_band <- function(
 
 ```
 
-```{r}
-# integer-named value columns
-.value_cols_int <- function(df) grep("^[0-9]+$", names(df), value = TRUE)
-
-# skewness function
-.skewness <- function(x) {
-  x <- x[is.finite(x)]
-  if (length(x) < 3) return(NA_real_)
-  
-  s <- sd(x)
-  if (!is.finite(s) || s == 0) return(NA_real_)
-  
-  mean((x - mean(x))^3) / s^3
-}
-
-# compute skewness per rep for one filter and one or multiple generations
-.skewness_for_filter <- function(df, filter, generations = NULL) {
-  d <- df
-  
-  if (length(filter)) {
-    for (nm in names(filter)) {
-      if (nm %in% names(d)) {
-        d <- d[d[[nm]] == filter[[nm]], , drop = FALSE]
-      }
-    }
-  }
-  
-  if (!is.null(generations) && "generation" %in% names(d)) {
-    d <- d[d$generation %in% generations, , drop = FALSE]
-  }
-  
-  if (nrow(d) == 0) stop("No rows after applying generation/filter.")
-  
-  vcols <- .value_cols_int(d)
-  if (!length(vcols)) stop("No integer-named value columns found.")
-  
-  gens <- sort(unique(d$generation))
-  reps <- sort(unique(d$rep))
-  
-  out <- expand.grid(
-    generation = gens,
-    rep = reps
-  )
-  out$skewness <- NA_real_
-  
-  for (i in seq_len(nrow(out))) {
-    dg <- d[
-      d$generation == out$generation[i] &
-        d$rep == out$rep[i],
-      ,
-      drop = FALSE
-    ]
-    
-    if (nrow(dg) == 0) next
-    
-    vals <- suppressWarnings(
-      as.numeric(unlist(dg[, vcols, drop = FALSE], use.names = FALSE))
-    )
-    
-    out$skewness[i] <- .skewness(vals)
-  }
-  
-  # across-rep mean and sd
-  mean_df <- aggregate(
-    skewness ~ generation,
-    data = out,
-    FUN = function(x) mean(x, na.rm = TRUE)
-  )
-  
-  sd_df <- aggregate(
-    skewness ~ generation,
-    data = out,
-    FUN = function(x) sd(x, na.rm = TRUE)
-  )
-  
-  names(mean_df)[2] <- "mean_skewness"
-  names(sd_df)[2] <- "sd_skewness"
-  
-  summary_df <- merge(mean_df, sd_df, by = "generation", all = TRUE)
-  
-  list(
-    per_rep = out,
-    summary = summary_df
-  )
-}
-
-# main plotting function
-plot_skewness_multi <- function(
-  df,
-  filters,                         # list of filter lists: list(f1, f2, ...)
-  generations = NULL,              # vector of generations to plot
-  labels = list(
-    title = "Skewness across generations",
-    x = "Generation",
-    y = "Skewness"
-  ),
-  cols = NULL,
-  lwd = 4,
-  pch = 16,
-  show_rep = FALSE,
-  rep_alpha = 0.25,
-  rep_lwd = 1,
-  show_points = TRUE,
-  add = FALSE,
-  ylim = NULL,
-  legend_pos = "topright",
-  legend_labels = NULL
-) {
-  k <- length(filters)
-  if (is.null(cols)) cols <- grDevices::hcl.colors(k, "Dark 2", rev = FALSE)
-  if (length(cols) < k) cols <- rep(cols, length.out = k)
-  
-  series <- vector("list", k)
-  for (i in seq_len(k)) {
-    series[[i]] <- .skewness_for_filter(
-      df = df,
-      filter = filters[[i]],
-      generations = generations
-    )
-  }
-  
-  all_x <- unlist(lapply(series, function(s) s$summary$generation))
-  all_y <- unlist(lapply(series, function(s) {
-    c(s$summary$mean_skewness, s$per_rep$skewness)
-  }))
-  
-  if (is.null(ylim)) {
-    ylim <- range(all_y, finite = TRUE)
-    if (!all(is.finite(ylim))) ylim <- c(-1, 1)
-    pad <- diff(ylim) * 0.08
-    if (pad == 0) pad <- 0.1
-    ylim <- ylim + c(-pad, pad)
-  }
-  
-  if (!add) {
-    plot(
-      NA, NA,
-      xlim = range(all_x, finite = TRUE),
-      ylim = ylim,
-      xlab = labels$x,
-      ylab = labels$y,
-      main = labels$title
-    )
-    abline(h = 0, lty = 2, col = "gray50")
-  }
-  
-  for (i in seq_len(k)) {
-    si <- series[[i]]
-    
-    if (isTRUE(show_rep)) {
-      rep_col <- grDevices::adjustcolor(cols[i], rep_alpha)
-      
-      reps <- sort(unique(si$per_rep$rep))
-      for (r in reps) {
-        dr <- si$per_rep[si$per_rep$rep == r, , drop = FALSE]
-        dr <- dr[order(dr$generation), ]
-        
-        lines(
-          dr$generation,
-          dr$skewness,
-          col = rep_col,
-          lwd = rep_lwd
-        )
-      }
-    }
-    
-    sm <- si$summary[order(si$summary$generation), ]
-    
-    lines(
-      sm$generation,
-      sm$mean_skewness,
-      col = cols[i],
-      lwd = lwd
-    )
-    
-    if (isTRUE(show_points)) {
-      points(
-        sm$generation,
-        sm$mean_skewness,
-        col = cols[i],
-        pch = pch
-      )
-    }
-  }
-  
-  if (!is.null(legend_labels)) {
-    legend(
-      legend_pos,
-      legend = legend_labels,
-      col = cols,
-      lwd = lwd,
-      pch = if (show_points) pch else NA,
-      bty = "n"
-    )
-  }
-  
-  invisible(series)
-}
-```
 
 ```{r}
 # --- helpers ---------------------------------------------------------------
@@ -760,7 +559,9 @@ plot_hist_lines_multi <- function(
   rep_alpha = 0.2,
   rep_lwd = 1,
   add = FALSE,                    # add to existing plot?
-  ymax = NULL
+  ymax = NULL,
+  group_df = NULL,        # NEW: optional data frame with group tags for coloring
+  n_threshold = c()
 ) {
   k <- length(filters)
   if (is.null(cols)) cols <- grDevices::hcl.colors(k, "Dark 2", rev = FALSE)
@@ -2001,102 +1802,5 @@ plot_reach_tick_multi <- function(
   }
   
   invisible(reach_list)
-}
-```
-
-```{r}
-# ---- Helper: apply one filter list ----
-apply_filter <- function(df, filter) {
-  d <- df
-  for (nm in names(filter)) {
-    d <- d[d[[nm]] == filter[[nm]], , drop = FALSE]
-  }
-  d
-}
-
-# ---- Helper: one scatter plot ----
-plot_g_vs_z_by_generation <- function(df,
-                                      filters,
-                                      xcol = "g_mean",
-                                      ycol = "z_mean",
-                                      tick_col = "tick",
-                                      labels = list(
-                                        title = "",
-                                        x = expression(bar(g)),
-                                        y = expression(bar(z))
-                                      ),
-                                      cols = NULL,
-                                      pch = 16,
-                                      cex = 1.8,
-                                      xlim = NULL,
-                                      ylim = NULL,
-                                      show_rep = TRUE) {
-  
-  if (is.null(cols)) cols <- rep("black", length(filters))
-  if (length(cols) < length(filters)) cols <- rep(cols, length.out = length(filters))
-  
-  all_x <- numeric(0)
-  all_y <- numeric(0)
-  
-  dat_list <- lapply(filters, function(filt) {
-    d <- apply_filter(df, filt)
-    d <- d[order(d[[tick_col]]), , drop = FALSE]
-    all_x <<- c(all_x, d[[xcol]])
-    all_y <<- c(all_y, d[[ycol]])
-    d
-  })
-  
-  if (is.null(xlim)) xlim <- range(all_x, na.rm = TRUE)
-  if (is.null(ylim)) ylim <- range(all_y, na.rm = TRUE)
-  
-  plot(
-    NA, NA,
-    xlim = xlim,
-    ylim = ylim,
-    xlab = labels$x,
-    ylab = labels$y,
-    main = labels$title
-  )
-  
-  for (i in seq_along(dat_list)) {
-    d <- dat_list[[i]]
-    if (nrow(d) == 0) next
-    
-    base_col <- cols[i]
-    
-    # light = earlier generation, dark = later generation
-    tick_scaled <- (d[[tick_col]] - min(d[[tick_col]], na.rm = TRUE)) /
-      diff(range(d[[tick_col]], na.rm = TRUE))
-    
-    if (all(is.na(tick_scaled)) || length(unique(d[[tick_col]])) == 1) {
-      tick_scaled <- rep(1, nrow(d))
-    }
-    
-    point_cols <- sapply(tick_scaled, function(a) {
-      adjustcolor(base_col, alpha.f = 0.1 + 0.5 * a)
-    })
-    
-    if (show_rep && "rep" %in% names(d)) {
-      reps <- sort(unique(d$rep))
-      for (r in reps) {
-        dr <- d[d$rep == r, , drop = FALSE]
-        dr <- dr[order(dr[[tick_col]]), , drop = FALSE]
-        lines(
-          dr[[xcol]],
-          dr[[ycol]],
-          col = adjustcolor(base_col, alpha.f = 0.25),
-          lwd = 1
-        )
-      }
-    }
-    
-    points(
-      d[[xcol]],
-      d[[ycol]],
-      pch = pch,
-      cex = cex,
-      col = point_cols
-    )
-  }
 }
 ```

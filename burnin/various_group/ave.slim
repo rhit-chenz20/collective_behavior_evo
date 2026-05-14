@@ -1,8 +1,6 @@
 initialize() {
 	initializeSLiMOptions(keepPedigrees=T);
 
-	defineConstant("start", clock()); 
-
     // Constant parameters
 	defineConstant("maxL", 10000);
 	defineConstant("U", 0.03);
@@ -21,6 +19,16 @@ initialize() {
     if (!exists("seed")){
         defineConstant("seed", getSeed());
     }
+
+	// for various group size
+	defineConstant("ng", asInteger(N/n));
+	defineConstant("groups", sample(0:(ng-1), size=N, replace=T));
+	group_count = integer(ng);  // initialize vector of length ng
+	
+	for (g in 0:(ng-1)) {
+		group_count[g] = sum(groups == g);
+	}
+	defineConstant("group_counts", group_count);
 
     // output data
 	defineGlobal("phenotypeLines", NULL);
@@ -60,9 +68,12 @@ initialize() {
 	}
 }
 
-seq(50, end_time, by = fluc_interval) late(){
-	if (optimum <= 0) defineGlobal("optimum", asInteger(fluc_opt/2));
-	else if (optimum > 0) defineGlobal("optimum", asInteger(-fluc_opt/2));
+shift_time late(){
+	print("shift; no shift happens");
+    a=p1.individuals.sumOfMutationsOfType(m1)+2*sum(sim.substitutions[sim.substitutions.mutationType == m1].selectionCoeff);
+	defineGlobal("optimum", optimum+shift_size);
+	print("new opt is " + optimum);
+	defineGlobal("Va0_sqrt", sqrt(var(a)));
 }
 
 late(){
@@ -119,14 +130,6 @@ late() {
 	}
 	
 	calculate_phenotype(p1);
-}
-
-shift_time late(){
-	print("shift; no shift happens");
-    a=p1.individuals.sumOfMutationsOfType(m1)+2*sum(sim.substitutions[sim.substitutions.mutationType == m1].selectionCoeff);
-	//defineGlobal("optimum", optimum+shift_size);
-	//print("new opt is " + optimum);
-	defineGlobal("Va0_sqrt", sqrt(var(a)));
 }
 
 shift_time-100 late(){
@@ -186,14 +189,13 @@ c(seq(shift_time-50, shift_time-6, by=5), (shift_time-5):(shift_time+9), seq(shi
     record_fitness(p1);
 }
 
-c(seq(shift_time-30, shift_time-6, by=5), (shift_time-2):(shift_time+4), seq(shift_time+5, end_time, by=10))  late(){
+c(seq(shift_time-50, shift_time-5, by=5), (shift_time-2):(shift_time+4), seq(shift_time+5, end_time, by=10))  late(){
 	print("recoding at cycle "+sim.cycle);
 	record_effectsize(p1);
 }
 
 end_time late() 
 {
-	cat("Elapsed: " + (clock() - start)); 
 	if (record_phenotype(p1, write = T)){
 		print("written phenotype to "+phenotype_fn);
 	}
@@ -228,7 +230,6 @@ function (logical) record_phenotype(o<Subpopulation>$ p, [logical$ write = F]){
     	header = paste(c("generation", p.individuals.index), sep="\t");
     	return writeFile(phenotype_fn, header + "\n"+ paste(phenotypeLines, sep="\n"), append=F);
 	}
-
     return T;
 }
 
@@ -237,19 +238,14 @@ function (logical) record_genotype(o<Subpopulation>$ p, [logical$ write = F]){
 		defineConstant("genotype_fn", "rec_genotype_"+ID+".tsv");
 		print("no genotype_fn supplied. using default filename: " + genotype_fn);
 	} 
-
     line = paste(sim.cycle, p.individuals.sumOfMutationsOfType(m1)+2*sum(sim.substitutions[sim.substitutions.mutationType == m1].selectionCoeff), sep = "\t");
     defineGlobal("genotypeLines", c(genotypeLines, line));
-
 	if (write) {
     	header = paste(c("generation", p.individuals.index), sep="\t");
     	return writeFile(genotype_fn, header + "\n"+ paste(genotypeLines, sep="\n"), append=F);
     }
-		
     return T;
-	
 }
-
 
 function (logical) record_group_tag(o<Subpopulation>$ p, [logical$ write = F]){
 	if(!exists("group_tag_fn")){ 
@@ -278,7 +274,6 @@ function (logical) record_copied_val(o<Subpopulation>$ p, [logical$ write = F]){
     }
     return T;
 }
-
 
 function (logical) record_effectsize(o<Subpopulation>$ p, [logical$ write = F]){
     // // output the mutation carried by each individual
@@ -342,6 +337,7 @@ function (logical) record_effectsize(o<Subpopulation>$ p, [logical$ write = F]){
 	}
 	return T;
 }
+
 function (logical) record_vars(o<Subpopulation>$ p, [logical$ write = F]){
 	if(!exists("vars_fn")){ 
 		defineConstant("vars_fn", "varstype_"+ID+".tsv");
@@ -382,29 +378,37 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 	a = inds.sumOfMutationsOfType(m1) + 2 * sum(sim.substitutions[sim.substitutions.mutationType == m1].selectionCoeff);
 	
 	shuffled = sample(inds, N, replace=F);
+	shuffled.tag = groups;
+	ord = order(inds.tag);
+	inds_sorted = inds[ord];
+
 	phenotype = float(N);
 	vars = float(N);
 	copied_val = float(N);
 
-	group_tag = 0;
-
-	for (i in seq(0, N-n, by=n)) {
-		group = shuffled[i:(i+n-1)];
+	start = 0;
+	for (g in 0:(ng-1)) {
+		n_g = group_counts[g];
+		
+		if (n_g == 0) next;
+		
+		end = start + n_g - 1;
+		group = inds_sorted[start:end];
+		
         as = a[group.index];
 
-        // no phenotype for inverse-variance model; record group variance to tagF
-        phenotype[group.index] = a[group.index];
-        a_var = var(as);
-        group.tagF = a_var;
+        // phenotype for ave model
+        phenotype[group.index] = ((n-1)*(1-psi)*a[group.index]+psi*sum(as)) / (n-1+psi);
+        copied_val[group.index] = (sum(as) - a[group.index]) / (n-1);
 		
-		vars[group.index] = var(as);
-		group.tag = group_tag;
-		group_tag = group_tag+1;
+		if (n_g == 1) vars[group.index] = -1;
+		else vars[group.index] = var(as);
+		start = end + 1;
 	}
 	
 	abs_fitness = dnorm(phenotype, optimum, sqrt(Vs));
-    // adjust the fitness of individuals
-    adj_fitness = abs_fitness / (1 + psi * inds.tagF);
+    // no fitness adjustment needed
+    adj_fitness = abs_fitness;
     
 	inds.fitnessScaling = adj_fitness;
 	inds.tagF = phenotype;

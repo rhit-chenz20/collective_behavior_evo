@@ -1,0 +1,244 @@
+Wrote: ave.slim
+Wrote: fit.slim
+Wrote: ext.slim
+Wrote: inv.slim
+Submitting job, psi=0.0, n=5, sz=40, rep=1, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.0_reg_ave_1.pop
+Submitting job, psi=0.0, n=5, sz=40, rep=1, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.0_reg_fit_1.pop
+Submitting job, psi=0.2, n=5, sz=40, rep=1, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.2_reg_ave_1.pop
+Submitting job, psi=0.2, n=5, sz=40, rep=1, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.2_reg_fit_1.pop
+Submitting job, psi=0.5, n=5, sz=40, rep=1, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.5_reg_ave_1.pop
+Submitting job, psi=0.5, n=5, sz=40, rep=1, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.5_reg_fit_1.pop
+Submitting job, psi=0.8, n=5, sz=40, rep=1, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.8_reg_ave_1.pop
+Submitting job, psi=0.8, n=5, sz=40, rep=1, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.8_reg_fit_1.pop
+Submitting job, psi=0.0, n=8, sz=40, rep=1, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.0_reg_ave_1.pop
+Submitting job, psi=0.0, n=8, sz=40, rep=1, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.0_reg_fit_1.pop
+Submitting job, psi=0.2, n=8, sz=40, rep=1, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.2_reg_ave_1.pop
+Submitting job, psi=0.2, n=8, sz=40, rep=1, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.2_reg_fit_1.pop
+Submitting job, psi=0.5, n=8, sz=40, rep=1, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.5_reg_ave_1.pop
+Submitting job, psi=0.5, n=8, sz=40, rep=1, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.5_reg_fit_1.pop
+Submitting job, psi=0.8, n=8, sz=40, rep=1, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.8_reg_ave_1.pop
+Submitting job, psi=0.8, n=8, sz=40, rep=1, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.8_reg_fit_1.pop
+Submitting job, psi=0.0, n=20, sz=40, rep=1, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.0_reg_ave_1.pop
+Submitting job, psi=0.0, n=20, sz=40, rep=1, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.0_reg_fit_1.pop
+Submitting job, psi=0.2, n=20, sz=40, rep=1, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.2_reg_ave_1.pop
+Submitting job, psi=0.2, n=20, sz=40, rep=1, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.2_reg_fit_1.pop
+Submitting job, psi=0.5, n=20, sz=40, rep=1, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.5_reg_ave_1.pop
+Submitting job, psi=0.5, n=20, sz=40, rep=1, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.5_reg_fit_1.pop
+Submitting job, psi=0.8, n=20, sz=40, rep=1, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.8_reg_ave_1.pop
+Submitting job, psi=0.8, n=20, sz=40, rep=1, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.8_reg_fit_1.pop
+Submitting job, psi=0.0, n=5, sz=40, rep=2, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.0_reg_ave_2.pop
+Submitting job, psi=0.0, n=5, sz=40, rep=2, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.0_reg_fit_2.pop
+Submitting job, psi=0.2, n=5, sz=40, rep=2, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.2_reg_ave_2.pop
+Submitting job, psi=0.2, n=5, sz=40, rep=2, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.2_reg_fit_2.pop
+Submitting job, psi=0.5, n=5, sz=40, rep=2, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.5_reg_ave_2.pop
+Submitting job, psi=0.5, n=5, sz=40, rep=2, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.5_reg_fit_2.pop
+Submitting job, psi=0.8, n=5, sz=40, rep=2, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.8_reg_ave_2.pop
+Submitting job, psi=0.8, n=5, sz=40, rep=2, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.8_reg_fit_2.pop
+Submitting job, psi=0.0, n=8, sz=40, rep=2, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.0_reg_ave_2.pop
+Submitting job, psi=0.0, n=8, sz=40, rep=2, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.0_reg_fit_2.pop
+Submitting job, psi=0.2, n=8, sz=40, rep=2, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.2_reg_ave_2.pop
+Submitting job, psi=0.2, n=8, sz=40, rep=2, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.2_reg_fit_2.pop
+Submitting job, psi=0.5, n=8, sz=40, rep=2, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.5_reg_ave_2.pop
+Submitting job, psi=0.5, n=8, sz=40, rep=2, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.5_reg_fit_2.pop
+Submitting job, psi=0.8, n=8, sz=40, rep=2, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.8_reg_ave_2.pop
+Submitting job, psi=0.8, n=8, sz=40, rep=2, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.8_reg_fit_2.pop
+Submitting job, psi=0.0, n=20, sz=40, rep=2, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.0_reg_ave_2.pop
+Submitting job, psi=0.0, n=20, sz=40, rep=2, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.0_reg_fit_2.pop
+Submitting job, psi=0.2, n=20, sz=40, rep=2, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.2_reg_ave_2.pop
+Submitting job, psi=0.2, n=20, sz=40, rep=2, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.2_reg_fit_2.pop
+Submitting job, psi=0.5, n=20, sz=40, rep=2, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.5_reg_ave_2.pop
+Submitting job, psi=0.5, n=20, sz=40, rep=2, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.5_reg_fit_2.pop
+Submitting job, psi=0.8, n=20, sz=40, rep=2, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.8_reg_ave_2.pop
+Submitting job, psi=0.8, n=20, sz=40, rep=2, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.8_reg_fit_2.pop
+Submitting job, psi=0.0, n=5, sz=40, rep=3, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.0_reg_ave_3.pop
+Submitting job, psi=0.0, n=5, sz=40, rep=3, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.0_reg_fit_3.pop
+Submitting job, psi=0.2, n=5, sz=40, rep=3, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.2_reg_ave_3.pop
+Submitting job, psi=0.2, n=5, sz=40, rep=3, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.2_reg_fit_3.pop
+Submitting job, psi=0.5, n=5, sz=40, rep=3, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.5_reg_ave_3.pop
+Submitting job, psi=0.5, n=5, sz=40, rep=3, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.5_reg_fit_3.pop
+Submitting job, psi=0.8, n=5, sz=40, rep=3, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.8_reg_ave_3.pop
+Submitting job, psi=0.8, n=5, sz=40, rep=3, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.8_reg_fit_3.pop
+Submitting job, psi=0.0, n=8, sz=40, rep=3, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.0_reg_ave_3.pop
+Submitting job, psi=0.0, n=8, sz=40, rep=3, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.0_reg_fit_3.pop
+Submitting job, psi=0.2, n=8, sz=40, rep=3, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.2_reg_ave_3.pop
+Submitting job, psi=0.2, n=8, sz=40, rep=3, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.2_reg_fit_3.pop
+Submitting job, psi=0.5, n=8, sz=40, rep=3, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.5_reg_ave_3.pop
+Submitting job, psi=0.5, n=8, sz=40, rep=3, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.5_reg_fit_3.pop
+Submitting job, psi=0.8, n=8, sz=40, rep=3, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.8_reg_ave_3.pop
+Submitting job, psi=0.8, n=8, sz=40, rep=3, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.8_reg_fit_3.pop
+Submitting job, psi=0.0, n=20, sz=40, rep=3, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.0_reg_ave_3.pop
+Submitting job, psi=0.0, n=20, sz=40, rep=3, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.0_reg_fit_3.pop
+Submitting job, psi=0.2, n=20, sz=40, rep=3, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.2_reg_ave_3.pop
+Submitting job, psi=0.2, n=20, sz=40, rep=3, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.2_reg_fit_3.pop
+Submitting job, psi=0.5, n=20, sz=40, rep=3, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.5_reg_ave_3.pop
+Submitting job, psi=0.5, n=20, sz=40, rep=3, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.5_reg_fit_3.pop
+Submitting job, psi=0.8, n=20, sz=40, rep=3, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.8_reg_ave_3.pop
+Submitting job, psi=0.8, n=20, sz=40, rep=3, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.8_reg_fit_3.pop
+Submitting job, psi=0.0, n=5, sz=40, rep=4, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.0_reg_ave_4.pop
+Submitting job, psi=0.0, n=5, sz=40, rep=4, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.0_reg_fit_4.pop
+Submitting job, psi=0.2, n=5, sz=40, rep=4, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.2_reg_ave_4.pop
+Submitting job, psi=0.2, n=5, sz=40, rep=4, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.2_reg_fit_4.pop
+Submitting job, psi=0.5, n=5, sz=40, rep=4, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.5_reg_ave_4.pop
+Submitting job, psi=0.5, n=5, sz=40, rep=4, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.5_reg_fit_4.pop
+Submitting job, psi=0.8, n=5, sz=40, rep=4, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.8_reg_ave_4.pop
+Submitting job, psi=0.8, n=5, sz=40, rep=4, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.8_reg_fit_4.pop
+Submitting job, psi=0.0, n=8, sz=40, rep=4, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.0_reg_ave_4.pop
+Submitting job, psi=0.0, n=8, sz=40, rep=4, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.0_reg_fit_4.pop
+Submitting job, psi=0.2, n=8, sz=40, rep=4, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.2_reg_ave_4.pop
+Submitting job, psi=0.2, n=8, sz=40, rep=4, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.2_reg_fit_4.pop
+Submitting job, psi=0.5, n=8, sz=40, rep=4, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.5_reg_ave_4.pop
+Submitting job, psi=0.5, n=8, sz=40, rep=4, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.5_reg_fit_4.pop
+Submitting job, psi=0.8, n=8, sz=40, rep=4, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.8_reg_ave_4.pop
+Submitting job, psi=0.8, n=8, sz=40, rep=4, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.8_reg_fit_4.pop
+Submitting job, psi=0.0, n=20, sz=40, rep=4, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.0_reg_ave_4.pop
+Submitting job, psi=0.0, n=20, sz=40, rep=4, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.0_reg_fit_4.pop
+Submitting job, psi=0.2, n=20, sz=40, rep=4, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.2_reg_ave_4.pop
+Submitting job, psi=0.2, n=20, sz=40, rep=4, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.2_reg_fit_4.pop
+Submitting job, psi=0.5, n=20, sz=40, rep=4, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.5_reg_ave_4.pop
+Submitting job, psi=0.5, n=20, sz=40, rep=4, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.5_reg_fit_4.pop
+Submitting job, psi=0.8, n=20, sz=40, rep=4, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.8_reg_ave_4.pop
+Submitting job, psi=0.8, n=20, sz=40, rep=4, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.8_reg_fit_4.pop
+Submitting job, psi=0.0, n=5, sz=40, rep=5, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.0_reg_ave_5.pop
+Submitting job, psi=0.0, n=5, sz=40, rep=5, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.0_reg_fit_5.pop
+Submitting job, psi=0.2, n=5, sz=40, rep=5, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.2_reg_ave_5.pop
+Submitting job, psi=0.2, n=5, sz=40, rep=5, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.2_reg_fit_5.pop
+Submitting job, psi=0.5, n=5, sz=40, rep=5, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.5_reg_ave_5.pop
+Submitting job, psi=0.5, n=5, sz=40, rep=5, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.5_reg_fit_5.pop
+Submitting job, psi=0.8, n=5, sz=40, rep=5, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.8_reg_ave_5.pop
+Submitting job, psi=0.8, n=5, sz=40, rep=5, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_5_psi_0.8_reg_fit_5.pop
+Submitting job, psi=0.0, n=8, sz=40, rep=5, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.0_reg_ave_5.pop
+Submitting job, psi=0.0, n=8, sz=40, rep=5, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.0_reg_fit_5.pop
+Submitting job, psi=0.2, n=8, sz=40, rep=5, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.2_reg_ave_5.pop
+Submitting job, psi=0.2, n=8, sz=40, rep=5, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.2_reg_fit_5.pop
+Submitting job, psi=0.5, n=8, sz=40, rep=5, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.5_reg_ave_5.pop
+Submitting job, psi=0.5, n=8, sz=40, rep=5, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.5_reg_fit_5.pop
+Submitting job, psi=0.8, n=8, sz=40, rep=5, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.8_reg_ave_5.pop
+Submitting job, psi=0.8, n=8, sz=40, rep=5, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_8_psi_0.8_reg_fit_5.pop
+Submitting job, psi=0.0, n=20, sz=40, rep=5, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.0_reg_ave_5.pop
+Submitting job, psi=0.0, n=20, sz=40, rep=5, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.0_reg_fit_5.pop
+Submitting job, psi=0.2, n=20, sz=40, rep=5, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.2_reg_ave_5.pop
+Submitting job, psi=0.2, n=20, sz=40, rep=5, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.2_reg_fit_5.pop
+Submitting job, psi=0.5, n=20, sz=40, rep=5, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.5_reg_ave_5.pop
+Submitting job, psi=0.5, n=20, sz=40, rep=5, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.5_reg_fit_5.pop
+Submitting job, psi=0.8, n=20, sz=40, rep=5, reg=ave.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.8_reg_ave_5.pop
+Submitting job, psi=0.8, n=20, sz=40, rep=5, reg=fit.
+Missing pop file: ../../data/various_group_size/pop/n_20_psi_0.8_reg_fit_5.pop
