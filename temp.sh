@@ -1,1 +1,0 @@
-python3 move_files.py data/n_group_translational data/n_group_extreme --find "ext" --replace "ave"
