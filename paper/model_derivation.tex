@@ -1,0 +1,136 @@
+% copy the average derivation (with e)
+Let
+\[
+Z = \sum_{j=1}^n z_j, \quad b_i := (1-\psi)a_i + e_i
+\]
+denote the total group phenotype and nonsocial phenotype contribution, respectively. Since
+\[
+\sum_{j \ne i} z_j = Z - z_i,
+\]
+equation~\eqref{eq:system} becomes
+\begin{equation}
+z_i = (1-\psi)a_i + e_i + \frac{\psi}{n-1}(Z - z_i).
+\end{equation}
+Rearranging,
+\[
+\left(1 + \frac{\psi}{n-1}\right) z_i
+= (1-\psi)a_i + e_i + \frac{\psi}{n-1} Z.
+\]
+
+Then
+\begin{equation}
+(1+\frac{\psi}{n-1}) z_i = b_i + \frac{\psi}{n-1} Z,
+\end{equation}
+so that
+\begin{equation}
+z_i = \frac{b_i + \frac{\psi}{n-1}.Z}{1+\frac{\psi}{n-1}.}.
+\label{eq:zi_intermediate}
+\end{equation}
+
+\paragraph{Step 2: Solve for $Z$.}
+
+Summing \eqref{eq:zi_intermediate} over all individuals gives
+\[
+Z = \sum_{i=1}^n z_i
+= \frac{\sum_{i=1}^n b_i + n\frac{\psi}{n-1}.Z}{1+\frac{\psi}{n-1}.}.
+\]
+
+Let
+\[
+B = \sum_{i=1}^n b_i.
+\]
+Then
+\[
+Z(1+c) = B + n\frac{\psi}{n-1}Z,
+\]
+which implies
+\[
+Z(1 + \frac{\psi}{n-1} - n\frac{\psi}{n-1}) = B.
+\]
+
+Since $\frac{\psi}{n-1}(n-1) = \psi$, we have
+\[
+1 + \frac{\psi}{n-1} - n\frac{\psi}{n-1} = 1 - \psi.
+\]
+Therefore, provided $\psi \ne 1$,
+\begin{equation}
+Z = \frac{B}{1-\psi}.
+\label{eq:Z_solution}
+\end{equation}
+
+\paragraph{Step 3: Substitute back.}
+
+Substituting \eqref{eq:Z_solution} into \eqref{eq:zi_intermediate},
+\[
+z_i = \frac{b_i + \dfrac{\frac{\psi}{n-1}B}{1-\psi}}{1+\frac{\psi}{n-1}}.
+\]
+
+Using $c = \psi/(n-1)$ and $1+\frac{\psi}{n-1} = (n-1+\psi)/(n-1)$, we obtain the explicit solution
+\begin{equation}
+z_i
+=
+\frac{n-1}{n-1+\psi}\, b_i
++
+\frac{\psi}{n-1+\psi}\,
+\frac{B}{1-\psi}.
+\end{equation}
+
+Finally, substituting back $b_i = (1-\psi)a_i + e_i$ and 
+\[
+B = \sum_{k=1}^n \big((1-\psi)a_k + e_k\big),
+\]
+yields
+\begin{equation}
+z_i
+=
+\frac{n-1}{n-1+\psi}\big((1-\psi)a_i + e_i\big)
++
+\frac{\psi}{n-1+\psi}
+\left(
+\sum_{k=1}^n a_k
++
+\frac{\sum_{k=1}^n e_k}{1-\psi}
+\right).
+\label{eq:final_solution}
+\end{equation}
+
+\paragraph{Remarks.}
+The system admits a unique solution for $\psi \ne 1$ and $n>1$.  
+When $\psi = 1$, the coefficient matrix becomes singular and the system does not, in general, admit a unique solution.
+
+
+% NOTE: this section is for no e considered for copy the average
+Assuming the population is under similar environment and $e$ is independent and normally distributed with a mean of 0 and variance $E$. (TODO: add $e$ to the simulation). Let $$Z=\sum^n_{k=1}z_k\text{ and }A=\sum^n_{k=1}a_k,$$ which means $Z$ and $A$ is the sum of phenotype and genotype of the whole group, respectively. Substituting for $\sum^n_{j\neq i} z_j$ with $Z-z_i$
+\begin{equation}
+    z_i=(1-\psi)a_i+\frac{\psi}{n-1}(Z-z_i)
+\end{equation}
+
+\begin{equation}
+    z_i=\frac{(1-\psi)a_i+\frac{\psi}{n-1}Z}{1+\frac{\psi}{n-1}}
+\end{equation}
+
+\begin{equation}
+    Z=\sum^n_{k=1}z_k=\sum^n_{k=1}\frac{(1-\psi)a_k+\frac{\psi}{n-1}Z}{1+\frac{\psi}{n-1}}
+\end{equation}
+
+\begin{equation}
+    Z=\sum^n_{k=1}\frac{(1-\psi)a_k}{1+\frac{\psi}{n-1}}+\frac{\frac{n\psi}{n-1}Z}{1+\frac{\psi}{n-1}}
+\end{equation}
+
+\begin{equation}
+    Z=\frac{(1-\psi)A+\frac{n\psi}{n-1}Z}{1+\frac{\psi}{n-1}}
+\end{equation}
+
+\begin{equation}
+    (1-\frac{\psi}{n-1})Z=(1-\psi)A+\frac{n\psi}{n-1}Z
+\end{equation}
+
+\begin{equation}
+    (n-1)(1-\psi)Z=(n-1)(1-\psi)A
+\end{equation}
+
+For $\psi\neq 1, n>1, \text{ and }Z=A$, we obtain an expression of $z_i$ as a function of every member's genotype. 
+ since $$Z=\sum^n_{k=1}z_k=\sum^n_{k=1}(1-\psi)a_k+$$
+\begin{equation}
+    z_i=\frac{(1-\psi)a_i+\frac{\psi}{n-1}Z}{1+\frac{\psi}{n-1}}=\frac{(n-1)(1-\psi)a_i+\psi A}{n-1+\psi}
+\end{equation}

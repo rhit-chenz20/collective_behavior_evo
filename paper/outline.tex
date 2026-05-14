@@ -1,0 +1,122 @@
+\documentclass[12pt]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{amsmath}
+\usepackage{enumitem}
+
+\setstretch{1.2}
+
+\begin{document}
+
+\section{Method}
+
+\subsection{Model setup}
+
+\subsubsection{Genomic architecture and selection regime from Hayward (2022)}
+\begin{enumerate}
+    \item Highly polygenic QTL for the trait under selection
+    \item Population size decreased (supplement validation figure 1)
+    \item Fitness function is wide, though scaled by the reduced population size
+    \item Shift of the optimum is a constant and a simulation parameter
+\end{enumerate}
+
+\subsubsection{Derived phenotype calculations based on Moore et al.\ (1987)}
+\begin{enumerate}
+    \item Direct implementation of the Moore model works in SLiM (supplement validation figure 2)
+    \item Redefine $\psi$ because of not translational invariance
+    \item Three models of phenotype calculations with examples
+\end{enumerate}
+
+\subsection{Analytical solution}
+
+\subsubsection{Analytically derived genotypic and phenotypic distributions}
+\begin{enumerate}
+    \item Copy the average
+    \item Copy the extreme
+    \item Copy the best (TODO)
+\end{enumerate}
+
+\subsubsection{Invasion analysis}
+\begin{enumerate}
+    \item Copy the average
+    \item Copy the extreme
+    \item Copy the best (TODO)
+\end{enumerate}
+
+\section{Results}
+
+\subsection{Single change in environment}
+
+\subsubsection{Figure 1: Genotypic and phenotypic distribution under stabilizing selection (generation 9999)}
+\begin{enumerate}
+    \item Show that the genotypic distribution is normal
+    \item Phenotypic distribution differs depending on $\psi$, group size, and model, without changes in the genotypic distribution
+\end{enumerate}
+
+\subsubsection{Figure 2 / Supplemental Figure 1: Distribution of the first generation under directional selection (generation 10000)}
+\begin{enumerate}
+    \item Show the phenotypic response to the changed optimum
+    \item Response depends on $\psi$, group size, and model
+    \item Reason for supplement: main point is the shift in mean phenotype, shown in adaptation trajectories and first-generation phenotype jump heat map
+    \item Alternative plot: scatter plot of mean phenotype change as a function of group size to show diminishing returns
+\end{enumerate}
+
+\subsubsection{Figure 3: Adaptation trajectories}
+\begin{enumerate}
+    \item Show slower movement of mean phenotype toward the new optimum with increasing sociality
+    \item Including genotype trajectories can show slowdown of genotypic evolution due to masking/shielding
+    % \item Alternatively, plot differences between mean genotype and mean phenotype over time to show genotypic catch-up
+\end{enumerate}
+
+\subsubsection{Figure 4: Heat map of first phenotypic jump for copy-the-best}
+\begin{enumerate}
+    \item Show dependence of initial response on $\psi$ and group size with diminishing returns
+    \item Analytical explanation of plateau near 25 for group size=50:
+    \begin{itemize}
+        \item Optimum shift of 120 is far in the tail of the fitness function
+        \item Copy-the-best effectively becomes copy-the-max
+        \item Plateau value approximated by
+        \[
+            \psi \times (\text{genetic standard deviation}) \times E[\max(a_1, a_2, \ldots, a_n)]
+        \]
+    \end{itemize}
+\end{enumerate}
+
+\subsubsection{Figure 5: Difference in decay constants}
+\begin{enumerate}
+    \item Compare $\psi = 0$ and $\psi = 0.9$ as a function of group size
+    \item Show slowdown of adaptation affected by group size and $\psi$
+\end{enumerate}
+
+\subsection{Fluctuating environment}
+
+\subsubsection{Figure 1: Distribution right before an environmental shift}
+\begin{enumerate}
+    % \item Show genotypic distribution centered between two optima ()
+    \item Distribution is not centered on either individual optimum
+\end{enumerate}
+
+\subsubsection{Figure 2: Phenotypic trajectory over a full cycle}
+\begin{enumerate}
+    \item Include normalized fitness trajectory
+    \item Intermediate $\psi$ (e.g.\ $\psi=0.5$) may yield higher fitness than nonsocial case at the end of the shift
+\end{enumerate}
+
+\subsubsection{Figure 3: Summary statistics}
+\begin{enumerate}
+    \item Some stats shown as a function of group size and $\psi$
+    \item could be describing the exponential fit to the trajectory or the distribution
+\end{enumerate}
+
+\subsection{Supplementary Figures}
+
+\subsubsection{Validation figures}
+\begin{enumerate}
+    \item Distance to the new optimum normalized by initial genetic variance at the shift
+    \item Compare $\psi=0$, $N=1000$ simulation to Hayward (2022)
+    \item Direct implementation of Moore et al.\ model under truncated selection
+    \item Show SLiM simulations reproduce Moore model single-generation predictions
+\end{enumerate}
+
+\end{document}
