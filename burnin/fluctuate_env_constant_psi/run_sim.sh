@@ -22,18 +22,18 @@ cp ext.slim ../../data/${dir_name}/
 cp fit.slim ../../data/${dir_name}/
 
 reset=false # reset the simulation even if the .pop file exists
-stopIfPopfileNotFound=false # stop the simulation if the .pop file is not found. If false, it will run the simulation from the start if the .pop file is not found.
+stopIfPopfileNotFound=true # stop the simulation if the .pop file is not found. If false, it will run the simulation from the start if the .pop file is not found.
 c=0
 for rep in {1..20}; do  
-    for gap in 90; do
-        for sz in 10 20 40 60 70 80 90 100; do   
-                for n in 8; do
+    for gap in 10 20 30 50 60 70 80 90; do
+        for sz in 6 10 20 40 60 70 80 90 100; do   
+                for n in 2 5 8 20; do
                     for psi in 0.0 0.2 0.5 0.8; do
                         for reg in ave fit ext; do
                             echo "Submitting job, psi=${psi}, n=${n}, sz=${sz}, rep=${rep}, reg=${reg}, gap=${gap}."
 
                             POP_FILE="../../data/${dir_name}/pop/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_gap_${gap}_${rep}.pop"
-                             OUT_POP_FILE="../../data/${dir_name}/pop/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_gap_${gap}_${rep}.pop"
+                            OUT_POP_FILE="../../data/${dir_name}/pop/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_gap_${gap}_${rep}.pop"
                             if [[  "$reset" == false && -f "$POP_FILE" ]]; then
                                 # ---- read the pop file if the pop file EXISTS and reset is false ----
                                 echo "Found pop file: $POP_FILE"
@@ -60,7 +60,7 @@ for rep in {1..20}; do
                                 echo "Missing pop file: $POP_FILE"
                                 if [[ "$stopIfPopfileNotFound" == true ]]; then
                                     echo "Stopping simulation because the pop file was not found and stopIfPopfileNotFound is set to true."
-                                    exit 1
+                                    continue
                                 fi
 
                                 bin/slim5.0 -d psi=$psi \
@@ -85,7 +85,7 @@ for rep in {1..20}; do
                             
                             
                             ((c++))
-                            if (( c > 19)); 
+                            if (( c > 25)); 
                             then
                                 wait
                                 c=0

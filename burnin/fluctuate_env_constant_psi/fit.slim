@@ -161,7 +161,9 @@ shift_time-30 late(){
 
 	log.addMeanSDColumns("num_seg", "len=c();for(i in p1.individuals){len=c(len, length(i.uniqueMutations));}; len;");
 	log.addMeanSDColumns("abs_effect", "abs_eff=c();for(i in p1.individuals){abs_eff=c(abs_eff, sum(abs(i.mutationsFromHaplosomes(category='all', mutType = m1).selectionCoeff)));}; abs_eff;");
-
+	log.addMeanSDColumns("mean_abs_effect", "mean_abs_eff=c();for(i in p1.individuals){mean_abs_eff=c(mean_abs_eff, mean(abs(i.mutationsFromHaplosomes(category='all', mutType = m1).selectionCoeff)));}; mean_abs_eff;");
+	log.addMeanSDColumns("mean_effect", "mean_eff=c();for(i in p1.individuals){mean_eff=c(mean_eff, mean(i.mutationsFromHaplosomes(category='all', mutType = m1).selectionCoeff));}; mean_eff;");
+	
 	log.addCustomColumn("z_opt", "optimum-mean(p1.individuals.tagF);");
     log.addCustomColumn("optimum", "optimum;");
 

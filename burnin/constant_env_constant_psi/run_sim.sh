@@ -1,6 +1,6 @@
 #!/bin/bash
 
-dir_name="constant_env_batch"
+dir_name="cons_env"
 
 mkdir -p ../../data/${dir_name}
 mkdir -p ../../data/${dir_name}/phenotype
@@ -21,20 +21,20 @@ cp ave.slim ../../data/${dir_name}/
 cp ext.slim ../../data/${dir_name}/
 cp fit.slim ../../data/${dir_name}/
 
-reset=false # reset the simulation even if the .pop file exists
+reset=true # reset the simulation even if the .pop file exists
 stopIfPopfileNotFound=false # stop the simulation if the .pop file is not found. If false, it will run the simulation from the start if the .pop file is not found.
 c=0
 # burn in using sz=20
-for rep in {1..50}; do  
+for rep in {1..20}; do  
    for sz in 40; do   
         for n in 4 10 25 40 50 100; do
-            for psi in 0.0 0.2 0.5 0.8; do
+            for psi in 0.2 0.8; do
                 for reg in ave ext fit; do
                     echo "Submitting job, psi=${psi}, n=${n}, sz=${sz}, rep=${rep}, reg=${reg}."
                 
-                    POP_FILE="../../data/${dir_name}/pop/n_${n}_psi_${psi}_reg_${reg}_${rep}.pop"
-                    # POP_FILE="../../data/constant_env_batch/pop/n_${n}_psi_${psi}_reg_${reg}_${rep}.pop"
-                    # POP_FILE1="../../data/constant_env_batch/pop/n_${n}_psi_${psi}_sz_20_reg_${reg}_${rep}.pop"
+                    # POP_FILE="../../data/${dir_name}/pop/n_${n}_psi_${psi}_reg_${reg}_${rep}.pop"
+                    POP_FILE="../../data/constant_env_batch/pop/n_${n}_psi_${psi}_reg_${reg}_${rep}.pop"
+                    POP_FILE1="../../data/constant_env_batch/pop/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}.pop"
 
                     # OUT_POP_FILE=POP_FILE
                     OUT_POP_FILE="../../data/${dir_name}/pop/n_${n}_psi_${psi}_reg_${reg}_${rep}.pop"
@@ -65,12 +65,13 @@ for rep in {1..50}; do
                         -d "copied_val_fn='../../data/${dir_name}/copied_val/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}.tsv'" \
                         ${reg}.slim &> ../../data/${dir_name}/log/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_${rep}.txt &
 
+                        mv $POP_FILE ../../data/${dir_name}/pop/
                     else
                         # ---- run simulation from the start if the file DOES NOT exist or reset is true ----
                         echo "Missing pop file: $POP_FILE"
                         if [[ "$stopIfPopfileNotFound" == true ]]; then
                             echo "Stopping simulation because the pop file was not found and stopIfPopfileNotFound is set to true."
-                            exit 1
+                            continue
                         fi
                         bin/slim5.0 -d psi=$psi \
                         -d ID="${rep}" \

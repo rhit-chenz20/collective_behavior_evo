@@ -7,9 +7,10 @@ output: pdf_document
 
 ## evolving sociality data
 ```{r setup, include=FALSE}
+library(progress)
 dataset_name <- "cons_env_invasion"
 
-analysis_root <- "figure/1_26_constant_env"
+analysis_root <- "figure/7_21_psi_invasion"
 data_root     <- "data"
 
 base_data_folders <- file.path(data_root, dataset_name)
@@ -28,10 +29,10 @@ dir.create(r_data_folder, recursive = TRUE, showWarnings = FALSE)
 
 # ---- Helper: extract metadata from filename ----
 extract_metadata <- function(path) {
-  rx <- "n_(\\d+)_psi_(-?[0-9.]+)_sz_(-?\\d+)_reg_(fit|ext|ave)_(\\d+)\\.tsv$"
+  rx <- "n_(\\d+)_psi_(-?[0-9.]+)_sz_(-?\\d+)_reg_(fit|ext|ave)_inGen_(\\d+)_inInd_(\\d+)_(\\d+)\\.tsv$"
   p  <- regmatches(basename(path), regexec(rx, basename(path)))[[1]]
 
-  if (length(p) != 6) {
+  if (length(p) != 8) {
     stop("Could not extract metadata from file: ", basename(path))
   }
 
@@ -40,7 +41,9 @@ extract_metadata <- function(path) {
     psi        = as.numeric(p[3]),
     shift_size = as.integer(p[4]),
     reg        = p[5],
-    rep        = as.integer(p[6]),
+    inGen      = as.integer(p[6]),
+    inInd      = as.integer(p[7]),
+    rep        = as.integer(p[8]),
     file_id    = basename(path),
     stringsAsFactors = FALSE
   )
@@ -53,6 +56,8 @@ read_one_data_file <- function(file) {
     error = function(e) NULL
   )
 
+  pb$tick()
+
   if (is.null(df)) {
     warning("Failed to read: ", file)
     return(NULL)
@@ -64,6 +69,8 @@ read_one_data_file <- function(file) {
   df$psi        <- meta$psi
   df$shift_size <- meta$shift_size
   df$reg        <- meta$reg
+  df$inGen      <- meta$inGen
+  df$inInd      <- meta$inInd
   df$rep        <- meta$rep
   df$file_id    <- meta$file_id
 
@@ -71,7 +78,7 @@ read_one_data_file <- function(file) {
 }
 
 # ---- Helper: filter files by metadata ----
-file_matches_filters <- function(file, psi_values, regimes, reps, group_sizes, shift_sizes) {
+file_matches_filters <- function(file, psi_values, regimes, reps, group_sizes, shift_sizes, inGen, inInd) {
   meta <- tryCatch(extract_metadata(file), error = function(e) NULL)
   if (is.null(meta)) return(FALSE)
 
@@ -79,8 +86,11 @@ file_matches_filters <- function(file, psi_values, regimes, reps, group_sizes, s
     (length(regimes) == 0 || meta$reg %in% regimes) &&
     (length(reps) == 0 || meta$rep %in% reps) &&
     (length(group_sizes) == 0 || meta$n %in% group_sizes) &&
-    (length(shift_sizes) == 0 || meta$shift_size %in% shift_sizes)
+    (length(shift_sizes) == 0 || meta$shift_size %in% shift_sizes) &&
+    (length(inGen) == 0 || meta$inGen %in% inGen) &&
+    (length(inInd) == 0 || meta$inInd %in% inInd)
 }
+
 # ---- Helper: load one data type folder ----
 load_data_type <- function(data_type,
                            base_data_folder,
@@ -88,7 +98,9 @@ load_data_type <- function(data_type,
                            regimes = c(),
                            reps = c(),
                            group_sizes = c(),
-                           shift_size = c()) {
+                           shift_size = c(),
+                           inGen = c(),
+                           inInd = c()) {
   
   folder <- file.path(base_data_folder, data_type)
 
@@ -105,7 +117,7 @@ load_data_type <- function(data_type,
   )
 
   file_list <- Filter(
-    function(file) file_matches_filters(file, psi_values, regimes, reps, group_sizes, shift_size),
+    function(file) file_matches_filters(file, psi_values, regimes, reps, group_sizes, shift_size, inGen, inInd),
     file_list
   )
 
@@ -114,73 +126,36 @@ load_data_type <- function(data_type,
     return(NULL)
   }
 
-  df_list <- lapply(file_list, read_one_data_file)
-  df_list <- Filter(Negate(is.null), df_list)
+  pb <- progress_bar$new(
+    format = "[:bar] :current/:total | :percent | ETA: :eta",
+    total = length(file_list),
+    clear = FALSE
+  )
 
+  df_list <- c()
+
+  for (i in seq_len(file_list)){
+    df_list[[i]] <- read_one_data_file(file_list[i])
+
+    if (i % 100 == 0) {
+      cat("Processed", i, "files out of", length(file_list), "\n")
+      pb$tick(100)
+      checkpoint <- do.call(rbind, df_list)
+
+      write.csv(
+        checkpoint,
+        file.path(r_data_folder, "checkpoint.csv"),
+        row.names = FALSE
+      )
+
+      cat("\nCheckpoint saved at file #", i, "\n")
+    }
+  } 
+ 
   if (length(df_list) == 0) {
     warning("No readable files found in: ", folder)
     return(NULL)
   }
-  
-  # ---- Check and harmonize column names before rbind ----
-  colname_list <- lapply(df_list, names)
-  all_cols <- sort(unique(unlist(colname_list)))
-
-  col_diff <- lapply(seq_along(colname_list), function(i) {
-    missing_cols <- setdiff(all_cols, colname_list[[i]])
-    
-    list(
-      df_index = i,
-      file = file_list[i],
-      missing = missing_cols
-    )
-  })
-
-  any_missing <- any(sapply(col_diff, function(d) length(d$missing) > 0))
-
-  if (any_missing) {
-    warning(
-      paste0(
-        "Inconsistent columns detected in files for data type '", data_type, 
-        "'. Missing columns will be filled with NA.\n",
-        paste(
-          sapply(col_diff, function(d) {
-            if (length(d$missing) == 0) {
-              return(NULL)
-            }
-            if(length(d$missing) == length(all_cols) - 1) {
-              return(paste0(
-                "  - File index ", d$df_index,
-                " (", basename(d$file), "): missing ALL expected columns; file empty"
-              ))
-            }
-            paste0(
-              "  - File index ", d$df_index,
-              " (", basename(d$file), "): missing [",
-              paste(d$missing, collapse = ", "),
-              "]"
-            )
-          }),
-          collapse = "\n"
-        )
-      )
-    )
-  }
-
-  # Add missing columns as NA and reorder columns consistently
-  df_list <- lapply(df_list, function(d) {
-    missing_cols <- setdiff(all_cols, names(d))
-    
-    if (length(missing_cols) > 0) {
-      for (mc in missing_cols) {
-        d[[mc]] <- NA
-      }
-    }
-    
-    d <- d[, all_cols, drop = FALSE]
-    d
-  })
-
   df <- do.call(rbind, df_list)
 
   df
@@ -189,12 +164,14 @@ load_data_type <- function(data_type,
 
 # load all data
 ```{r}
-data_type_to_load <- c("allele")
+data_type_to_load <- c("data")
 psi_values <- c()
 regimes <- c()
-reps <- 1:20
-group_sizes <- c(8)
+reps <- 1:10
+group_sizes <- c()
 shift_size <- c(40)
+inGen <- c()
+inInd <- c()
 
 for (data_type in data_type_to_load) {
   cat("Loading data type:", data_type, "\n")
@@ -206,7 +183,9 @@ for (data_type in data_type_to_load) {
     regimes = regimes,
     reps = reps,
     group_sizes = group_sizes,
-    shift_size = shift_size
+    shift_size = shift_size,
+    inGen = inGen,
+    inInd = inInd
   )
 
   if (is.null(df)) {
@@ -217,7 +196,7 @@ for (data_type in data_type_to_load) {
   out_file <- switch(
     data_type,
     # "data"       = file.path(r_data_folder, "data_summary_fit.rds"),
-    "data"       = file.path(r_data_folder, "data_summary_n_8_sz_40.rds"),
+    "data"       = file.path(r_data_folder, "data_summary.rds"),
     "genotype"   = file.path(r_data_folder, "genotype.rds"),
     "phenotype"  = file.path(r_data_folder, "phenotype.rds"),
     "fitness"    = file.path(r_data_folder, "fitness.rds"),

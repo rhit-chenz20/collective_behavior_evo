@@ -10,9 +10,22 @@ initialize() {
     defineGlobal("L", 500);
 
     // variable parameters
-	defineConstant("shift_time", 10*N);
+
+	if (!exists("shift_offset")){
+		defineConstant("shift_time", 10*N);
+	} else{
+		defineConstant("shift_time", 10*N+shift_offset);
+	}
 	defineConstant("end_time", shift_time+300);
-	
+
+	if(!exists("log_start_gen")){
+		defineConstant("log_start_gen", shift_time-30);
+	}
+
+	if(!exists("log_pop_gen")){
+		defineConstant("log_pop_gen", shift_time-100);
+	}
+
     // book keeping
 	defineGlobal("Va0_sqrt", -1);	
     defineGlobal("mutToAdd_a", 0);
@@ -52,9 +65,47 @@ initialize() {
 	if(!exists("burnin_fn")){ 
 		print("no burnin file found, simulate from the start_time...");
 		sim.addSubpop("p1", N);
+		p1.individuals.tagL0 = F;
 	} else{
 		print("reading burnin from "+burnin_fn);
 		sim.readFromPopulationFile(burnin_fn);
+		p1.individuals.tagL0 = F;
+	}
+}
+
+invasion_gen late() {
+	sample_ind = sample(p1.individuals, invasion_ind, replace=F);
+	sample_ind.tagL0 = T;
+	print("invasion at generation "+invasion_gen+" with "+invasion_ind+" social individuals");
+}
+
+invasion_gen+1: late(){
+	if (length(p1.individuals[p1.individuals.tagL0]) == 0){
+		print("social individual fail to invade, simulation finished");
+		calculate_phenotype(p1);
+		cat("Elapsed: " + (clock() - start_time) + " seconds\n"); 
+		if (record_phenotype(p1, write = T)){
+			print("written phenotype to "+phenotype_fn);
+		}
+		if (record_group_tag(p1, write = T)){
+			print("written group tag to "+group_tag_fn);
+		}
+		if (record_genotype(p1, write = T)){
+			print("written genotype to "+genotype_fn);
+		}
+		if (record_effectsize(p1, write = T)){
+			print("written effectsize to file "+ind_fn);
+		}
+		if (record_copied_val(p1, write = T)){
+			print("written copied values to file "+copied_val_fn);
+		}
+		if (record_vars(p1, write = T)){
+			print("written group vars to file "+vars_fn);
+		}
+		if (record_fitness(p1, write = T)){
+			print("written fitness to file "+fitness_fn);
+		}
+		sim.simulationFinished();
 	}
 }
 
@@ -73,6 +124,17 @@ late(){
 }
 
 mutationEffect(m1) { return 1.0; }
+
+modifyChild(p1) {
+	if (parent1.tagL0 == T & parent2.tagL0 == T){
+		child.tagL0 = T;
+	} else if (parent1.tagL0 == T | parent2.tagL0 == T){
+		child.tagL0 = runif(1) < 0.5;
+	} else{
+		child.tagL0 = F;
+	}
+	return T;
+}
 
 mutation(m1) {
 	// mutation exist at mut.position, reject the new mutation
@@ -122,21 +184,24 @@ late() {
 	calculate_phenotype(p1);
 }
 
-shift_time-100 late(){
+log_pop_gen late(){
 	sim.outputFull(filePath=pop_output, binary=T, pedigreeIDs=T, objectTags=T, substitutions=T); 
 }
 
-shift_time-30: early(){
+log_start_gen: early(){
 	defineGlobal("last_gen_z", p1.individuals.tagF);
 	defineGlobal("last_gen_g", p1.individuals.sumOfMutationsOfType(m1)+2*sum(sim.substitutions[sim.substitutions.mutationType == m1].selectionCoeff));
 }
 
-shift_time-30 late(){
+log_start_gen late(){
 	print("logging at cycle "+sim.cycle);
 	// log results
 	log = community.createLogFile(fre_output,  sep="\t", logInterval=1);
-	log.addTick();
-
+	if (!exists("shift_offset")){
+		log.addTick();
+	}else{
+		log.addCustomColumn("tick", "community.tick - shift_offset;");
+	}
 	log.addCustomColumn("N", "N;");
     log.addCustomColumn("Vs", "Vs;");
     log.addCustomColumn("Va0_sqrt", "Va0_sqrt;");
@@ -144,17 +209,20 @@ shift_time-30 late(){
 	log.addMeanSDColumns("z", "p1.individuals.tagF;");
     log.addMeanSDColumns("g", "p1.individuals.sumOfMutationsOfType(m1) + (2 * sum(sim.substitutions.selectionCoeff));");
     log.addMeanSDColumns("fitness", "abs_fit;");   
-	log.addMeanSDColumns("parent_z", "mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]);");
-	log.addMeanSDColumns("parent_g", "mean(last_gen_g[p1.lifetimeReproductiveOutput != 0]);");
+	log.addMeanSDColumns("parent_z", "last_gen_z[p1.lifetimeReproductiveOutput != 0];");
+	log.addMeanSDColumns("parent_g", "last_gen_g[p1.lifetimeReproductiveOutput != 0];");
     log.addMeanSDColumns("group_vars", "group_vars;");
 	log.addMeanSDColumns("num_seg", "len=c();for(i in p1.individuals){len=c(len, length(i.uniqueMutations));}; len;");
 	log.addMeanSDColumns("abs_effect", "abs_eff=c();abs_sub = sum(abs(sim.substitutions.selectionCoeff)); for(i in p1.individuals){abs_eff=c(abs_eff, abs_sub + sum(abs(i.mutationsFromHaplosomes(category='all', mutType = m1).selectionCoeff)));}; abs_eff;");
 	log.addMeanSDColumns("mean_abs_effect", "mean_abs_eff=c();for(i in p1.individuals){mean_abs_eff=c(mean_abs_eff, mean(abs(i.mutationsFromHaplosomes(category='all', mutType = m1).selectionCoeff)));}; mean_abs_eff;");
 	log.addMeanSDColumns("mean_effect", "mean_eff=c();for(i in p1.individuals){mean_eff=c(mean_eff, mean(i.mutationsFromHaplosomes(category='all', mutType = m1).selectionCoeff));}; mean_eff;");
-	
+	log.addMeanSDColumns("s_ind_offspring", "p1.lifetimeReproductiveOutput[p1.individuals.tagL0];");
+	log.addMeanSDColumns("as_ind_offspring", "p1.lifetimeReproductiveOutput[!p1.individuals.tagL0];");
+
 	log.addCustomColumn("seg_site_pop", "length(sim.mutations[sim.mutations.mutationType == m1]);");
 	log.addCustomColumn("num_fixed_mut", "length(sim.substitutions);");
-
+	log.addCustomColumn("num_social_ind", "length(p1.individuals[p1.individuals.tagL0]);");
+	log.addCustomColumn("num_asocial_ind", "length(p1.individuals[!p1.individuals.tagL0]);");
 	log.addCustomColumn("z_opt", "optimum-mean(p1.individuals.tagF);");
 	log.addCustomColumn("z_opt_closest", "optimum-max(p1.individuals.tagF);");
 	log.addCustomColumn("g_opt", "optimum-mean(p1.individuals.sumOfMutationsOfType(m1) + (2 * sum(sim.substitutions.selectionCoeff)));");
@@ -190,7 +258,7 @@ c(seq(shift_time-50, shift_time-5, by=5), (shift_time-2):(shift_time+4), seq(shi
 
 end_time late() 
 {
-	cat("Elapsed: " + (clock() - start_time)); 
+	cat("Elapsed: " + (clock() - start_time) + " seconds\n"); 
 	if (record_phenotype(p1, write = T)){
 		print("written phenotype to "+phenotype_fn);
 	}
@@ -396,10 +464,12 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 	for (i in seq(0, N-n, by=n)) {
 		group = shuffled[i:(i+n-1)];
         as = a[group.index];
+		social_or_not = group.tagL0;
 
-        // phenotype for ave model
-        phenotype[group.index] = ((n-1)*(1-psi)*a[group.index]+psi*sum(as)) / (n-1+psi);
-        copied_val[group.index] = (sum(as) - a[group.index]) / (n-1);
+		social_ind = group[social_or_not];
+		asocial_ind = group[!social_or_not];
+
+        ######PHENOTYPE_CALCULATION######
 		
 		vars[group.index] = var(as);
 		group.tag = group_tag;
@@ -407,8 +477,7 @@ function (void) calculate_phenotype(o<Subpopulation>$ p){
 	}
 	
 	abs_fitness = dnorm(phenotype, optimum, sqrt(Vs));
-    // no fitness adjustment needed
-    adj_fitness = abs_fitness;
+    ######FITNESS_ADJUSTMENT######
     
 	inds.fitnessScaling = adj_fitness;
 	inds.tagF = phenotype;

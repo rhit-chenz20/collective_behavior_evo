@@ -1,0 +1,771 @@
+Wrote: ave.slim
+Wrote: fit.slim
+Wrote: ext.slim
+Submitting job, psi=0.2, n=8, sz=80, rep=5, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_5.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_5
+Submitting job, psi=0.5, n=8, sz=80, rep=5, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_5.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_5
+Submitting job, psi=0.8, n=8, sz=80, rep=5, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_5.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_5
+Submitting job, psi=0.2, n=8, sz=100, rep=5, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_5.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_5
+Submitting job, psi=0.5, n=8, sz=100, rep=5, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_5.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_5
+Submitting job, psi=0.8, n=8, sz=100, rep=5, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_5.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_5
+Submitting job, psi=0.2, n=8, sz=80, rep=5, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_5.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_5
+Submitting job, psi=0.5, n=8, sz=80, rep=5, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_5.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_5
+Submitting job, psi=0.8, n=8, sz=80, rep=5, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_5.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_5
+Submitting job, psi=0.2, n=8, sz=100, rep=5, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_5.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_5
+Submitting job, psi=0.5, n=8, sz=100, rep=5, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_5.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_5
+Submitting job, psi=0.8, n=8, sz=100, rep=5, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_5.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_5
+Submitting job, psi=0.2, n=8, sz=80, rep=6, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_6.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_6
+Submitting job, psi=0.5, n=8, sz=80, rep=6, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_6.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_6
+Submitting job, psi=0.8, n=8, sz=80, rep=6, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_6.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_6
+Submitting job, psi=0.2, n=8, sz=100, rep=6, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_6.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_6
+Submitting job, psi=0.5, n=8, sz=100, rep=6, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_6.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_6
+Submitting job, psi=0.8, n=8, sz=100, rep=6, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_6.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_6
+Submitting job, psi=0.2, n=8, sz=80, rep=6, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_6.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_6
+Submitting job, psi=0.5, n=8, sz=80, rep=6, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_6.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_6
+Submitting job, psi=0.8, n=8, sz=80, rep=6, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_6.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_6
+Submitting job, psi=0.2, n=8, sz=100, rep=6, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_6.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_6
+Submitting job, psi=0.5, n=8, sz=100, rep=6, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_6.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_6
+Submitting job, psi=0.8, n=8, sz=100, rep=6, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_6.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_6
+Submitting job, psi=0.2, n=8, sz=80, rep=7, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_7.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_7
+Submitting job, psi=0.5, n=8, sz=80, rep=7, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_7.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_7
+Submitting job, psi=0.8, n=8, sz=80, rep=7, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_7.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_7
+Submitting job, psi=0.2, n=8, sz=100, rep=7, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_7.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_7
+Submitting job, psi=0.5, n=8, sz=100, rep=7, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_7.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_7
+Submitting job, psi=0.8, n=8, sz=100, rep=7, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_7.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_7
+Submitting job, psi=0.2, n=8, sz=80, rep=7, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_7.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_7
+Submitting job, psi=0.5, n=8, sz=80, rep=7, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_7.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_7
+Submitting job, psi=0.8, n=8, sz=80, rep=7, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_7.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_7
+Submitting job, psi=0.2, n=8, sz=100, rep=7, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_7.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_7
+Submitting job, psi=0.5, n=8, sz=100, rep=7, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_7.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_7
+Submitting job, psi=0.8, n=8, sz=100, rep=7, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_7.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_7
+Submitting job, psi=0.2, n=8, sz=80, rep=8, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_8.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_8
+Submitting job, psi=0.5, n=8, sz=80, rep=8, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_8.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_8
+Submitting job, psi=0.8, n=8, sz=80, rep=8, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_8.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_8
+Submitting job, psi=0.2, n=8, sz=100, rep=8, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_8.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_8
+Submitting job, psi=0.5, n=8, sz=100, rep=8, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_8.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_8
+Submitting job, psi=0.8, n=8, sz=100, rep=8, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_8.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_8
+Submitting job, psi=0.2, n=8, sz=80, rep=8, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_8.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_8
+Submitting job, psi=0.5, n=8, sz=80, rep=8, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_8.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_8
+Submitting job, psi=0.8, n=8, sz=80, rep=8, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_8.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_8
+Submitting job, psi=0.2, n=8, sz=100, rep=8, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_8.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_8
+Submitting job, psi=0.5, n=8, sz=100, rep=8, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_8.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_8
+Submitting job, psi=0.8, n=8, sz=100, rep=8, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_8.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_8
+Submitting job, psi=0.2, n=8, sz=80, rep=9, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_9.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_9
+Submitting job, psi=0.5, n=8, sz=80, rep=9, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_9.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_9
+Submitting job, psi=0.8, n=8, sz=80, rep=9, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_9.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_9
+Submitting job, psi=0.2, n=8, sz=100, rep=9, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_9.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_9
+Submitting job, psi=0.5, n=8, sz=100, rep=9, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_9.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_9
+Submitting job, psi=0.8, n=8, sz=100, rep=9, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_9.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_9
+Submitting job, psi=0.2, n=8, sz=80, rep=9, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_9.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_9
+Submitting job, psi=0.5, n=8, sz=80, rep=9, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_9.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_9
+Submitting job, psi=0.8, n=8, sz=80, rep=9, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_9.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_9
+Submitting job, psi=0.2, n=8, sz=100, rep=9, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_9.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_9
+Submitting job, psi=0.5, n=8, sz=100, rep=9, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_9.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_9
+Submitting job, psi=0.8, n=8, sz=100, rep=9, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_9.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_9
+Submitting job, psi=0.2, n=8, sz=80, rep=10, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_10.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_10
+Submitting job, psi=0.5, n=8, sz=80, rep=10, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_10.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_10
+Submitting job, psi=0.8, n=8, sz=80, rep=10, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_10.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_10
+Submitting job, psi=0.2, n=8, sz=100, rep=10, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_10.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_10
+Submitting job, psi=0.5, n=8, sz=100, rep=10, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_10.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_10
+Submitting job, psi=0.8, n=8, sz=100, rep=10, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_10.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_10
+Submitting job, psi=0.2, n=8, sz=80, rep=10, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_10.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_10
+Submitting job, psi=0.5, n=8, sz=80, rep=10, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_10.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_10
+Submitting job, psi=0.8, n=8, sz=80, rep=10, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_10.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_10
+Submitting job, psi=0.2, n=8, sz=100, rep=10, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_10.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_10
+Submitting job, psi=0.5, n=8, sz=100, rep=10, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_10.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_10
+Submitting job, psi=0.8, n=8, sz=100, rep=10, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_10.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_10
+Submitting job, psi=0.2, n=8, sz=80, rep=11, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_11.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_11
+Submitting job, psi=0.5, n=8, sz=80, rep=11, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_11.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_11
+Submitting job, psi=0.8, n=8, sz=80, rep=11, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_11.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_11
+Submitting job, psi=0.2, n=8, sz=100, rep=11, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_11.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_11
+Submitting job, psi=0.5, n=8, sz=100, rep=11, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_11.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_11
+Submitting job, psi=0.8, n=8, sz=100, rep=11, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_11.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_11
+Submitting job, psi=0.2, n=8, sz=80, rep=11, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_11.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_11
+Submitting job, psi=0.5, n=8, sz=80, rep=11, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_11.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_11
+Submitting job, psi=0.8, n=8, sz=80, rep=11, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_11.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_11
+Submitting job, psi=0.2, n=8, sz=100, rep=11, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_11.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_11
+Submitting job, psi=0.5, n=8, sz=100, rep=11, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_11.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_11
+Submitting job, psi=0.8, n=8, sz=100, rep=11, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_11.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_11
+Submitting job, psi=0.2, n=8, sz=80, rep=12, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_12.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_12
+Submitting job, psi=0.5, n=8, sz=80, rep=12, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_12.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_12
+Submitting job, psi=0.8, n=8, sz=80, rep=12, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_12.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_12
+Submitting job, psi=0.2, n=8, sz=100, rep=12, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_12.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_12
+Submitting job, psi=0.5, n=8, sz=100, rep=12, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_12.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_12
+Submitting job, psi=0.8, n=8, sz=100, rep=12, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_12.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_12
+Submitting job, psi=0.2, n=8, sz=80, rep=12, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_12.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_12
+Submitting job, psi=0.5, n=8, sz=80, rep=12, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_12.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_12
+Submitting job, psi=0.8, n=8, sz=80, rep=12, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_12.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_12
+Submitting job, psi=0.2, n=8, sz=100, rep=12, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_12.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_12
+Submitting job, psi=0.5, n=8, sz=100, rep=12, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_12.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_12
+Submitting job, psi=0.8, n=8, sz=100, rep=12, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_12.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_12
+Submitting job, psi=0.2, n=8, sz=80, rep=13, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_13.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_13
+Submitting job, psi=0.5, n=8, sz=80, rep=13, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_13.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_13
+Submitting job, psi=0.8, n=8, sz=80, rep=13, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_13.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_13
+Submitting job, psi=0.2, n=8, sz=100, rep=13, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_13.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_13
+Submitting job, psi=0.5, n=8, sz=100, rep=13, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_13.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_13
+Submitting job, psi=0.8, n=8, sz=100, rep=13, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_13.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_13
+Submitting job, psi=0.2, n=8, sz=80, rep=13, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_13.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_13
+Submitting job, psi=0.5, n=8, sz=80, rep=13, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_13.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_13
+Submitting job, psi=0.8, n=8, sz=80, rep=13, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_13.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_13
+Submitting job, psi=0.2, n=8, sz=100, rep=13, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_13.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_13
+Submitting job, psi=0.5, n=8, sz=100, rep=13, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_13.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_13
+Submitting job, psi=0.8, n=8, sz=100, rep=13, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_13.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_13
+Submitting job, psi=0.2, n=8, sz=80, rep=14, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_14.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_14
+Submitting job, psi=0.5, n=8, sz=80, rep=14, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_14.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_14
+Submitting job, psi=0.8, n=8, sz=80, rep=14, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_14.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_14
+Submitting job, psi=0.2, n=8, sz=100, rep=14, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_14.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_14
+Submitting job, psi=0.5, n=8, sz=100, rep=14, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_14.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_14
+Submitting job, psi=0.8, n=8, sz=100, rep=14, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_14.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_14
+Submitting job, psi=0.2, n=8, sz=80, rep=14, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_14.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_14
+Submitting job, psi=0.5, n=8, sz=80, rep=14, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_14.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_14
+Submitting job, psi=0.8, n=8, sz=80, rep=14, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_14.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_14
+Submitting job, psi=0.2, n=8, sz=100, rep=14, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_14.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_14
+Submitting job, psi=0.5, n=8, sz=100, rep=14, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_14.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_14
+Submitting job, psi=0.8, n=8, sz=100, rep=14, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_14.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_14
+Submitting job, psi=0.2, n=8, sz=80, rep=15, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_15.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_15
+Submitting job, psi=0.5, n=8, sz=80, rep=15, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_15.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_15
+Submitting job, psi=0.8, n=8, sz=80, rep=15, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_15.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_15
+Submitting job, psi=0.2, n=8, sz=100, rep=15, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_15.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_15
+Submitting job, psi=0.5, n=8, sz=100, rep=15, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_15.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_15
+Submitting job, psi=0.8, n=8, sz=100, rep=15, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_15.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_15
+Submitting job, psi=0.2, n=8, sz=80, rep=15, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_15.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_15
+Submitting job, psi=0.5, n=8, sz=80, rep=15, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_15.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_15
+Submitting job, psi=0.8, n=8, sz=80, rep=15, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_15.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_15
+Submitting job, psi=0.2, n=8, sz=100, rep=15, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_15.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_15
+Submitting job, psi=0.5, n=8, sz=100, rep=15, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_15.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_15
+Submitting job, psi=0.8, n=8, sz=100, rep=15, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_15.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_15
+Submitting job, psi=0.2, n=8, sz=80, rep=16, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_16.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_16
+Submitting job, psi=0.5, n=8, sz=80, rep=16, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_16.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_16
+Submitting job, psi=0.8, n=8, sz=80, rep=16, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_16.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_16
+Submitting job, psi=0.2, n=8, sz=100, rep=16, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_16.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_16
+Submitting job, psi=0.5, n=8, sz=100, rep=16, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_16.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_16
+Submitting job, psi=0.8, n=8, sz=100, rep=16, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_16.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_16
+Submitting job, psi=0.2, n=8, sz=80, rep=16, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_16.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_16
+Submitting job, psi=0.5, n=8, sz=80, rep=16, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_16.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_16
+Submitting job, psi=0.8, n=8, sz=80, rep=16, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_16.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_16
+Submitting job, psi=0.2, n=8, sz=100, rep=16, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_16.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_16
+Submitting job, psi=0.5, n=8, sz=100, rep=16, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_16.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_16
+Submitting job, psi=0.8, n=8, sz=100, rep=16, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_16.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_16
+Submitting job, psi=0.2, n=8, sz=80, rep=17, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_17.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_17
+Submitting job, psi=0.5, n=8, sz=80, rep=17, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_17.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_17
+Submitting job, psi=0.8, n=8, sz=80, rep=17, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_17.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_17
+Submitting job, psi=0.2, n=8, sz=100, rep=17, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_17.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_17
+Submitting job, psi=0.5, n=8, sz=100, rep=17, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_17.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_17
+Submitting job, psi=0.8, n=8, sz=100, rep=17, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_17.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_17
+Submitting job, psi=0.2, n=8, sz=80, rep=17, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_17.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_17
+Submitting job, psi=0.5, n=8, sz=80, rep=17, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_17.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_17
+Submitting job, psi=0.8, n=8, sz=80, rep=17, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_17.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_17
+Submitting job, psi=0.2, n=8, sz=100, rep=17, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_17.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_17
+Submitting job, psi=0.5, n=8, sz=100, rep=17, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_17.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_17
+Submitting job, psi=0.8, n=8, sz=100, rep=17, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_17.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_17
+Submitting job, psi=0.2, n=8, sz=80, rep=18, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_18.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_18
+Submitting job, psi=0.5, n=8, sz=80, rep=18, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_18.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_18
+Submitting job, psi=0.8, n=8, sz=80, rep=18, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_18.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_18
+Submitting job, psi=0.2, n=8, sz=100, rep=18, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_18.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_18
+Submitting job, psi=0.5, n=8, sz=100, rep=18, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_18.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_18
+Submitting job, psi=0.8, n=8, sz=100, rep=18, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_18.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_18
+Submitting job, psi=0.2, n=8, sz=80, rep=18, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_18.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_18
+Submitting job, psi=0.5, n=8, sz=80, rep=18, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_18.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_18
+Submitting job, psi=0.8, n=8, sz=80, rep=18, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_18.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_18
+Submitting job, psi=0.2, n=8, sz=100, rep=18, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_18.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_18
+Submitting job, psi=0.5, n=8, sz=100, rep=18, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_18.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_18
+Submitting job, psi=0.8, n=8, sz=100, rep=18, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_18.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_18
+Submitting job, psi=0.2, n=8, sz=80, rep=19, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_19.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_19
+Submitting job, psi=0.5, n=8, sz=80, rep=19, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_19.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_19
+Submitting job, psi=0.8, n=8, sz=80, rep=19, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_19.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_19
+Submitting job, psi=0.2, n=8, sz=100, rep=19, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_19.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_19
+Submitting job, psi=0.5, n=8, sz=100, rep=19, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_19.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_19
+Submitting job, psi=0.8, n=8, sz=100, rep=19, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_19.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_19
+Submitting job, psi=0.2, n=8, sz=80, rep=19, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_19.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_19
+Submitting job, psi=0.5, n=8, sz=80, rep=19, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_19.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_19
+Submitting job, psi=0.8, n=8, sz=80, rep=19, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_19.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_19
+Submitting job, psi=0.2, n=8, sz=100, rep=19, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_19.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_19
+Submitting job, psi=0.5, n=8, sz=100, rep=19, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_19.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_19
+Submitting job, psi=0.8, n=8, sz=100, rep=19, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_19.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_19
+Submitting job, psi=0.2, n=8, sz=80, rep=20, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_20.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_20
+Submitting job, psi=0.5, n=8, sz=80, rep=20, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_20.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_20
+Submitting job, psi=0.8, n=8, sz=80, rep=20, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_80_20.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_20
+Submitting job, psi=0.2, n=8, sz=100, rep=20, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_20.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_20
+Submitting job, psi=0.5, n=8, sz=100, rep=20, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_20.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_20
+Submitting job, psi=0.8, n=8, sz=100, rep=20, reg=ave, gap=80, in_Gen=0, inInd=500.
+9970
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_80_20.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_80_inGen_0_absInGen_9970_inInd_500_20
+Submitting job, psi=0.2, n=8, sz=80, rep=20, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_20.pop
+output prefix: n_8_psi_0.2_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_20
+Submitting job, psi=0.5, n=8, sz=80, rep=20, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_20.pop
+output prefix: n_8_psi_0.5_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_20
+Submitting job, psi=0.8, n=8, sz=80, rep=20, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_80_reg_ave_gap_90_20.pop
+output prefix: n_8_psi_0.8_sz_80_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_20
+Submitting job, psi=0.2, n=8, sz=100, rep=20, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_20.pop
+output prefix: n_8_psi_0.2_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_20
+Submitting job, psi=0.5, n=8, sz=100, rep=20, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_20.pop
+output prefix: n_8_psi_0.5_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_20
+Submitting job, psi=0.8, n=8, sz=100, rep=20, reg=ave, gap=90, in_Gen=0, inInd=500.
+9950
+Found pop file: ../../data/fluc_env/pop/n_8_psi_0.0_sz_100_reg_ave_gap_90_20.pop
+output prefix: n_8_psi_0.8_sz_100_reg_ave_gap_90_inGen_0_absInGen_9950_inInd_500_20

@@ -5,14 +5,14 @@ date: "`r Sys.Date()`"
 output: pdf_document
 ---
 
-# parameters for plotting
+# parameter for plotting
 ```{r setup, include=FALSE}
 # parameters for plotting
-dataset_name <- "constant_env_batch"
-date <- "6_23"
+dataset_name <- "fluc_env"
+date <- "5_26"
 
 # set these once for your machine / project
-analysis_root <- "../zc524/collective_behavior_evo/figure/1_26_constant_env"
+analysis_root <- "../zc524/collective_behavior_evo/figure/1_26_fluctuating_env"
 base_plot_folder     <- file.path("../zc524/collective_behavior_evo/figure/plots", date)
 r_data_folder    <- file.path("../zc524/collective_behavior_evo/figure", "r_data", dataset_name)
 
@@ -25,53 +25,28 @@ if (!dir.exists(base_plot_folder)) {
 met_brewer_pallete <- "Austria"  # color pattern for lines
 ```
 
-# load allele data
+# load evolutionary trajectory data
 ```{r}
-cons_allele_df <- readRDS(file.path(r_data_folder, "allele.rds"))
+fluc_allele_df <- readRDS(file.path(r_data_folder, "allele.rds"))
+# summary_stat_df <- readRDS("../r_data/constant_env/data_summary.rds")
 ```
 
 ```{r}
-t_before <- 10000
-t_after  <- 10300
-
-group_cols <- c("reg", "n", "psi", "shift_size", "rep", "id")
-
-pre_processed_df <- cons_allele_df[cons_allele_df$gen %in% c(t_before, t_after) & cons_allele_df$rep %in% seq(1, 10), ]
-
-delta_p_df <- do.call(
-  rbind,
-  lapply(
-    split(pre_processed_df, interaction(pre_processed_df[group_cols], drop = TRUE)),
-    function(d) {
-      d <- d[order(d$gen), ]
-
-      i_before <- which.min(abs(d$gen - t_before))
-      i_after  <- which.min(abs(d$gen - t_after))
-
-      row_before <- d[i_before, , drop = FALSE]
-      row_after  <- d[i_after, , drop = FALSE]
-
-      out <- row_after
-
-      out$gen_before <- row_before$gen
-      out$gen_after  <- row_after$gen
-      out$freq_before <- row_before$frequencies
-      out$freq_after  <- row_after$frequencies
-      out$delta_p <- row_after$frequencies - row_before$frequencies
-
-      out
-    }
-  )
-)
-
-rownames(delta_p_df) <- NULL
+fluc_allele_df$delta_p_percent <- fluc_allele_df$frequencies - ave(frequencies, list(reg, n, psi, shift_size, rep, id), FUN = function(x) {
+  # get freq at t_before and t_after
+  t_before <- 10000
+  t_after <- 10015
+  freq_before <- x[which.min(abs(fluc_allele_df$gen[fluc_allele_df$frequencies == x] - t_before))]
+  freq_after <- x[which.min(abs(fluc_allele_df$gen[fluc_allele_df$frequencies == x] - t_after))]
+  freq_after - freq_before
+})
 ```
 
 ## the 99th percentile of absolute effect sizes over time
 ```{r}
 # Keep segregating mutations only (typical for most architecture stats)
-seg <- cons_allele_df$frequencies > 0 & cons_allele_df$frequencies < 1 & !cons_allele_df$isFixed
-df  <- cons_allele_df[seg, ]
+seg <- fluc_allele_df$frequencies > 0 & fluc_allele_df$frequencies < 1 & !fluc_allele_df$isFixed
+df  <- fluc_allele_df[seg, ]
 
 # Convenience
 a <- df$effect_size
@@ -130,24 +105,26 @@ if (!dir.exists(out_dir)) {
 
 for (reg_i in c("ave", "fit", "ext")) {
   for (n_i in c(2, 5, 8, 20)) {
-    for (psi_i in c(0.0, 0.5, 0.9)) {
-      for (shift_size_i in c(20, 40, 60)) {
-        cond <- with(tail_stats, reg==reg_i & n==n_i & shift_size==shift_size_i & psi==psi_i)
-        d <- tail_stats[cond, ]
-        d <- d[order(d$gen), ]
-        # ---- build filename dynamically ----
-        out_file <- file.path(
-          out_dir,
-          paste0("allele_effect_size_q99_reg_", reg_i, "_n_", n_i, "_shift_", shift_size_i, "_psi_", psi_i, ".png")
-        )
-        png(filename = out_file, width = 800, height = 600)
-        plot(NA, NA, xlim = range(d$gen), ylim = range(d$q99_abs), xlab = "Generation", ylab = "99th Percentile of |Effect Size|", main = paste( "n:", n_i, "Shift:", shift_size_i, "Psi:", psi_i))
-        for (rep_i in unique(d$rep)) {
-          d_rep <- d[d$rep == rep_i, ]
-          lines(d_rep$gen, d_rep$q99_abs)
+    for (psi_i in c(0.0, 0.2, 0.5, 0.8)) {
+      for (shift_size_i in c(10, 100, 50)) {
+        for (gap_i in c(10, 50, 100)) {
+          cond <- with(tail_stats, reg==reg_i & n==n_i & shift_size==shift_size_i & psi==psi_i & gap == gap_i)
+          d <- tail_stats[cond, ]
+          d <- d[order(d$gen), ]
+          # ---- build filename dynamically ----
+          out_file <- file.path(
+            out_dir,
+            paste0("allele_effect_size_q99_reg_", reg_i, "_n_", n_i, "_shift_", shift_size_i, "_psi_", psi_i, ".png")
+          )
+          png(filename = out_file, width = 800, height = 600)
+          plot(NA, NA, xlim = range(d$gen), ylim = range(d$q99_abs), xlab = "Generation", ylab = "99th Percentile of |Effect Size|", main = paste( "n:", n_i, "Shift:", shift_size_i, "Psi:", psi_i))
+          for (rep_i in unique(d$rep)) {
+            d_rep <- d[d$rep == rep_i, ]
+            lines(d_rep$gen, d_rep$q99_abs)
+          }
+          box()
+          dev.off()
         }
-        box()
-        dev.off()
       }
     }
   }
@@ -353,8 +330,8 @@ if (!dir.exists(out_dir)) {
 col <- hcl.colors(3, palette = hcl_color_palette)
 breaks <- seq(-3, 3, by=0.1)
 
-avg_cons_allele_df <- aggregate(frequencies ~ gen + reg + n + psi + shift_size,
-                    data = cons_allele_df,
+avg_fluc_allele_df <- aggregate(frequencies ~ gen + reg + n + psi + shift_size,
+                    data = fluc_allele_df,
                     FUN = mean,
                     na.rm = TRUE)
 
@@ -362,8 +339,8 @@ for (reg_i in c("ave")) {
   for (n_i in c(2)) {
     for (psi_i in c(0.0)) {
       for (shift_size_i in c(20)) {
-        cond0 <- with(avg_cons_allele_df, reg==reg_i & n==n_i & shift_size==shift_size_i & psi==psi_i)
-        d <- avg_cons_allele_df[cond0, ]
+        cond0 <- with(avg_fluc_allele_df, reg==reg_i & n==n_i & shift_size==shift_size_i & psi==psi_i)
+        d <- avg_fluc_allele_df[cond0, ]
 
         d$eff_bin <- cut(d$frequencies, breaks = breaks, include.lowest = TRUE, right = FALSE)
 
@@ -471,7 +448,7 @@ for (shift_size in szs) {
         )
 
         hm <- .build_effect_heatmat(
-          df = cons_allele_df,
+          df = fluc_allele_df,
           filter = filt,
           xcol = xcol,
           breaks_vec = breaks_vec,
@@ -559,13 +536,13 @@ for (shift_size in szs) {
 
 ```{r}
 # ----------------- user-editable settings -----------------
-ns   <- c(8)
-psis <- c(0, 0.5, 0.8)
+ns   <- c(2, 5, 8, 20)
+psis <- c(0, 0.5, 0.9)
 regs <- c("ave", "fit", "ext")
-szs  <- c(40)
+szs  <- c(20, 40, 60)
 
 t_before <- 10000
-t_after  <- 10300
+t_after  <- 10015
 xcol <- "gen"   # change to "generation" if needed
 
 out_dir <- file.path(base_plot_folder, "delta_p_scatter_pdf")
@@ -599,7 +576,7 @@ for (shift_size in szs) {
         filt <- list(reg = reg_i, psi = p, n = n, shift_size = shift_size)
 
         m <- .delta_p_panel_data(
-          df = delta_p_df,
+          df = fluc_allele_df,
           filter = filt,
           t_before = t_before,
           t_after = t_after,
@@ -648,8 +625,8 @@ for (shift_size in szs) {
     )
 
     # ---- draw panels row-major: psi rows, n cols ----
-    reps_all <- sort(unique(cons_allele_df$rep))
-    rep_cols <- hcl.colors(length(reps_all), palette = "Set 2")
+    reps_all <- sort(unique(fluc_allele_df$rep))
+    rep_cols <- hcl.colors(max(1, length(reps_all)), palette = hcl_color_palette)
 
     for (ip in seq_along(psis)) {
       p <- psis[ip]
@@ -760,7 +737,7 @@ for (shift_size in szs) {
         filt <- list(reg = reg_i, psi = p, n = n, shift_size = shift_size)
 
         m <- .delta_p_panel_data_union(
-          df = cons_allele_df, filter = filt,
+          df = fluc_allele_df, filter = filt,
           t_before = t_before, t_after = t_after, xcol = xcol
         )
 
@@ -905,7 +882,7 @@ for (shift_size in szs) {
         filt <- list(reg = reg_i, psi = p, n = n, shift_size = shift_size)
 
         m <- .delta_p_panel_data(
-          df = cons_allele_df,
+          df = fluc_allele_df,
           filter = filt,
           t_before = t_before,
           t_after = t_after,
@@ -953,7 +930,7 @@ for (shift_size in szs) {
     )
 
     # ---- draw panels row-major: psi rows, n cols ----
-    reps_all <- sort(unique(cons_allele_df$rep))
+    reps_all <- sort(unique(fluc_allele_df$rep))
     rep_cols <- hcl.colors(max(1, length(reps_all)), palette = hcl_color_palette)
 
     for (ip in seq_along(psis)) {
@@ -1030,16 +1007,16 @@ out_dir <- file.path(base_plot_folder, "fixed_mutations_over_time")
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
 shift_vals <- c(20, 40, 60)
-n_vals <- sort(unique(cons_allele_df$n[cons_allele_df$reg == "ext"]))
+n_vals <- sort(unique(fluc_allele_df$n[fluc_allele_df$reg == "ext"]))
 col_map <- c("black", "dodgerblue3", "red3")
 
 # detect generation column
-gen_col <- if ("generation" %in% names(cons_allele_df)) "generation" else "gen"
+gen_col <- if ("generation" %in% names(fluc_allele_df)) "generation" else "gen"
 
 # keep only copy-the-extreme and target shift sizes
-sub_df <- cons_allele_df[
-  cons_allele_df$reg == "ext" &
-  cons_allele_df$shift_size %in% shift_vals,
+sub_df <- fluc_allele_df[
+  fluc_allele_df$reg == "ext" &
+  fluc_allele_df$shift_size %in% shift_vals,
 ]
 
 # make sure isFixed behaves like logical

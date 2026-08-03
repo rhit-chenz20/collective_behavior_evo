@@ -7,13 +7,13 @@ output: pdf_document
 
 # parameter for plotting
 ```{r setup, include=FALSE}
-dataset_name <- "constant_env_batch"
-date <- "6_16"
+dataset_name <- "cons_env_invasion"
+date <- "7_21"
 
 # set these once for your machine / project
-analysis_root <- "../zc524/collective_behavior_evo/figure/1_26_constant_env"
-base_plot_folder     <- file.path("../zc524/collective_behavior_evo/figure/plots", date)
-r_data_folder    <- file.path("../zc524/collective_behavior_evo/figure", "r_data", dataset_name)
+analysis_root <- "figure/psi_invasion"
+base_plot_folder     <- file.path("figure/plots", date)
+r_data_folder    <- file.path("figure/r_data", dataset_name)
 
 library(MetBrewer)
 
@@ -36,7 +36,7 @@ unique(cons_data_df[cons_data_df$psi == 0.2,]$rep)
 # unique(cons_data_df$psi)
 ```
 ```{r}
-
+colnames(cons_data_df)
 ```
 
 ```{r}
@@ -51,7 +51,7 @@ cons_data_df$g_z <- cons_data_df$z_mean - cons_data_df$a_mean
 ```
 
 ```{r}
-colname = c("z_sd")  # column to plot
+colname = c("num_social_ind")  # column to plot
 plot_folder = file.path(base_plot_folder, paste("direc_",colname, collapse = "_"), "/")
 
 ltys = c(1, 1) # per ycol: solid, dashed
@@ -65,32 +65,40 @@ psi_col_map <- setNames(colors_for_psi, c(0.0, 0.2, 0.5, 0.8))
 
 # cons_data_df <- summary_stat_df[summary_stat_df$tick < 10000, ]
 # for (n in c(2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 50)){
-for (n in c(8)){
+for (n in c(5, 8, 20)){
     for (sz in c(40)){
         for (reg in c("fit", "ext", "ave")){
+          for (inGen in c(9000, 9500, 9900, 10000, 10020, 10050, 10100)){
+            for (inInd in c(50, 100)){
             # for (reg in c("fit")){
                 # for (opt in c(0, sz)){
-                filt_A <- list(reg = reg, psi = 0.0, n = n, shift_size = sz)
-                filt_B <- list(reg = reg, psi = 0.2, n = n, shift_size = sz)
-                filt_C <- list(reg = reg, psi = 0.5, n = n, shift_size = sz)
-                filt_D <- list(reg = reg, psi = 0.8, n = n, shift_size = sz)
-                pdf(paste0(plot_folder, "reg_", reg, "_n_", n, "_sz_", sz, ".pdf"), width=11.5, height=8)
+                filt_A <- list(reg = reg, psi = 0.2, n = n, shift_size = sz, inGen = inGen, inInd = inInd)
+                filt_B <- list(reg = reg, psi = 0.5, n = n, shift_size = sz, inGen = inGen, inInd = inInd)
+                filt_C <- list(reg = reg, psi = 0.8, n = n, shift_size = sz, inGen = inGen, inInd = inInd)
+                pdf(paste0(plot_folder, "reg_", reg, "_n_", n, "_sz_", sz, "_inGen_", inGen, "_inInd_", inInd, ".pdf"), width=11.5, height=8)
 
                 title <- paste0(
-                if (reg == "fit") "Copy the Best" else
-                if (reg == "ext") "Copy the Extreme" else
-                if (reg == "ave") "Copy the Average",
-                  " model (n = ", n, ")"
+                  if (reg == "fit") "Copy the Best" else
+                  if (reg == "ext") "Copy the Extreme" else
+                  if (reg == "ave") "Copy the Average",
+                    " model (n = ", n, ")",
+                    "shift size = ", sz, ", inGen = ", inGen, ", inInd = ", inInd
                 )
 
-                ylim <- c(2, 8)
-                if ("fitness_mean" %in% colname) {
-                  ylim <- NULL
-                } else if ("z_opt" %in% colname || "z_opt_abs" %in% colname) {
-                  ylim <- c(0, sz+5)
+                ylim <- c(0, 1000)
+                if (inGen < 10000){
+                  xlim <- c(inGen - 30, inGen+400)
+                } else{
+                  xlim <- c(9970, 10300)
                 }
+                
+                # if ("fitness_mean" %in% colname) {
+                #   ylim <- NULL
+                # } else if ("z_opt" %in% colname || "z_opt_abs" %in% colname) {
+                #   ylim <- c(0, sz+5)
+                # }
                 par(cex.axis = 2.5, cex.lab = 2.5, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
-                fils <- list(filt_D)
+                fils <- list(filt_A, filt_B, filt_C)
                 cols <- psi_col_map[as.character(sapply(fils, function(f) f$psi))]
             
                 plot_lines_multi(
@@ -100,17 +108,20 @@ for (n in c(8)){
                     labels  = list(
                         title = title,
                         x = "Generation",  # or any x label you want
-                        y = expression(z[sd])      # or any y label you want
+                        y = expression("# social individuals")      # or any y label you want
                     ),
-                    show_rep = FALSE,       # faded per-rep lines? TRUE/FALSE
+                    show_rep = TRUE,       # faded per-rep lines? TRUE/FALSE
+                    show_mean = TRUE,      # bold mean line? TRUE/FALSE
                     cols = cols,
                     ylim = ylim,
-                    xlim = c(9990, 10300),
+                    xlim = xlim,
                     # xcol = "dz1"
                     ltys = ltys
                 )
                 
-                # abline(v=10000, lty = 2, col = "black", lwd = 4)
+                abline(v=inGen, lty = 2, col = "red", lwd = 4)
+                abline(v=10000, lty = 2, col = "black", lwd = 4)
+                abline(h=1000, lty = 1, col = "black", lwd = 4)
                 # abline(v=10018, lty = 1, col = psi_col_map["0.5"], lwd = 4)
                 # abline(v=10017.5, lty = 1, col = psi_col_map["0.8"], lwd = 4)
                 # abline(v=10030, lty = 1, col = psi_col_map["0.2"], lwd = 4)
@@ -118,12 +129,14 @@ for (n in c(8)){
                 #   x1 = 10300, y1 = 40,
                 #   col = "red", lwd = 4)
 
-                # leg_expr <- as.expression(lapply(fils, function(v) bquote(psi == .(v$psi))))
-                # legend("bottomright", bty = "n", legend = leg_expr,
-                #     col = met.brewer(name=met_brewer_pallete, n=length(fils), type="discrete"),
-                #     lwd = 3, cex = 2.2)
+                leg_expr <- as.expression(lapply(fils, function(v) bquote(psi == .(v$psi))))
+                legend("bottomright", bty = "n", legend = leg_expr,
+                    col = cols,
+                    lwd = 3, cex = 2.2)
                 dev.off()
                 # }
+            }
+          }
         }
     }
 }

@@ -6,13 +6,13 @@ output: pdf_document
 ---
 
 ```{r}
-
 plot_lines_multi <- function(
   df,
   filters,
   ycol,  # NOW: can be length 1 or >1 (tick mode supports multi)
   labels = list(title = NULL, x = "Tick", y = ycol),
   show_rep = TRUE,
+  show_mean = TRUE,
   cols = NULL,          # colors per filter (unchanged meaning)
   xlim = NULL,
   ylim = NULL,
@@ -171,6 +171,7 @@ plot_lines_multi <- function(
           }
         }
 
+        if (!show_mean) next  # skip mean line if requested
         # mean line for this y column
         m <- s$mean[[yc]]
         if (!is.null(m) && nrow(m) > 1) {

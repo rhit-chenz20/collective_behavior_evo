@@ -7,13 +7,13 @@ output: pdf_document
 
 # parameter for plotting
 ```{r setup, include=FALSE}
-dataset_name <- "fluc_env"
-date <- "6_16"
+dataset_name <- "fluc_env_invasion"
+date <- "7_28"
 
 # set these once for your machine / project
-analysis_root <- "../zc524/collective_behavior_evo/figure/1_26_fluctuating_env"
-base_plot_folder     <- file.path("../zc524/collective_behavior_evo/figure/plots", date)
-r_data_folder    <- file.path("../zc524/collective_behavior_evo/figure", "r_data", dataset_name)
+analysis_root <- "figure/7_27_fluc_env_psi_invasion"
+base_plot_folder     <- file.path("figure/plots", date)
+r_data_folder    <- file.path("figure", "r_data", dataset_name)
 
 library(MetBrewer)
 
@@ -40,13 +40,14 @@ fluc_data_df$a_z_diff <- fluc_data_df$z_mean - fluc_data_df$a_mean
 ```
 
 ```{r}
-unique(fluc_data_df$shift_size)
-unique(fluc_data_df$gap)
-unique(fluc_data_df$psi)
+head(fluc_data_df[fluc_data_df$gap == 80 & fluc_data_df$tick_of_cycle == 0, "tick"])
 ```
 
 ```{r}
-colname = c("z_mean", "optimum")  # column to plot
+colname = c(
+  "num_social_ind",
+  "optimum"
+)  # column to plot
 plot_folder = file.path(base_plot_folder, paste(colname, collapse = "_"))
 
 ltys = c(1, 2) # per ycol: solid, dashed
@@ -61,89 +62,138 @@ psi_col_map <- setNames(colors_for_psi, c(0.0, 0.2, 0.5, 0.8))
 # sz=60
 # n=50
 for (n in c(8)){
-  for (gap in c(80)){
-    for (sz in c(40)){
+  for (gap in c(50)){
+    for (sz in c(20, 40, 60)){
       for (reg in c("fit", "ave", "ext")){
-        filt_A <- list(reg = reg, psi = 0.0, n = n, shift_size = sz, gap = gap)
-        filt_B <- list(reg = reg, psi = 0.2, n = n, shift_size = sz, gap = gap)
-        filt_C <- list(reg = reg, psi = 0.5, n = n, shift_size = sz, gap = gap)
-        filt_D <- list(reg = reg, psi = 0.8, n = n, shift_size = sz, gap = gap)
-        pdf(file.path(plot_folder, paste0("reg_", reg, "_n_", n, "_gap_", gap, "_sz_", sz, ".pdf")), width = 11, height = 8)
-        
-        title <- paste0(
-        if (reg == "inv") "Homogenous group" else
-            if (reg == "fit") "copy the best" else
-            if (reg == "ext") "copy the extreme" else
-                if (reg == "ave") "copy the average",
-        " model (n = ", n, ")"
-        )
-        
-        par(cex.axis = 2.5, cex.lab = 2.5, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
+        for (inGen in c(5)){
+          for (inInd in c(100)){
+            filt_A <- list(reg = reg, psi = 0.2, n = n, shift_size = sz, gap = gap, inGen = inGen, inInd = inInd)
+            filt_B <- list(reg = reg, psi = 0.5, n = n, shift_size = sz, gap = gap, inGen = inGen, inInd = inInd)
+            filt_C <- list(reg = reg, psi = 0.8, n = n, shift_size = sz, gap = gap, inGen = inGen, inInd = inInd)
+            pdf(file.path(plot_folder, paste0("reg_", reg, "_n_", n, "_gap_", gap, "_sz_", sz, "_ingen_", inGen, "_inInd_", inInd, ".pdf")), width = 11, height = 8)
+            
+            title <- paste0(
+              if (reg == "fit") "copy the best" else
+              if (reg == "ext") "copy the extreme" else
+              if (reg == "ave") "copy the average",
+              " model (n = ", n, ")"
+            )
+            
+            par(cex.axis = 2.5, cex.lab = 2.5, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
 
-        ylim <- c(-sz/2 -5, sz/2 + 5)
-        if ("fitness_mean" %in% colname) {
-          ylim <- NULL
-        } else if ("z_opt" %in% colname || "z_opt_abs" %in% colname) {
-          ylim <- c(0, sz+5)
+            ylim <- c(0, 1000)
+            xlim <- c(9900, 10300)
+
+            fils <- list(filt_A, filt_B, filt_C)
+            # fils <- list(filt_A, filt_D)
+            plot_lines_multi(
+                df      = fluc_data_df,
+                filters = fils,
+                ycol    = colname,  # << choose the column to plot
+                labels  = list(
+                    title = title,
+                    x = "Generation",  # or any x label you want
+                    # y = paste(colname, collapse = "/")      # or any y label you want
+                    y = "# of Social Individual"
+                ),
+                show_rep = TRUE,       # faded per-rep lines? TRUE/FALSE
+                show_mean = TRUE,
+                cols = psi_col_map[as.character(sapply(fils, function(f) f$psi))],
+                ylim = ylim,
+                xlim = xlim,
+                # xcol = "dz1"
+                ltys = ltys,
+                rep_alpha = 0.2
+            )
+
+            # plot_lines_multi_agg_cycle(
+            #   df      = fluc_data_df,
+            #   filters = fils,
+            #   ycol    = colname,  # << choose the column to plot
+            #   labels  = list(
+            #       title = title,
+            #       x = "Generation",  # or any x label you want
+            #       y = paste(colname, collapse = "/")      # or any y label you want
+            #   ),
+
+            #   show_rep = TRUE,       # faded per-rep lines? TRUE/FALSE
+            #   cols = met.brewer(name=met_brewer_pallete, n=length(fils), type="discrete"),
+            #   ylim = ylim,
+            #   # xlim = c(9990, 3*gap + 9990),
+            #   ltys = ltys,
+            #   use_cycle_rep = TRUE,
+            #   gap_col = "gap",
+            #   cycle_start = 10000,       # or NULL if you want first observed tick
+            #   cycle_window = c(0, 2*gap - 1),    # first full cycle for gap=10
+            #   rep_alpha = 0.1
+            # )
+            
+            first_flip_gen <- 9900
+            for (gen_flip in seq(first_flip_gen, 10300, by=gap)){
+              abline(v=gen_flip, lty = 2, col = adjustcolor("red", alpha=0.5), lwd = 4)
+            }
+
+            leg_expr <- as.expression(lapply(fils, function(v) bquote(psi == .(v$psi))))
+            legend("topright", bty = "n", legend = leg_expr,
+                col = psi_col_map[as.character(sapply(fils, function(f) f$psi))],
+                lwd = 3, cex = 2.2)
+            dev.off()
+          }
         }
-        # ylim <- c(3, 12)
-
-        fils <- list(filt_A, filt_B, filt_C, filt_D)
-        # fils <- list(filt_A, filt_D)
-        plot_lines_multi(
-            df      = fluc_data_df,
-            filters = fils,
-            ycol    = colname,  # << choose the column to plot
-            labels  = list(
-                title = title,
-                x = "Generation",  # or any x label you want
-                # y = paste(colname, collapse = "/")      # or any y label you want
-                y = expression(bar(z))
-            ),
-            show_rep = TRUE,       # faded per-rep lines? TRUE/FALSE
-            cols = psi_col_map[as.character(sapply(fils, function(f) f$psi))],
-            ylim = ylim,
-            xlim = c(9995, 5*gap + 9995),
-            # xcol = "dz1"
-            ltys = ltys,
-            rep_alpha = 0.2
-        )
-
-        # plot_lines_multi_agg_cycle(
-        #   df      = fluc_data_df,
-        #   filters = fils,
-        #   ycol    = colname,  # << choose the column to plot
-        #   labels  = list(
-        #       title = title,
-        #       x = "Generation",  # or any x label you want
-        #       y = paste(colname, collapse = "/")      # or any y label you want
-        #   ),
-
-        #   show_rep = TRUE,       # faded per-rep lines? TRUE/FALSE
-        #   cols = met.brewer(name=met_brewer_pallete, n=length(fils), type="discrete"),
-        #   ylim = ylim,
-        #   # xlim = c(9990, 3*gap + 9990),
-        #   ltys = ltys,
-        #   use_cycle_rep = TRUE,
-        #   gap_col = "gap",
-        #   cycle_start = 10000,       # or NULL if you want first observed tick
-        #   cycle_window = c(0, 2*gap - 1),    # first full cycle for gap=10
-        #   rep_alpha = 0.1
-        # )
-        
-        # abline(v=10000, lty = 2, col = "black", lwd = 4)
-
-        leg_expr <- as.expression(lapply(fils, function(v) bquote(psi == .(v$psi))))
-        legend("topright", bty = "n", legend = leg_expr,
-            col = psi_col_map[as.character(sapply(fils, function(f) f$psi))],
-            lwd = 3, cex = 2.2)
-        dev.off()
       }
     }
   }
 }
 
 ```
+
+# count how many reps the social individal established among the asocial population
+```{r}
+# parameters
+target_tick <- 10300
+
+# unique invasion generations
+inGen_vals <- unique(fluc_data_df$inGen)
+
+# storage
+count_df <- data.frame()
+
+for (ig in inGen_vals) {
+  
+  # subset one invasion generation
+  dat_ig <- fluc_data_df[fluc_data_df$inGen == ig, ]
+  
+  # all parameter combinations
+  param_grid <- expand.grid(
+    gap = sort(unique(fluc_data_df$gap)),
+    shift_size = sort(unique(fluc_data_df$shift_size))
+  )
+  
+  # count reps with data at target tick
+  param_grid$n_rep <- NA_integer_
+  
+  for (i in seq_len(nrow(param_grid))) {
+    
+    tmp <- dat_ig[
+      dat_ig$gap == param_grid$gap[i] &
+      dat_ig$shift_size == param_grid$shift_size[i] &
+      dat_ig$tick == target_tick,
+    ]
+    
+    # number of unique replicates
+    param_grid$n_rep[i] <- length(unique(tmp$rep))
+  }
+  
+  # add invasion generation label
+  param_grid$inGen <- ig
+  
+  # append
+  count_df <- rbind(count_df, param_grid)
+}
+```
+
+
+
 
 ## a_sd heatmap
 ```{r}

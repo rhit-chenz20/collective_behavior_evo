@@ -1,0 +1,5 @@
+Wrote: ave.slim
+Wrote: fit.slim
+Wrote: ext.slim
+Submitting job, psi=0.2, n=2, sz=40, rep=2, reg=ave.
+Found pop file: ../../data/cons_env_invasion/pop/n_2_psi_0.2_sz_40_reg_ave_inGen_9000_inInd_1_2.pop

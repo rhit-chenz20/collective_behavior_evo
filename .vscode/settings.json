@@ -1,3 +1,4 @@
 {
-    "python.analysis.typeCheckingMode": "off"
+    "python.analysis.typeCheckingMode": "off",
+    "r.rterm.linux": "/programs/R-4.0.5-r9/bin/R"
 }
