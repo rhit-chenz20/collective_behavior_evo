@@ -1,4 +1,5 @@
 {
     "python.analysis.typeCheckingMode": "off",
-    "r.rterm.linux": "/programs/R-4.0.5-r9/bin/R"
+    "r.rterm.linux": "/programs/R-4.0.5-r9/bin/R",
+    "latex-workshop.latex.path": "/Library/TeX/texbin" 
 }

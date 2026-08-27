@@ -1,0 +1,51 @@
+This is BibTeX, Version 0.99e (TeX Live 2026)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: draft.aux
+The style file: pnas-new.bst
+Database file #1: pnas-sample.bib
+Warning--string name "sept" is undefined
+--line 281 of file pnas-sample.bib
+Warning--string name "june" is undefined
+--line 517 of file pnas-sample.bib
+You've used 21 entries,
+            1916 wiz_defined-function locations,
+            700 strings with 9421 characters,
+and the built_in function-call counts, 5181 in all, are:
+= -- 479
+> -- 227
+< -- 0
++ -- 69
+- -- 48
+* -- 470
+:= -- 802
+add.period$ -- 42
+call.type$ -- 21
+change.case$ -- 20
+chr.to.int$ -- 0
+cite$ -- 21
+duplicate$ -- 190
+empty$ -- 486
+format.name$ -- 48
+if$ -- 1143
+int.to.chr$ -- 0
+int.to.str$ -- 21
+missing$ -- 22
+newline$ -- 87
+num.names$ -- 21
+pop$ -- 26
+preamble$ -- 1
+purify$ -- 0
+quote$ -- 0
+skip$ -- 86
+stack$ -- 0
+substring$ -- 553
+swap$ -- 23
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 0
+warning$ -- 0
+while$ -- 41
+width$ -- 23
+write$ -- 211
+(There were 2 warnings)
