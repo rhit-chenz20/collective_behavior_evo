@@ -1,0 +1,164 @@
+
+
+```{r setup, include=FALSE}
+# parameters for plotting
+dataset_name <- "cons_env_data"
+date <- "9_22_2026"
+
+# set these once for your machine / project
+analysis_root <- "figure/cons_env_plot"
+base_plot_folder     <- file.path("figure/plots", date)
+r_data_folder    <- file.path("figure", "r_data", dataset_name)
+
+library(MetBrewer)
+library(ggplot2)
+
+if (!dir.exists(base_plot_folder)) {
+  dir.create(base_plot_folder, recursive = TRUE, showWarnings = FALSE)
+}
+
+met_brewer_pallete <- "Hiroshige"  # color pattern for lines
+```
+
+```{r model_fig}
+
+# color bar spans [x_min, x_max]; normal curve is centered at the bar's midpoint
+x_min <- -3
+x_max <- 3
+x_center <- (x_min + x_max) / 2
+sd_norm <- 0.6
+n_colors <- 200
+
+bar_colors <- met.brewer(name = met_brewer_pallete, n = n_colors, type = "continuous")
+
+bar_df <- data.frame(
+  xmin = seq(x_min, x_max, length.out = n_colors + 1)[-(n_colors + 1)],
+  xmax = seq(x_min, x_max, length.out = n_colors + 1)[-1],
+  fill = as.character(bar_colors)
+)
+
+norm_x <- seq(x_min, x_max, length.out = 500)
+norm_df <- data.frame(x = norm_x, y = dnorm(norm_x, mean = x_center, sd = sd_norm))
+
+bar_height <- 0.08 * max(norm_df$y)
+bar_gap    <- 0.03 * max(norm_df$y)
+
+p_model <- ggplot() +
+  geom_rect(data = bar_df,
+            aes(xmin = xmin, xmax = xmax, ymin = -bar_gap - bar_height, ymax = -bar_gap, fill = fill),
+            color = NA) +
+  scale_fill_identity() +
+  geom_line(data = norm_df, aes(x = x, y = y), linewidth = 1) +
+  coord_cartesian(xlim = c(x_min, x_max), expand = FALSE, clip = "off") +
+  theme_void() +
+  theme(plot.margin = margin(10, 10, 10, 10))
+
+p_model
+
+ggsave(file.path(base_plot_folder, "model_fig.pdf"), p_model, width = 5, height = 3)
+```
+
+
+
+
+```{r two_normals}
+# two normal curves with the same mean: wide (dashed) and narrow (blue solid)
+normalize_height <- TRUE  # TRUE: every curve peaks at 1 (same height); FALSE: true densities
+
+# normal density, optionally scaled so its peak equals 1
+norm_curve <- function(x, mean, sd, normalize) {
+  y <- dnorm(x, mean = mean, sd = sd)
+  if (normalize) y / dnorm(0, sd = sd) else y
+}
+# height of a curve's peak (used for the grey vertical lines)
+norm_peak <- function(sd, normalize) {
+  if (normalize) 1 else dnorm(0, sd = sd)
+}
+
+norm_mean <- 0
+sd_wide   <- 2
+sd_narrow <- 0.5
+
+x_vals <- seq(norm_mean - 4 * sd_wide, norm_mean + 4 * sd_wide, length.out = 500)
+two_norm_df <- data.frame(
+  x = x_vals,
+  wide   = norm_curve(x_vals, norm_mean, sd_wide, normalize_height),
+  narrow = norm_curve(x_vals, norm_mean, sd_narrow, normalize_height)
+)
+
+p_two_norm <- ggplot(two_norm_df, aes(x = x)) +
+  # grey vertical line at the mean, from the x axis (y = 0) up to the tallest peak
+  annotate("segment", x = norm_mean, xend = norm_mean, y = 0,
+           yend = max(norm_peak(sd_wide, normalize_height), norm_peak(sd_narrow, normalize_height)),
+           color = "grey", linewidth = 1) +
+  geom_line(aes(y = wide), linetype = "dashed", color = "black", linewidth = 1) +
+  geom_line(aes(y = narrow), linetype = "solid", color = "blue", linewidth = 1) +
+  coord_cartesian(expand = FALSE, clip = "off") +
+  theme_void() +
+  theme(plot.margin = margin(10, 10, 10, 10))
+
+p_two_norm
+
+ggsave(file.path(base_plot_folder, "two_normals.pdf"), p_two_norm, width = 5, height = 3)
+```
+
+```{r three_normals}
+# same two curves as above, plus a second wide (dashed black) curve shifted right;
+# the two black curves overlap
+normalize_height <- TRUE  # TRUE: every curve peaks at 1 (same height); FALSE: true densities
+shifted_mean <- norm_mean + 3 * sd_wide
+
+x_vals_3 <- seq(norm_mean - 4 * sd_wide, shifted_mean + 4 * sd_wide, length.out = 800)
+three_norm_df <- data.frame(
+  x = x_vals_3,
+  wide    = norm_curve(x_vals_3, norm_mean, sd_wide, normalize_height),
+  narrow  = norm_curve(x_vals_3, norm_mean, sd_narrow, normalize_height),
+  shifted = norm_curve(x_vals_3, shifted_mean, sd_wide, normalize_height)
+)
+
+p_three_norm <- ggplot(three_norm_df, aes(x = x)) +
+  # grey vertical lines at each mean, from the x axis (y = 0) up to the tallest peak there
+  annotate("segment", x = c(norm_mean, shifted_mean), xend = c(norm_mean, shifted_mean),
+           y = 0,
+           yend = c(max(norm_peak(sd_wide, normalize_height), norm_peak(sd_narrow, normalize_height)),
+                    norm_peak(sd_wide, normalize_height)),
+           color = "grey", linewidth = 1) +
+  geom_line(aes(y = wide), linetype = "dashed", color = "black", linewidth = 1) +
+  geom_line(aes(y = shifted), linetype = "solid", color = "black", linewidth = 1) +
+  geom_line(aes(y = narrow), linetype = "solid", color = "blue", linewidth = 1) +
+  coord_cartesian(expand = FALSE, clip = "off") +
+  theme_void() +
+  theme(plot.margin = margin(10, 10, 10, 10))
+
+p_three_norm
+
+ggsave(file.path(base_plot_folder, "three_normals.pdf"), p_three_norm, width = 6, height = 3)
+```
+
+```{r three_normals_blue_between}
+# same as three_normals, but the blue curve is centered between the two black curves
+normalize_height <- TRUE  # TRUE: every curve peaks at 1 (same height); FALSE: true densities
+blue_mean <- (norm_mean + shifted_mean) / 2
+
+three_norm_mid_df <- data.frame(
+  x = x_vals_3,
+  wide    = norm_curve(x_vals_3, norm_mean, sd_wide, normalize_height),
+  narrow  = norm_curve(x_vals_3, blue_mean, sd_narrow, normalize_height),
+  shifted = norm_curve(x_vals_3, shifted_mean, sd_wide, normalize_height)
+)
+
+p_three_norm_mid <- ggplot(three_norm_mid_df, aes(x = x)) +
+  # grey vertical lines at each black mean, from the x axis (y = 0) up to the black peak
+  annotate("segment", x = c(norm_mean, shifted_mean), xend = c(norm_mean, shifted_mean),
+           y = 0, yend = norm_peak(sd_wide, normalize_height), color = "grey", linewidth = 1) +
+  geom_line(aes(y = wide), linetype = "dashed", color = "black", linewidth = 1) +
+  geom_line(aes(y = shifted), linetype = "solid", color = "black", linewidth = 1) +
+  geom_line(aes(y = narrow), linetype = "solid", color = "blue", linewidth = 1) +
+  coord_cartesian(expand = FALSE, clip = "off") +
+  theme_void() +
+  theme(plot.margin = margin(10, 10, 10, 10))
+
+p_three_norm_mid
+
+ggsave(file.path(base_plot_folder, "three_normals_blue_between.pdf"), p_three_norm_mid, width = 6, height = 3)
+```

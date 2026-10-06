@@ -131,6 +131,8 @@ shift_time late(){
 
 shift_time-100 late(){
 	sim.outputFull(filePath=pop_output, binary=T, pedigreeIDs=T, objectTags=T, substitutions=T); 
+	print(community.tick+": output population to "+pop_output);
+	sim.simulationFinished();
 }
 
 shift_time-30: early(){

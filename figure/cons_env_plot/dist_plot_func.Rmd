@@ -1,0 +1,497 @@
+
+# distributon over time
+```{r}
+# integer-named value columns
+.value_cols_int <- function(df) {
+  grep("^[0-9]+$", names(df), value = TRUE)
+}
+
+# filter dataframe by named parameter list
+.filter_df <- function(df, filter = list()) {
+  d <- df
+
+  if (length(filter) > 0) {
+    for (nm in names(filter)) {
+      if (!nm %in% names(d)) {
+        warning("Filter column not found and ignored: ", nm)
+        next
+      }
+
+      d <- d[d[[nm]] %in% filter[[nm]], , drop = FALSE]
+    }
+  }
+
+  if (nrow(d) == 0) {
+    stop("No rows left after applying filter.")
+  }
+
+  d
+}
+
+# convert wide replicate/individual columns into long generation-value data
+.to_long_generation_value <- function(df, filter = list(), generation = NULL) {
+  d <- .filter_df(df, filter)
+
+  if (!is.null(generation)) {
+    if (!"generation" %in% names(d)) {
+      stop("Column 'generation' not found.")
+    }
+    d <- d[d$generation %in% generation, , drop = FALSE]
+  }
+
+  if (nrow(d) == 0) {
+    stop("No rows left after applying generation filter.")
+  }
+
+  vcols <- .value_cols_int(d)
+  if (length(vcols) == 0) {
+    stop("No integer-named value columns found.")
+  }
+
+  value_mat <- as.matrix(d[, vcols, drop = FALSE])
+
+  out <- data.frame(
+    generation = rep(d$generation, each = length(vcols)),
+    value = as.numeric(t(value_mat))
+  )
+
+  out <- out[is.finite(out$value), , drop = FALSE]
+  out
+}
+make_colorbar_pdf <- function(
+  file = "grey_colorbar.pdf",
+  zlim = c(0, 0.08),
+  width = 1.6,
+  height = 4,
+  n_col = 64,
+  label = "Density",
+  zero_col = "black",
+  color_palette = NULL,
+  label_at = NULL,      # e.g. c(0, 0.02, 0.05, 0.08) - values to place tick labels at
+  label_text = NULL     # optional custom text for those ticks; defaults to label_at itself
+) {
+  if (!is.null(color_palette)) {
+    grey_pal <- color_palette
+  } else {  
+    grey_pal <- gray.colors(n_col, start = 0.95, end = 0.15)
+  }
+
+  if (!is.null(zero_col)) {
+    pal <- c(zero_col, grey_pal)
+  } else {
+    pal <- grey_pal
+  }
+
+  zero_eps <- 1e-6
+
+  z_vals <- seq(zlim[1], zlim[2], length.out = n_col)
+  z_plot <- matrix(c(zlim[1] - zero_eps, z_vals), nrow = 1)
+
+  pdf(file, width = width, height = height)
+
+  old_par <- par(no.readonly = TRUE)
+  on.exit({
+    par(old_par)
+    dev.off()
+  })
+
+  par(mar = c(3, 2, 2, 4))
+
+  image(
+    x = 1,
+    y = c(zlim[1] - zero_eps, z_vals),
+    z = z_plot,
+    col = pal,
+    zlim = c(zlim[1] - zero_eps, zlim[2]),
+    axes = FALSE,
+    xlab = "",
+    ylab = ""
+  )
+
+  # use custom tick positions if given, otherwise fall back to pretty(zlim)
+  ticks_at  <- if (!is.null(label_at)) label_at else pretty(zlim)
+  ticks_lab <- if (!is.null(label_text)) label_text else ticks_at
+
+  axis(
+    side = 4,
+    at = ticks_at,
+    labels = ticks_lab,
+    las = 1
+  )
+
+  mtext(label, side = 4, line = 2.5)
+
+  box()
+}
+gen_heatmap <- function(df, breaks, col = "purple",
+                        xlab = "Generation", ylab = "Trait value",
+                        zlim = c(0, 1),
+                        zero_col = "black",
+                        zero_eps = 1e-6,
+                        x_label_gens = NULL,
+                        x_label_text = NULL,
+                        color_palette = NULL,
+                        line_vals = NULL,
+                        gen_vals = NULL,
+                        show_mean_line = FALSE) {
+  # Build palette
+  base_pal <- if (!is.null(color_palette)) {
+    color_palette
+  } else if (col == "purple") {
+    rev(colorRampPalette(c("#EEEDFE", "#AFA9EC", "#7F77DD", "#3C3489"))(64))
+  } else if (col == "teal") {
+    rev(colorRampPalette(c("#E1F5EE", "#5DCAA5", "#1D9E75", "#085041"))(64))
+  } else {
+    colorRampPalette(c("white", col))(64)
+  }
+
+  if (!is.null(zero_col)) {
+    pal <- c(zero_col, base_pal)
+  }else {
+    pal <- base_pal
+  }
+
+  gens <- sort(unique(df$generation))
+
+  lo <- min(breaks)
+  hi <- max(breaks)
+
+  df <- df[df$value >= lo & df$value <= hi, , drop = FALSE]
+
+  mids <- (breaks[-1] + breaks[-length(breaks)]) / 2
+
+  mat <- sapply(gens, function(g) {
+    vals <- df$value[df$generation == g]
+    vals <- vals[vals >= lo & vals <= hi]
+
+    h <- hist(vals, breaks = breaks, plot = FALSE)
+    h$density
+  })
+
+  mat_plot <- mat
+  mat_plot[mat_plot == 0] <- zlim[1] - zero_eps
+
+  image(
+    x = seq_along(gens),
+    y = mids,
+    z = t(mat_plot),
+    col = pal,
+    zlim = c(zlim[1] - zero_eps, zlim[2]),
+    axes = FALSE,
+    xlab = xlab,
+    ylab = ylab
+  )
+
+  # Only label selected generations
+  if (is.null(x_label_gens)) {
+    x_at <- seq_along(gens)
+    x_labs <- gens
+  } else {
+    keep <- gens %in% x_label_gens
+    x_at <- which(keep)
+    x_labs <- x_label_text
+  }
+
+  axis(
+    1,
+    at = x_at,
+    labels = x_labs,
+    tick = FALSE
+  )
+
+  axis(2, las = 1, tick = FALSE)
+  box()
+
+  # Add line on top of heatmap
+  if (!is.null(line_vals)) {
+    line_x <- match(gen_vals, gens)
+    line_y <- line_vals
+
+    # Drop generations not present in the heatmap
+    ok <- !is.na(line_x)
+    line_x <- line_x[ok]
+
+    # # horizontal dashed segment per generation, no vertical connectors
+    segments(
+      x0 = line_x[1] - 0.5,
+      x1 = line_x[2] + 0.5,
+      y0 = line_y[1],
+      y1 = line_y[1],
+      col = "blue",
+      lwd = 8,
+      lty = 5
+    )
+
+    segments(
+      x0 = line_x[3] - 0.5,
+      x1 = line_x[4] + 0.5,
+      y0 = line_y[2],
+      y1 = line_y[2],
+      col = "blue",
+      lwd = 8,
+      lty = 5
+    )
+  }
+
+  # Add mean trait value bar for each generation (unconnected)
+  if (show_mean_line) {
+    mean_vals <- sapply(gens, function(g) {
+      vals <- df$value[df$generation == g]
+      vals <- vals[vals >= lo & vals <= hi]
+      mean(vals, na.rm = TRUE)
+    })
+
+    mean_x <- seq_along(gens)
+    bar_half_width <- 0.4  # fraction of one generation's x-spacing; tweak to taste
+
+    segments(
+      x0 = mean_x - bar_half_width,
+      x1 = mean_x + bar_half_width,
+      y0 = mean_vals,
+      y1 = mean_vals,
+      col = "red",
+      lwd = 8,
+      lty = 1
+    )
+  }
+}
+plot_pheno_geno_heatmaps <- function(
+  cons_pheno_df,
+  cons_geno_df,
+  breaks,
+  pheno_filter = list(),
+  geno_filter = list(),
+  pheno_generations = NULL,
+  geno_generations = NULL,
+  file = "heatmap_generations.pdf",
+  width = 5,
+  height = 8,
+  zlim = c(0, 1),
+  pheno_zlim = zlim,
+  geno_zlim = zlim,
+  x_label_gens = c(10000, 10100, 10200, 10300),
+  x_label_text = c(0, 100, 200, 300),
+  color_palette = NULL,
+  zero_col = "black",
+  geno_color_palette = NULL,
+  pheno_color_palette = NULL,
+  line_vals = NULL,
+  gen_vals = NULL,
+  show_mean_line = FALSE
+) {
+  pheno_long <- .to_long_generation_value(
+    cons_pheno_df,
+    filter = pheno_filter,
+    generation = pheno_generations
+  )
+
+  geno_long <- .to_long_generation_value(
+    cons_geno_df,
+    filter = geno_filter,
+    generation = geno_generations
+  )
+
+  pdf(file, width = width, height = height)
+
+  old_par <- par(no.readonly = TRUE)
+  on.exit({
+    par(old_par)
+    dev.off()
+  })
+
+  # par(mfrow = c(2,1), mar = c(3, 3, 2, 1), mgp = c(2, 0.5, 0))
+
+  if (!is.null(color_palette)) {
+    pheno_color_palette <- color_palette
+    geno_color_palette <- color_palette
+  }
+  gen_heatmap(pheno_long, breaks, col = "purple", zlim = pheno_zlim, zero_col = zero_col, x_label_gens = x_label_gens, x_label_text = x_label_text, color_palette = pheno_color_palette, line_vals = line_vals, gen_vals = gen_vals, show_mean_line = show_mean_line)
+  title(main = "Phenotype", cex.main = 0.95, font.main = 1)
+
+  gen_heatmap(geno_long, breaks, col = "teal", zlim = geno_zlim, zero_col = zero_col, x_label_gens = x_label_gens, x_label_text = x_label_text, color_palette = geno_color_palette, line_vals = line_vals, gen_vals = gen_vals, show_mean_line = show_mean_line)
+  title(main = "Genotype", cex.main = 0.95, font.main = 1)
+
+  invisible(list(
+    pheno_long = pheno_long,
+    geno_long = geno_long
+  ))
+}
+
+```
+
+```{r}
+
+# integer-named value columns
+.value_cols_int <- function(df) grep("^[0-9]+$", names(df), value = TRUE)
+
+# compute binned proportions per-rep and their across-rep mean
+.binned_props_for_filter <- function(df, filter, generation, breaks) {
+  d <- df
+  if (!is.null(generation) && "generation" %in% names(d)) {
+    # if generation is a range vector of length 2, keep rows in that range; if single value, keep rows equal to it
+    if (length(generation) == 2) {
+      d <- d[d$generation >= generation[1] & d$generation <= generation[2], , drop = FALSE]
+    } else {
+      d <- d[d$generation == generation, , drop = FALSE]
+    }
+  }
+  if (length(filter)) {
+    for (nm in names(filter)) if (nm %in% names(d)) d <- d[d[[nm]] == filter[[nm]], , drop = FALSE]
+  }
+  if (nrow(d) == 0) stop("No rows after applying generation/filter.")
+
+  vcols <- .value_cols_int(d)
+  if (!length(vcols)) stop("No integer-named value columns found.")
+
+  breaks <- sort(as.numeric(breaks))
+  x_min <- min(breaks); x_max <- max(breaks)
+  mids  <- (breaks[-1] + breaks[-length(breaks)]) / 2
+
+  reps <- sort(unique(d$rep))
+  M <- matrix(NA_real_, nrow = length(reps), ncol = length(mids))
+
+  for (i in seq_along(reps)) {
+    dr <- d[d$rep == reps[i], , drop = FALSE]
+    vals <- suppressWarnings(as.numeric(unlist(dr[, vcols, drop = FALSE], use.names = FALSE)))
+    vals <- vals[is.finite(vals) & vals >= x_min & vals <= x_max]
+    if (!length(vals)) next
+    h <- hist(vals, breaks = breaks, plot = FALSE, include.lowest = TRUE, right = FALSE)
+    prop <- h$counts / sum(h$counts)              # proportions (sum to 1 within range)
+    M[i, ] <- prop
+  }
+
+  list(mid = mids, mat = M, mean_prop = colMeans(M, na.rm = TRUE))
+}
+
+# --- main: plot histogram "lines" (across-rep mean), optional per-rep fades --
+plot_hist_lines_multi <- function(
+  df,
+  filters,                           # list of filter lists: list(f1, f2, ...)
+  generation,
+  breaks,                            # numeric vector of bin edges (shared by all)
+  labels = list(title = "Binned distributions", x = "Value", y = "Proportion"),
+  cols = NULL,                       # colors per filter
+  lwd = 4,
+  show_rep = FALSE,                  # faded per-rep lines behind the mean
+  rep_alpha = 0.2,
+  rep_lwd = 1,
+  add = FALSE,                    # add to existing plot?
+  ymax = NULL
+) {
+  k <- length(filters)
+  if (is.null(cols)) cols <- grDevices::hcl.colors(k, "Dark 2", rev = FALSE)
+
+  # compute first, plot after (so y-limits fit all)
+  series <- vector("list", k)
+  for (i in seq_len(k)) {
+    series[[i]] <- .binned_props_for_filter(df, filters[[i]], generation, breaks)
+  }
+
+  mids <- series[[1]]$mid
+  if(is.null(ymax)){
+    ymax <- max(vapply(series, function(s) max(s$mean_prop, na.rm = TRUE), 0), na.rm = TRUE)
+    if (!is.finite(ymax) || ymax <= 0) ymax <- 1
+  }
+  if (!add) {
+    plot(mids, series[[1]]$mean_prop, type = "n",
+         xlab = labels$x, ylab = labels$y, main = labels$title,
+         xlim = range(mids), ylim = c(0, 1.05 * ymax))
+  }
+
+  for (i in seq_len(k)) {
+    si <- series[[i]]
+    if (isTRUE(show_rep)) {
+      rep_col <- grDevices::adjustcolor(cols[i], rep_alpha)
+      for (r in seq_len(nrow(si$mat))) {
+        yi <- si$mat[r, ]
+        if (all(!is.finite(yi))) next
+        lines(mids, yi, col = rep_col, lwd = rep_lwd)
+      }
+    }
+    lines(mids, si$mean_prop, col = cols[i], lwd = lwd)
+  }
+
+  invisible(series)
+}
+
+# integer-named value columns
+.value_cols_int <- function(df) grep("^[0-9]+$", names(df), value = TRUE)
+
+# # per-replicate variance decomposition, then average across replicates
+# .var_decomp_for_filter <- function(df, filter, generation) {
+#   d <- df
+
+#   if (!is.null(generation) && "generation" %in% names(d)) {
+#     if (length(generation) == 2) {
+#       d <- d[d$generation >= generation[1] & d$generation <= generation[2], , drop = FALSE]
+#     } else {
+#       d <- d[d$generation == generation, , drop = FALSE]
+#     }
+#   }
+
+#   if (length(filter)) {
+#     for (nm in names(filter)) {
+#       if (nm %in% names(d)) d <- d[d[[nm]] == filter[[nm]], , drop = FALSE]
+#     }
+#   }
+
+#   if (nrow(d) == 0) stop("No rows after applying generation/filter.")
+
+#   vcols <- .value_cols_int(d)
+#   if (!length(vcols)) stop("No integer-named value columns found.")
+
+#   reps <- sort(unique(d$rep))
+
+#   out <- data.frame(
+#     rep = reps,
+#     var_total = NA_real_,
+#     var_within = NA_real_,
+#     var_between = NA_real_
+#   )
+
+#   for (i in seq_along(reps)) {
+#     dr <- d[d$rep == reps[i], , drop = FALSE]
+
+#     vals <- suppressWarnings(as.numeric(unlist(dr[, vcols, drop = FALSE], use.names = FALSE)))
+#     vals <- vals[is.finite(vals)]
+
+#     if (length(vals) < 2) next
+
+#     vt <- var(vals)
+
+#     # two-mode decomposition using kmeans
+#     set.seed(1)
+#     km <- tryCatch(kmeans(vals, centers = 2, nstart = 20), error = function(e) NULL)
+#     if (is.null(km)) next
+
+#     g1 <- vals[km$cluster == 1]
+#     g2 <- vals[km$cluster == 2]
+
+#     if (length(g1) < 2 || length(g2) < 2) next
+
+#     p1 <- length(g1) / length(vals)
+#     p2 <- length(g2) / length(vals)
+
+#     mu1 <- mean(g1)
+#     mu2 <- mean(g2)
+
+#     v1 <- var(g1)
+#     v2 <- var(g2)
+
+#     vw <- p1 * v1 + p2 * v2
+#     vb <- p1 * p2 * (mu1 - mu2)^2
+
+#     out$var_total[i]   <- vt
+#     out$var_within[i]  <- vw
+#     out$var_between[i] <- vb
+#   }
+
+#   list(
+#     per_rep = out,
+#     mean_within  = mean(out$var_within,  na.rm = TRUE),
+#     mean_between = mean(out$var_between, na.rm = TRUE),
+#     mean_total   = mean(out$var_total,   na.rm = TRUE)
+#   )
+# }
+
+```

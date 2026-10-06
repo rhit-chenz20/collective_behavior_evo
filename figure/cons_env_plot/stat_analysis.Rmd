@@ -1,0 +1,1500 @@
+---
+title: "statistical comparison of fit, ave and ext during burn-in"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+# parameters
+```{r setup, include=FALSE}
+dataset_name <- "cons_env_data"
+date <- "10_13_2026"
+
+# set these once for your machine / project
+analysis_root    <- "figure/cons_env_plot"
+base_plot_folder <- file.path("figure/plots", date)
+r_data_folder    <- file.path("figure", "r_data", dataset_name)
+
+library(ggplot2)
+library(MetBrewer)
+
+if (!dir.exists(base_plot_folder)) {
+  dir.create(base_plot_folder, recursive = TRUE, showWarnings = FALSE)
+}
+
+met_brewer_pallete <- "Austria"  # color pattern for lines
+
+burnin_end <- 10000               # only ticks < burnin_end are used (shift_size irrelevant here)
+n_last     <- 25                  # number of final recorded time points for the "last25" summaries
+n_boot     <- 10000               # bootstrap resamples
+models     <- c("ave", "fit", "ext")
+model_cols <- setNames(met.brewer(name = met_brewer_pallete, n = 3, type = "discrete"), models)
+set.seed(20260928)                # makes bootstrap CIs reproducible
+
+# which trait to analyse: "z" = phenotype (z_sd, z_mean), "g" = genotype (g_sd, g_mean).
+# Set this and re-run the whole file; outputs are prefixed with the trait so the
+# phenotype and genotype results do not overwrite each other.
+trait      <- "g"
+sd_col     <- paste0(trait, "_sd")
+mean_col   <- paste0(trait, "_mean")
+trait_word <- c(z = "phenotypic", g = "genotypic")[[trait]]
+Trait_word <- c(z = "Phenotypic", g = "Genotypic")[[trait]]
+out_path   <- function(name) file.path(base_plot_folder, paste0(trait, "_", name))
+```
+
+# load data (skipped if cons_data_df is already in the environment)
+<!-- ```{r}
+if (!exists("cons_data_df")) {
+  cons_data_df <- readRDS(file.path(r_data_folder, "data_summary.rds"))
+}
+``` -->
+
+# prepare burn-in data: one trajectory per run
+```{r}
+# Accept either "ticks" or "tick" as the generation column.
+tick_col <- if ("ticks" %in% names(cons_data_df)) "ticks" else "tick"
+
+burn_df <- cons_data_df[cons_data_df[[tick_col]] < burnin_end & cons_data_df$reg %in% models,
+                        c(tick_col, "psi", "n", "reg", "rep", "shift_size", mean_col, sd_col)]
+names(burn_df)[1] <- "tick"
+
+# A run is one psi/n/reg/rep combination. Before the shift, shift_size does not matter,
+# so keep a single shift_size per run; otherwise the same burn-in would be counted
+# several times and inflate n.
+run_key <- interaction(burn_df$psi, burn_df$n, burn_df$reg, burn_df$rep, drop = TRUE)
+keep_sz <- ave(burn_df$shift_size, run_key, FUN = function(x) min(x, na.rm = TRUE))
+burn_df <- burn_df[burn_df$shift_size == keep_sz, ]
+burn_df <- burn_df[!duplicated(burn_df[c("psi", "n", "reg", "rep", "tick")]), ]
+
+burn_df$model     <- factor(burn_df$reg, levels = models)
+burn_df$run       <- paste0(burn_df$reg, "_psi", burn_df$psi, "_n", burn_df$n, "_rep", burn_df$rep)
+burn_df$param_set <- paste0("psi = ", burn_df$psi, ", n = ", burn_df$n)
+burn_df <- burn_df[order(burn_df$run, burn_df$tick), ]
+```
+
+# 1. burn-in diagnostic plots
+```{r}
+# One line per run, colored by model; facets separate psi (columns) and n (rows)
+# so that runs from different parameter sets are not overlaid.
+plot_burnin <- function(df, yvar, ylab, file) {
+  p <- ggplot(df, aes(x = tick, y = .data[[yvar]], group = run, color = model)) +
+    geom_line(alpha = 0.4, linewidth = 0.3) +
+    facet_grid(n ~ psi, labeller = label_both) +
+    scale_color_manual(values = model_cols) +
+    labs(x = "Generation", y = ylab, color = "Model") +
+    theme_bw()
+  ggsave(file, p, width = 10, height = 6, dpi = 300)
+  p
+}
+
+plot_burnin(burn_df, sd_col,   paste("Population", trait_word, "SD"),
+            file.path(base_plot_folder, paste0("burnin_", sd_col, ".pdf")))
+plot_burnin(burn_df, mean_col, paste("Population", trait_word, "mean"),
+            file.path(base_plot_folder, paste0("burnin_", mean_col, ".pdf")))
+```
+
+# 2. per-run summary table
+```{r}
+# Collapse each run's trajectory to single numbers: from here on the run is the
+# unit of analysis, never the generation.
+summarize_run <- function(d) {
+  last <- tail(d, n_last)   # d is sorted by tick
+  data.frame(
+    model            = as.character(d$model[1]),
+    run              = d$run[1],
+    mean_sd_all      = mean(d[[sd_col]],      na.rm = TRUE),
+    mean_sd_last25   = mean(last[[sd_col]],   na.rm = TRUE),
+    mean_mean_all    = mean(d[[mean_col]],    na.rm = TRUE),
+    mean_mean_last25 = mean(last[[mean_col]], na.rm = TRUE),
+    psi              = d$psi[1],
+    n                = d$n[1],
+    rep              = d$rep[1],
+    param_set        = d$param_set[1],
+    n_timepoints     = nrow(d)
+  )
+}
+run_df <- do.call(rbind, lapply(split(burn_df, burn_df$run), summarize_run))
+run_df <- run_df[order(run_df$psi, run_df$n, match(run_df$model, models), run_df$rep), ]
+rownames(run_df) <- NULL
+
+# Sanity check: every run should have 50 recorded time points.
+if (any(run_df$n_timepoints != 50)) {
+  warning("Some runs do not have 50 time points: ",
+          paste(unique(run_df$n_timepoints), collapse = ", "))
+}
+
+write.csv(run_df, out_path("per_run_summary.csv"), row.names = FALSE)
+print(run_df, row.names = FALSE)
+```
+
+# 3. model comparison on per-run values
+```{r}
+# Comparisons are made within each psi/n parameter set, so model differences are
+# not confounded with parameter differences.
+metrics    <- c("mean_sd_all", "mean_sd_last25", "mean_mean_all", "mean_mean_last25")
+sd_metrics <- c("mean_sd_all", "mean_sd_last25")   # bootstrap diff/ratio and CV are for SD only
+model_pairs <- list(c("fit", "ave"), c("fit", "ext"), c("ave", "ext"))  # each pair is (A, B)
+
+# Bootstrap mean(B) - mean(A) and mean(B) / mean(A) by resampling runs within each model.
+boot_diff_ratio <- function(a, b, n_boot) {
+  # index-based resampling (sample(x) misbehaves when length(x) == 1)
+  ma <- colMeans(matrix(a[sample.int(length(a), length(a) * n_boot, replace = TRUE)], nrow = length(a)))
+  mb <- colMeans(matrix(b[sample.int(length(b), length(b) * n_boot, replace = TRUE)], nrow = length(b)))
+  c(diff_lo  = unname(quantile(mb - ma, 0.025)), diff_hi  = unname(quantile(mb - ma, 0.975)),
+    ratio_lo = unname(quantile(mb / ma, 0.025)), ratio_hi = unname(quantile(mb / ma, 0.975)),
+    # 90% CI: used for the equivalence classification (TOST at alpha = 0.05)
+    ratio_lo90 = unname(quantile(mb / ma, 0.05)), ratio_hi90 = unname(quantile(mb / ma, 0.95)))
+}
+
+group_list <- list(); anova_list <- list(); pair_list <- list()
+
+for (ps in unique(run_df$param_set)) {
+  sub <- run_df[run_df$param_set == ps, ]
+  sub$model <- factor(sub$model, levels = intersect(models, sub$model))
+
+  for (m in metrics) {
+    # (a) group means, SDs, n and, for SD metrics, CV of the per-run SD
+    for (g in levels(sub$model)) {
+      x <- sub[[m]][sub$model == g]
+      group_list[[length(group_list) + 1]] <- data.frame(
+        param_set = ps, metric = m, model = g, n_runs = length(x),
+        mean = mean(x), sd = sd(x),
+        cv = if (m %in% sd_metrics) sd(x) / mean(x) else NA
+      )
+    }
+
+    # (b) one-way ANOVA across models (runs as replicates)
+    if (nlevels(sub$model) >= 2) {
+      tab <- summary(aov(sub[[m]] ~ sub$model))[[1]]
+      anova_list[[length(anova_list) + 1]] <- data.frame(
+        param_set = ps, metric = m,
+        F = tab[1, "F value"], df_model = tab[1, "Df"], df_resid = tab[2, "Df"],
+        p = tab[1, "Pr(>F)"]
+      )
+    }
+
+    # (c) pairwise Welch t-tests, plus bootstrap diff/ratio for SD metrics
+    for (pr in model_pairs) {
+      a <- sub[[m]][sub$model == pr[1]]
+      b <- sub[[m]][sub$model == pr[2]]
+      if (length(a) < 2 || length(b) < 2) next
+      tt <- tryCatch(t.test(b, a, var.equal = FALSE), error = function(e) NULL)
+      row <- data.frame(
+        param_set = ps, metric = m, A = pr[1], B = pr[2],
+        mean_A = mean(a), mean_B = mean(b),
+        diff = mean(b) - mean(a), diff_lo = NA, diff_hi = NA,
+        ratio = NA, ratio_lo = NA, ratio_hi = NA, ratio_lo90 = NA, ratio_hi90 = NA,
+        welch_t  = if (is.null(tt)) NA else unname(tt$statistic),
+        welch_df = if (is.null(tt)) NA else unname(tt$parameter),
+        welch_p  = if (is.null(tt)) NA else tt$p.value
+      )
+      if (m %in% sd_metrics) {
+        ci <- boot_diff_ratio(a, b, n_boot)
+        row$ratio <- mean(b) / mean(a)
+        row[names(ci)] <- ci
+      }
+      pair_list[[length(pair_list) + 1]] <- row
+    }
+  }
+}
+
+group_stats_df <- do.call(rbind, group_list)
+anova_df       <- do.call(rbind, anova_list)
+pairwise_df    <- do.call(rbind, pair_list)
+
+# Many tests are run (parameter sets x metrics x pairs): add Holm-adjusted p-values
+# within each metric so the family-wise error rate is controlled.
+anova_df$p_holm       <- ave(anova_df$p,          anova_df$metric,    FUN = function(p) p.adjust(p, "holm"))
+pairwise_df$welch_p_holm <- ave(pairwise_df$welch_p, pairwise_df$metric, FUN = function(p) p.adjust(p, "holm"))
+
+write.csv(group_stats_df, out_path("model_group_stats.csv"), row.names = FALSE)
+write.csv(anova_df,       out_path("model_anova.csv"),       row.names = FALSE)
+write.csv(pairwise_df,    out_path("model_pairwise.csv"),    row.names = FALSE)
+```
+
+# 4. clean, labeled summary
+```{r}
+fmt   <- function(x, d = 4) ifelse(is.na(x), "NA", formatC(signif(x, d), format = "g", digits = d))
+# returns "= 0.0123" or "< 1e-4" so it reads correctly after "p"
+fmt_p <- function(p) ifelse(is.na(p), "= NA", ifelse(p < 1e-4, "< 1e-4", paste("=", formatC(p, format = "f", digits = 4))))
+metric_labels <- c(
+  mean_sd_all      = paste(Trait_word, "SD, averaged over all 50 time points"),
+  mean_sd_last25   = paste(Trait_word, "SD, averaged over last 25 time points"),
+  mean_mean_all    = paste(Trait_word, "mean, averaged over all 50 time points"),
+  mean_mean_last25 = paste(Trait_word, "mean, averaged over last 25 time points")
+)
+
+report <- c(
+  "==================================================================",
+  paste0(" MODEL COMPARISON (", trait_word, "): fit vs ave vs ext (burn-in, generation < 10000)"),
+  "==================================================================",
+  " Unit of analysis: one run (psi, n, reg, rep). Each run is reduced to",
+  " one value per metric before any test; generations are never treated",
+  " as independent observations.",
+  sprintf(" Bootstrap: %d resamples of runs within each model, percentile 95%% CI.", n_boot),
+  " Pairwise contrasts are B vs A: diff = mean(B) - mean(A), ratio = mean(B)/mean(A).",
+  " p_holm = Holm-adjusted across all parameter sets/pairs for that metric.",
+  ""
+)
+
+for (ps in unique(run_df$param_set)) {
+  report <- c(report, "------------------------------------------------------------------",
+              paste0(" PARAMETER SET: ", ps),
+              "------------------------------------------------------------------")
+  for (m in metrics) {
+    report <- c(report, "", paste0(" [", metric_labels[[m]], "]"))
+
+    # group stats
+    gs <- group_stats_df[group_stats_df$param_set == ps & group_stats_df$metric == m, ]
+    for (i in seq_len(nrow(gs))) {
+      report <- c(report, sprintf("   %-4s n = %3d   mean = %-10s sd = %-10s%s",
+                                  gs$model[i], gs$n_runs[i], fmt(gs$mean[i]), fmt(gs$sd[i]),
+                                  if (m %in% sd_metrics) paste0(" CV = ", fmt(gs$cv[i])) else ""))
+    }
+
+    # ANOVA
+    an <- anova_df[anova_df$param_set == ps & anova_df$metric == m, ]
+    if (nrow(an) == 1) {
+      report <- c(report, sprintf("   One-way ANOVA: F(%d, %d) = %s, p %s (p_holm %s)",
+                                  an$df_model, an$df_resid, fmt(an$F), fmt_p(an$p), fmt_p(an$p_holm)))
+    }
+
+    # pairwise
+    pw <- pairwise_df[pairwise_df$param_set == ps & pairwise_df$metric == m, ]
+    for (i in seq_len(nrow(pw))) {
+      line <- sprintf("   %s vs %s: diff = %s", pw$B[i], pw$A[i], fmt(pw$diff[i]))
+      if (m %in% sd_metrics) {
+        line <- paste0(line, sprintf(" [%s, %s]; ratio = %s [%s, %s]",
+                                     fmt(pw$diff_lo[i]), fmt(pw$diff_hi[i]),
+                                     fmt(pw$ratio[i]), fmt(pw$ratio_lo[i]), fmt(pw$ratio_hi[i])))
+      }
+      line <- paste0(line, sprintf("; Welch t(%s) = %s, p %s (p_holm %s)",
+                                   fmt(pw$welch_df[i], 3), fmt(pw$welch_t[i]),
+                                   fmt_p(pw$welch_p[i]), fmt_p(pw$welch_p_holm[i])))
+      report <- c(report, line)
+    }
+  }
+  report <- c(report, "")
+}
+
+cat(report, sep = "\n")
+writeLines(report, out_path("model_comparison_summary.txt"))
+```
+
+# 5. effect-size report: SD ratio heatmaps + equivalence classification
+```{r}
+heat_label_col <- "grey15"
+
+# The narrative is built on the SD ratio (B/A) and its bootstrap CI, not on p-values.
+# Equivalence margin: an SD ratio within +/-5% is treated as biologically negligible.
+# Classification uses the 90% CI, which is the formal TOST at alpha = 0.05
+# (equivalent = both one-sided tests reject). The 95% CI is reported alongside.
+equiv_margin <- c(0.95, 1.05)
+heat_pairs   <- c("ave / fit", "ext / fit")   # panels shown in the heatmap and narrative
+
+classify_equiv <- function(lo, hi, margin) {
+  ifelse(is.na(lo) | is.na(hi), NA,
+  ifelse(lo >= margin[1] & hi <= margin[2], "equivalent",   # CI fully inside margin
+  ifelse(hi <  margin[1] | lo >  margin[2], "different",    # CI fully outside margin
+                                            "inconclusive")))
+}
+
+# One row per parameter set x SD metric x pair, with psi and n as numbers for plotting.
+ratio_df <- pairwise_df[pairwise_df$metric %in% sd_metrics, ]
+ratio_df <- merge(ratio_df, unique(run_df[c("param_set", "psi", "n")]), by = "param_set")
+ratio_df$pair  <- paste(ratio_df$B, "/", ratio_df$A)
+ratio_df$class <- classify_equiv(ratio_df$ratio_lo90, ratio_df$ratio_hi90, equiv_margin)
+ratio_df <- ratio_df[order(ratio_df$metric, ratio_df$pair, ratio_df$psi, ratio_df$n), ]
+write.csv(ratio_df[c("metric", "pair", "psi", "n", "ratio", "ratio_lo90", "ratio_hi90",
+                     "ratio_lo", "ratio_hi", "class")],
+          out_path("sd_ratio_equivalence.csv"), row.names = FALSE)
+
+# Heatmap: psi x n, one panel per pair. Fill is log2(ratio) on a diverging scale
+# centered on 1, so 0.9 and 1.11 get equally strong color. Each cell is labeled with
+# the ratio and its class (E = equivalent, D = different, ? = inconclusive).
+class_code <- c(equivalent = "E", different = "D", inconclusive = "?")
+plot_ratio_heatmap <- function(m, file) {
+  d <- ratio_df[ratio_df$metric == m & ratio_df$pair %in% heat_pairs, ]
+  d$label <- sprintf("%.2f\n%s", d$ratio, class_code[d$class])
+  lim <- max(abs(log2(d$ratio)), log2(1.10), na.rm = TRUE)
+  brk <- c(0.8, 0.9, 0.95, 1, 1.05, 1.1, 1.25)
+  brk <- brk[abs(log2(brk)) <= lim]
+  p <- ggplot(d, aes(x = factor(n), y = factor(psi), fill = log2(ratio))) +
+    geom_tile(color = "white", linewidth = 0.6) +
+    geom_text(aes(label = label), size = 2.3, lineheight = 0.85, color = heat_label_col) +
+    facet_wrap(~ pair) +
+    scale_fill_gradient2(low = "#4575b4", mid = "#f0efec", high = "#d73027", midpoint = 0,
+                         limits = c(-lim, lim), breaks = log2(brk), labels = brk,
+                         name = "SD ratio") +
+    labs(x = "n", y = expression(psi),
+         title = paste0("Ratio of ", trait_word, " SD between models (",
+                        sub(".*SD, averaged", "averaged", metric_labels[[m]]), ")"),
+         caption = sprintf(paste("E = equivalent, D = different, ? = inconclusive;",
+                                 "90%% bootstrap CI vs margin [%.2f, %.2f]"),
+                           equiv_margin[1], equiv_margin[2])) +
+    theme_minimal(base_size = 10) +
+    theme(panel.grid = element_blank())
+  ggsave(file, p, width = 11, height = 6, dpi = 300)
+  p
+}
+for (m in sd_metrics) {
+  plot_ratio_heatmap(m, out_path(paste0("sd_ratio_heatmap_", m, ".pdf")))
+}
+
+# Separate version: one heatmap per pair, each with its own color bar, because the
+# pairs span very different ranges (ext/fit up to ~20x, ave/fit under ~2x); a shared
+# scale washes out the ave/fit pattern. Each pair gets its own PNG, and all pairs
+# for a metric are also written as pages of one PDF.
+# Generic psi x n ratio heatmap (d needs columns psi, n, ratio, class); also used in section 6.
+ratio_heatmap <- function(d, title, fill_name = "SD ratio") {
+  d$label <- sprintf("%.2f\n%s", d$ratio, class_code[d$class])
+  # color limits fitted to this plot's range (log scale), always spanning the
+  # equivalence margin; 1 stays the neutral midpoint
+  lims <- c(min(log2(d$ratio), log2(equiv_margin[1]), na.rm = TRUE),
+            max(log2(d$ratio), log2(equiv_margin[2]), na.rm = TRUE))
+  lim  <- max(abs(lims))
+  # round-number ticks: coarse for large ranges (e.g. ext/fit ~20x), fine for small ones
+  brk <- if (lim > log2(6)) c(0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 20, 50, 100) else
+         if (lim > log2(1.3)) c(0.25, 0.5, 0.67, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 2, 3, 4) else
+           c(0.8, 0.9, 0.95, 1, 1.05, 1.1, 1.25)
+  brk <- brk[log2(brk) >= lims[1] & log2(brk) <= lims[2]]
+  ggplot(d, aes(x = factor(n), y = factor(psi), fill = log2(ratio))) +
+    geom_tile(color = "white", linewidth = 0.6) +
+    geom_text(aes(label = label), size = 2.6, lineheight = 0.85, color = heat_label_col) +
+    scale_fill_gradient2(low = "#4575b4", mid = "#f0efec", high = "#d73027", midpoint = 0,
+                         limits = lims, breaks = log2(brk),
+                         labels = brk, name = fill_name) +
+    labs(x = "n", y = expression(psi), title = title,
+         caption = sprintf(paste("E = equivalent, D = different, ? = inconclusive;",
+                                 "90%% bootstrap CI vs margin [%.2f, %.2f]"),
+                           equiv_margin[1], equiv_margin[2])) +
+    theme_minimal(base_size = 10) +
+    theme(panel.grid = element_blank())
+}
+
+plot_ratio_heatmap_single <- function(m, pr) {
+  d <- ratio_df[ratio_df$metric == m & ratio_df$pair == pr, ]
+  ratio_heatmap(d, paste0(Trait_word, " SD ratio ", pr, " (",
+                          sub(".*SD, averaged", "averaged", metric_labels[[m]]), ")"))
+}
+
+for (m in sd_metrics) {
+  plots <- lapply(heat_pairs, function(pr) plot_ratio_heatmap_single(m, pr))
+  for (i in seq_along(heat_pairs)) {
+    pair_tag <- gsub(" / ", "_over_", heat_pairs[i])
+    ggsave(out_path(paste0("sd_ratio_heatmap_", m, "_", pair_tag, ".pdf")),
+           plots[[i]], width = 7, height = 6, dpi = 300)
+  }
+  pdf(out_path(paste0("sd_ratio_heatmap_", m, "_by_pair.pdf")), width = 7, height = 6)
+  for (p in plots) print(p)   # one page per pair
+  dev.off()
+}
+```
+
+```{r}
+# Text report: effect sizes and equivalence first, Holm-corrected tests as a supplement.
+fmt_ci <- function(r, lo, hi) sprintf("%.3f [%.3f, %.3f]", r, lo, hi)
+
+eff <- c(
+  "==================================================================",
+  paste0(" ", toupper(trait_word), " SD RATIOS BETWEEN MODELS (burn-in, generation < 10000)"),
+  "==================================================================",
+  paste0(" Effect size: ratio of mean per-run ", trait_word, " SD, B / A, within each (psi, n)."),
+  " Unit of analysis: one run; CIs from bootstrapping runs within each model",
+  sprintf(" (%d resamples).", n_boot),
+  sprintf(" Equivalence margin: SD ratio in [%.2f, %.2f].", equiv_margin[1], equiv_margin[2]),
+  " Classification uses the 90% CI (TOST, alpha = 0.05):",
+  "   equivalent   = 90% CI fully inside the margin",
+  "   different    = 90% CI fully outside the margin",
+  "   inconclusive = otherwise",
+  " Format: ratio [90% CI] [95% CI].",
+  ""
+)
+
+for (m in sd_metrics) {
+  eff <- c(eff, "------------------------------------------------------------------",
+           paste0(" ", metric_labels[[m]]),
+           "------------------------------------------------------------------")
+  for (pr in heat_pairs) {
+    d <- ratio_df[ratio_df$metric == m & ratio_df$pair == pr, ]
+    cnt <- table(factor(d$class, levels = names(class_code)))
+    eff <- c(eff, "", sprintf(" %s: equivalent %d, different %d, inconclusive %d (of %d parameter sets)",
+                              pr, cnt[["equivalent"]], cnt[["different"]], cnt[["inconclusive"]], nrow(d)))
+
+    # Parameter sets that are not equivalent, largest departure from 1 first.
+    ex <- d[d$class != "equivalent", ]
+    ex <- ex[order(-abs(log(ex$ratio))), ]
+    if (nrow(ex) > 0) {
+      eff <- c(eff, "   Not equivalent (largest effect first):")
+      eff <- c(eff, sprintf("     psi = %-5s n = %-4s %s %s  %s",
+                            ex$psi, ex$n,
+                            fmt_ci(ex$ratio, ex$ratio_lo90, ex$ratio_hi90),
+                            sprintf("[%.3f, %.3f]", ex$ratio_lo, ex$ratio_hi),
+                            ex$class))
+    }
+
+    # Compact psi x n grid of ratio + class code, same layout as the heatmap.
+    grid <- tapply(sprintf("%.2f%s", d$ratio, class_code[d$class]), list(d$psi, d$n), identity)
+    grid[is.na(grid)] <- "-"
+    eff <- c(eff, "   Grid (rows psi, columns n; E/D/? = class):",
+             paste0("     ", capture.output(print(noquote(grid)))))
+  }
+  eff <- c(eff, "")
+}
+
+# Supplementary: formal tests with Holm correction (all pairs, all metrics).
+supp <- c(
+  "==================================================================",
+  " SUPPLEMENTARY: FORMAL TESTS (Holm-adjusted within each metric)",
+  "==================================================================",
+  "",
+  " S1. One-way ANOVA across fit / ave / ext"
+)
+an <- anova_df[order(anova_df$metric, anova_df$param_set), ]
+supp <- c(supp, sprintf("   %-16s %-20s F(%d, %d) = %-9s p %-9s p_holm %s",
+                        an$metric, an$param_set, an$df_model, an$df_resid,
+                        fmt(an$F), fmt_p(an$p), fmt_p(an$p_holm)))
+supp <- c(supp, "", " S2. Pairwise Welch t-tests (B vs A)")
+pw <- pairwise_df[order(pairwise_df$metric, pairwise_df$param_set, pairwise_df$B, pairwise_df$A), ]
+supp <- c(supp, sprintf("   %-16s %-20s %s vs %s: t(%s) = %-9s p %-9s p_holm %s",
+                        pw$metric, pw$param_set, pw$B, pw$A,
+                        fmt(pw$welch_df, 3), fmt(pw$welch_t),
+                        fmt_p(pw$welch_p), fmt_p(pw$welch_p_holm)))
+
+cat(eff, supp, sep = "\n")
+writeLines(c(eff, supp), out_path("sd_ratio_report.txt"))
+```
+
+# 6. genetic variance (always uses g_sd, independent of `trait`)
+```{r}
+# Settings for this section. Results go to their own folder inside base_plot_folder.
+gv_folder <- file.path(base_plot_folder, "genetic_variance")
+dir.create(gv_folder, recursive = TRUE, showWarnings = FALSE)
+gv_path <- function(name) file.path(gv_folder, name)
+
+gv_window <- "all"   # per-run value from "last25" (closer to equilibrium) or "all" time points
+
+# Neutral expectation V_g = 2 * N_e * V_m (diploid, additive), from the SLiM scripts:
+# N = 1000; U = 0.03 mutations per haploid genome per generation; effect a = +/- sqrt(Exp(1)),
+# so E[a^2] = 1 and V_m = 2 * U * E[a^2] per diploid per generation.
+# N_e = N assumes an ideal Wright-Fisher population; selection on the group can lower it.
+N_e <- 1000
+V_m <- 2 * 0.03 * 1
+V_g_neutral <- 2 * N_e * V_m
+
+# Per-run genetic values: runs are psi/n/reg/rep; one shift_size kept per run (see above).
+gv_df <- cons_data_df[cons_data_df[[tick_col]] < burnin_end & cons_data_df$reg %in% models,
+                      c(tick_col, "psi", "n", "reg", "rep", "shift_size", "g_sd")]
+names(gv_df)[1] <- "tick"
+gv_key  <- interaction(gv_df$psi, gv_df$n, gv_df$reg, gv_df$rep, drop = TRUE)
+gv_df   <- gv_df[gv_df$shift_size == ave(gv_df$shift_size, gv_key, FUN = function(x) min(x, na.rm = TRUE)), ]
+gv_df   <- gv_df[!duplicated(gv_df[c("psi", "n", "reg", "rep", "tick")]), ]
+gv_df   <- gv_df[order(gv_df$reg, gv_df$psi, gv_df$n, gv_df$rep, gv_df$tick), ]
+
+gv_run <- do.call(rbind, lapply(split(gv_df, list(gv_df$reg, gv_df$psi, gv_df$n, gv_df$rep), drop = TRUE),
+  function(d) {
+    w <- if (gv_window == "last25") tail(d, n_last) else d
+    data.frame(model = d$reg[1], psi = d$psi[1], n = d$n[1], rep = d$rep[1],
+               g_sd  = mean(w$g_sd,   na.rm = TRUE),   # mean genetic SD over the window
+               g_var = mean(w$g_sd^2, na.rm = TRUE))   # mean genetic variance over the window
+  }))
+gv_run$model <- factor(gv_run$model, levels = models)
+rownames(gv_run) <- NULL
+write.csv(gv_run, gv_path("gv_per_run.csv"), row.names = FALSE)
+
+# Save one PNG per model plus a multi-page PDF with the same plots.
+save_by_model <- function(plots, stem, width = 7, height = 6) {
+  for (mdl in names(plots)) ggsave(gv_path(paste0(stem, "_", mdl, ".pdf")), plots[[mdl]],
+                                   width = width, height = height, dpi = 300)
+  pdf(gv_path(paste0(stem, "_by_model.pdf")), width = width, height = height)
+  for (p in plots) print(p)
+  dev.off()
+}
+
+# Overview: mean g_sd (+/- 95% CI across runs) vs psi, one line per n, one panel per model.
+# The dashed line is the neutral ceiling sqrt(2 N_e V_m).
+gv_sum <- aggregate(g_sd ~ model + psi + n, data = gv_run,
+                    FUN = function(x) c(m = mean(x), se = sd(x) / sqrt(length(x))))
+gv_sum <- do.call(data.frame, gv_sum)
+p_overview <- ggplot(gv_sum, aes(psi, g_sd.m, color = factor(n), group = factor(n))) +
+  geom_hline(yintercept = sqrt(V_g_neutral), linetype = "dashed", color = "grey50") +
+  geom_errorbar(aes(ymin = g_sd.m - 1.96 * g_sd.se, ymax = g_sd.m + 1.96 * g_sd.se), width = 0.01) +
+  geom_line(linewidth = 0.6) + geom_point(size = 1.5) +
+  facet_wrap(~ model) + scale_y_log10() + scale_color_viridis_d(end = 0.9) +
+  labs(x = expression(psi), y = "Genetic SD (log scale)", color = "n",
+       caption = "Mean over runs, 95% CI; dashed = neutral ceiling sqrt(2 Ne Vm)") +
+  theme_bw()
+ggsave(gv_path("g_sd_vs_psi.pdf"), p_overview, width = 11, height = 4.5, dpi = 300)
+p_overview
+```
+
+## 6.0.1 genetic SD vs psi, selected n
+```{r}
+# Same plot as g_sd_vs_psi.pdf, restricted to the n values listed here.
+n_sel <- c(2, 8, 25, 100)
+n_sel <- sort(intersect(n_sel, unique(gv_sum$n)))   # drop values not in the data
+gv_sel <- gv_sum[gv_sum$n %in% n_sel, ]
+
+p_sel_base <- ggplot(gv_sel, aes(psi, g_sd.m, group = factor(n))) +
+  geom_hline(yintercept = sqrt(V_g_neutral), linetype = "dashed", color = "grey50") +
+  geom_errorbar(aes(ymin = g_sd.m - 1.96 * g_sd.se, ymax = g_sd.m + 1.96 * g_sd.se), width = 0.01) +
+  geom_line(linewidth = 0.6) + geom_point(size = 1.5) +
+  facet_wrap(~ model) + scale_y_log10() +
+  labs(x = expression(psi), y = "Genetic SD (log scale)", color = "n",
+       caption = "Mean over runs, 95% CI; dashed = neutral ceiling sqrt(2 Ne Vm)") +
+  theme_bw()
+
+# Option A: continuous log-scale color bar, labelled at the selected n.
+p_sel_bar <- p_sel_base + aes(color = n) + labs(color = "n") +
+  scale_color_viridis_c(end = 0.9, trans = "log10", breaks = n_sel, labels = n_sel) +
+  guides(color = guide_colorbar(barwidth = unit(12, "lines"), barheight = unit(0.6, "lines"),
+                                title.vjust = 0.8)) +
+  theme(legend.position = "bottom")
+ggsave(gv_path("g_sd_vs_psi_sel_colorbar.pdf"), p_sel_bar, width = 11, height = 5)
+p_sel_bar
+
+# Option B: discrete legend as a single row below the plot.
+p_sel_row <- p_sel_base + aes(color = factor(n)) + labs(color = "n") +
+  scale_color_viridis_d(end = 0.9) +
+  guides(color = guide_legend(nrow = 1)) +
+  theme(legend.position = "bottom")
+ggsave(gv_path("g_sd_vs_psi_sel_legendrow.pdf"), p_sel_row, width = 11, height = 5)
+p_sel_row
+
+# Options C/D: the two legends above, placed inside the top of the ext panel
+# (ext is the rightmost panel; position is in plot-area fractions, top-right corner).
+legend_in_ext <- theme(legend.position = c(0.995, 0.925), legend.justification = c(1, 1),
+                       legend.direction = "horizontal",
+                       legend.background = element_rect(fill = alpha("white", 0.8), color = NA))
+p_sel_bar_in <- p_sel_bar + legend_in_ext +
+  guides(color = guide_colorbar(barwidth = unit(8, "lines"), barheight = unit(0.5, "lines"),
+                                title.vjust = 0.8))
+ggsave(gv_path("g_sd_vs_psi_sel_colorbar_inext.pdf"), p_sel_bar_in, width = 11, height = 4.5)
+p_sel_bar_in
+
+p_sel_row_in <- p_sel_row + legend_in_ext
+ggsave(gv_path("g_sd_vs_psi_sel_legendrow_inext.pdf"), p_sel_row_in, width = 11, height = 4.5)
+p_sel_row_in
+
+# Options E/F: stepped color bar with one tile per n tested in the dataset (colors
+# spread over all n, so a plotted line matches its tile), labelled only at n_sel.
+# Only the lines feed the legend, drawn as rect keys so adjacent tiles form a bar.
+n_all <- sort(unique(gv_sum$n))
+p_sel_tiles <- ggplot(gv_sel, aes(psi, g_sd.m, color = factor(n, levels = n_all), group = factor(n))) +
+  geom_hline(yintercept = sqrt(V_g_neutral), linetype = "dashed", color = "grey50") +
+  geom_errorbar(aes(ymin = g_sd.m - 1.96 * g_sd.se, ymax = g_sd.m + 1.96 * g_sd.se),
+                width = 0.01, show.legend = FALSE) +
+  geom_line(linewidth = 0.6, key_glyph = "rect") +
+  geom_point(size = 1.5, show.legend = FALSE) +
+  facet_wrap(~ model) + scale_y_log10() +
+  scale_color_viridis_d(end = 0.9, drop = FALSE,
+                        labels = function(x) ifelse(x %in% as.character(n_sel), x, "")) +
+  guides(color = guide_legend(nrow = 1, label.position = "bottom", label.hjust = 0.5,
+                              title.vjust = 0.8)) +
+  labs(x = expression(psi), y = "Genetic SD (log scale)", color = "n",
+       caption = "Mean over runs, 95% CI; dashed = neutral ceiling sqrt(2 Ne Vm)") +
+  theme_bw() +
+  theme(legend.spacing.x = unit(0, "pt"),
+        legend.key.width = unit(1.2, "lines"), legend.key.height = unit(0.6, "lines"))
+
+p_sel_tiles_bottom <- p_sel_tiles + theme(legend.position = "bottom")
+ggsave(gv_path("g_sd_vs_psi_sel_tiles.pdf"), p_sel_tiles_bottom, width = 11, height = 5)
+p_sel_tiles_bottom
+
+p_sel_tiles_in <- p_sel_tiles + legend_in_ext +
+  theme(legend.key.width = unit(0.7, "lines"), legend.key.height = unit(0.5, "lines"))
+ggsave(gv_path("g_sd_vs_psi_sel_tiles_inext.pdf"), p_sel_tiles_in, width = 11, height = 4.5)
+p_sel_tiles_in
+```
+
+## 6.1 genetic SD relative to psi = 0
+```{r}
+# Ratio mean g_sd(psi) / mean g_sd(psi = 0) within each model and n; bootstrap
+# resamples runs within each psi group. Classified E/D/? like the model ratios.
+psi0_list <- list()
+for (mdl in models) for (nn in sort(unique(gv_run$n))) {
+  sub <- gv_run[gv_run$model == mdl & gv_run$n == nn, ]
+  ref <- sub$g_sd[sub$psi == 0]
+  if (length(ref) < 2) next
+  for (ps in setdiff(sort(unique(sub$psi)), 0)) {
+    x <- sub$g_sd[sub$psi == ps]
+    if (length(x) < 2) next
+    ci <- boot_diff_ratio(ref, x, n_boot)
+    psi0_list[[length(psi0_list) + 1]] <- data.frame(
+      model = mdl, n = nn, psi = ps, ratio = mean(x) / mean(ref),
+      ratio_lo90 = ci[["ratio_lo90"]], ratio_hi90 = ci[["ratio_hi90"]],
+      ratio_lo   = ci[["ratio_lo"]],   ratio_hi   = ci[["ratio_hi"]])
+  }
+}
+psi0_df <- do.call(rbind, psi0_list)
+psi0_df$class <- classify_equiv(psi0_df$ratio_lo90, psi0_df$ratio_hi90, equiv_margin)
+write.csv(psi0_df, gv_path("g_sd_ratio_vs_psi0.csv"), row.names = FALSE)
+
+# One heatmap per model, each with its own color bar (psi = 0 is the reference row, not shown).
+psi0_plots <- setNames(lapply(models, function(mdl)
+  ratio_heatmap(psi0_df[psi0_df$model == mdl, ],
+                paste0("Genetic SD relative to psi = 0 (", mdl, ", ", gv_window, ")"),
+                fill_name = "g_sd ratio")), models)
+save_by_model(psi0_plots, "g_sd_ratio_vs_psi0_heatmap")
+```
+
+## 6.2 trend test: does g_sd increase with psi?
+```{r}
+# For each model and n (runs as units):
+#   Spearman rho between psi and per-run g_sd;
+#   Jonckheere-Terpstra test for an increasing trend across ordered psi groups
+#   (one-sided, normal approximation; exact ties are negligible for continuous g_sd);
+#   effect size = slope of log(g_sd) on psi (lm, 95% CI), also as % change per 0.1 psi.
+jt_test <- function(x, g) {
+  lv <- sort(unique(g)); ni <- as.vector(table(factor(g, levels = lv))); N <- length(x)
+  J <- 0
+  for (i in seq_along(lv)[-length(lv)]) for (j in (i + 1):length(lv)) {
+    xi <- x[g == lv[i]]; xj <- x[g == lv[j]]
+    J <- J + sum(outer(xi, xj, "<")) + 0.5 * sum(outer(xi, xj, "=="))
+  }
+  EJ <- (N^2 - sum(ni^2)) / 4
+  VJ <- (N^2 * (2 * N + 3) - sum(ni^2 * (2 * ni + 3))) / 72
+  z <- (J - EJ) / sqrt(VJ)
+  c(JT = J, z = z, p = pnorm(z, lower.tail = FALSE))
+}
+
+trend_list <- list()
+for (mdl in models) for (nn in sort(unique(gv_run$n))) {
+  sub <- gv_run[gv_run$model == mdl & gv_run$n == nn & gv_run$g_sd > 0, ]
+  if (length(unique(sub$psi)) < 3) next
+  sp  <- suppressWarnings(cor.test(sub$psi, sub$g_sd, method = "spearman", exact = FALSE))
+  jt  <- jt_test(sub$g_sd, sub$psi)
+  fit <- lm(log(g_sd) ~ psi, data = sub)
+  ci  <- confint(fit)["psi", ]
+  trend_list[[length(trend_list) + 1]] <- data.frame(
+    model = mdl, n = nn, n_runs = nrow(sub),
+    slope_log_gsd = coef(fit)[["psi"]], slope_lo = ci[[1]], slope_hi = ci[[2]],
+    pct_per_0.1psi = 100 * (exp(0.1 * coef(fit)[["psi"]]) - 1),
+    spearman_rho = unname(sp$estimate), spearman_p = sp$p.value,
+    jt_z = jt[["z"]], jt_p_increasing = jt[["p"]])
+}
+trend_df <- do.call(rbind, trend_list)
+# Holm across n within each model
+trend_df$spearman_p_holm <- ave(trend_df$spearman_p,      trend_df$model, FUN = function(p) p.adjust(p, "holm"))
+trend_df$jt_p_holm       <- ave(trend_df$jt_p_increasing, trend_df$model, FUN = function(p) p.adjust(p, "holm"))
+write.csv(trend_df, gv_path("g_sd_trend_tests.csv"), row.names = FALSE)
+```
+
+## 6.3 mechanism check: relaxed selection on own genotype
+```{r}
+# If a fraction psi of the phenotype no longer comes from own genotype, selection on
+# own genotype is weakened by (1 - psi)^2, i.e. effective Vs -> Vs / (1 - psi)^2.
+# Plot log(V_g) against x = -2 log(1 - psi) for psi < 1:
+#   slope ~ 1   -> V_g proportional to Vs (house-of-cards regime)
+#   slope ~ 0.5 -> V_g proportional to sqrt(Vs) (Gaussian / Kimura regime)
+mech <- gv_run[gv_run$psi < 1 & gv_run$g_var > 0, ]
+mech$x <- -2 * log(1 - mech$psi)
+mech$y <- log(mech$g_var)
+
+mech_list <- list()
+for (mdl in models) for (nn in sort(unique(mech$n))) {
+  sub <- mech[mech$model == mdl & mech$n == nn, ]
+  if (length(unique(sub$x)) < 2) next
+  fit <- lm(y ~ x, data = sub); ci <- confint(fit)["x", ]
+  mech_list[[length(mech_list) + 1]] <- data.frame(
+    model = mdl, n = nn, slope = coef(fit)[["x"]], slope_lo = ci[[1]], slope_hi = ci[[2]],
+    r_squared = summary(fit)$r.squared)
+}
+mech_df <- do.call(rbind, mech_list)
+write.csv(mech_df, gv_path("mechanism_slopes.csv"), row.names = FALSE)
+
+# Per-psi means over runs, with the fitted line per n and a slope-1 reference line
+# anchored at the psi = 0 mean (dashed).
+mech_mean <- aggregate(y ~ model + n + x, data = mech, FUN = mean)
+ref1 <- merge(mech_mean[mech_mean$x == 0, c("model", "n", "y")], data.frame(slope = 1))
+p_mech <- ggplot(mech, aes(x, y, color = factor(n))) +
+  geom_point(alpha = 0.15, size = 0.6) +
+  geom_point(data = mech_mean, size = 1.8) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, linewidth = 0.6) +
+  geom_abline(data = ref1, aes(intercept = y, slope = slope, color = factor(n)),
+              linetype = "dashed", linewidth = 0.4, show.legend = FALSE) +
+  facet_wrap(~ model) + scale_color_viridis_d(end = 0.9) +
+  labs(x = expression(-2 * log(1 - psi)), y = expression(log(g[sd]^2)), color = "n",
+       caption = "Small points = runs, large = mean over runs; solid = fit, dashed = slope 1 from psi = 0") +
+  theme_bw()
+ggsave(gv_path("mechanism_logVg_vs_log1mpsi.pdf"), p_mech, width = 11, height = 4.5, dpi = 300)
+p_mech
+```
+
+## 6.4 neutral ceiling at psi = 1
+```{r}
+# Observed mean V_g at psi = 1 vs the neutral expectation 2 N_e V_m, with a bootstrap
+# CI over runs. Note: at psi = 1 own genotype has no direct effect on own phenotype,
+# but in fit/ext a genotype still matters when it is the one copied, so full
+# neutrality is not guaranteed.
+neut_list <- list()
+at1 <- gv_run[gv_run$psi == 1, ]
+for (mdl in models) for (nn in sort(unique(at1$n))) {
+  v <- at1$g_var[at1$model == mdl & at1$n == nn]
+  if (length(v) < 2) next
+  bm <- colMeans(matrix(v[sample.int(length(v), length(v) * n_boot, replace = TRUE)], nrow = length(v)))
+  neut_list[[length(neut_list) + 1]] <- data.frame(
+    model = mdl, n = nn, n_runs = length(v), mean_Vg = mean(v),
+    expected_Vg = V_g_neutral, ratio = mean(v) / V_g_neutral,
+    ratio_lo = quantile(bm, 0.025, names = FALSE) / V_g_neutral,
+    ratio_hi = quantile(bm, 0.975, names = FALSE) / V_g_neutral)
+}
+neut_df <- if (length(neut_list)) do.call(rbind, neut_list) else NULL
+if (!is.null(neut_df)) write.csv(neut_df, gv_path("neutral_ceiling_psi1.csv"), row.names = FALSE)
+```
+
+## 6.5 effect of group size on genetic SD
+```{r}
+# Within each model and psi (runs as units):
+#   Kruskal-Wallis test of g_sd across n;
+#   effect size = slope of log(g_sd) on log(n) (lm, 95% CI): the % change in g_sd per doubling of n;
+#   ratio g_sd(n) / g_sd(smallest n) with bootstrap CI and E/D/? label, shown as a heatmap.
+n_ref <- min(gv_run$n)
+gs_list <- list(); nratio_list <- list()
+for (mdl in models) for (ps in sort(unique(gv_run$psi))) {
+  sub <- gv_run[gv_run$model == mdl & gv_run$psi == ps & gv_run$g_sd > 0, ]
+  if (length(unique(sub$n)) < 2) next
+  kw  <- kruskal.test(g_sd ~ factor(n), data = sub)
+  fit <- lm(log(g_sd) ~ log2(n), data = sub); ci <- confint(fit)["log2(n)", ]
+  gs_list[[length(gs_list) + 1]] <- data.frame(
+    model = mdl, psi = ps, n_runs = nrow(sub),
+    slope_log_gsd_per_log2n = coef(fit)[["log2(n)"]], slope_lo = ci[[1]], slope_hi = ci[[2]],
+    pct_per_doubling_n = 100 * (exp(coef(fit)[["log2(n)"]]) - 1),
+    kw_chisq = unname(kw$statistic), kw_df = unname(kw$parameter), kw_p = kw$p.value)
+
+  ref <- sub$g_sd[sub$n == n_ref]
+  if (length(ref) < 2) next
+  for (nn in setdiff(sort(unique(sub$n)), n_ref)) {
+    x <- sub$g_sd[sub$n == nn]
+    if (length(x) < 2) next
+    ci <- boot_diff_ratio(ref, x, n_boot)
+    nratio_list[[length(nratio_list) + 1]] <- data.frame(
+      model = mdl, psi = ps, n = nn, ratio = mean(x) / mean(ref),
+      ratio_lo90 = ci[["ratio_lo90"]], ratio_hi90 = ci[["ratio_hi90"]],
+      ratio_lo   = ci[["ratio_lo"]],   ratio_hi   = ci[["ratio_hi"]])
+  }
+}
+gs_df <- do.call(rbind, gs_list)
+gs_df$kw_p_holm <- ave(gs_df$kw_p, gs_df$model, FUN = function(p) p.adjust(p, "holm"))
+write.csv(gs_df, gv_path("group_size_tests.csv"), row.names = FALSE)
+
+nratio_df <- do.call(rbind, nratio_list)
+nratio_df$class <- classify_equiv(nratio_df$ratio_lo90, nratio_df$ratio_hi90, equiv_margin)
+write.csv(nratio_df, gv_path("g_sd_ratio_vs_smallest_n.csv"), row.names = FALSE)
+nratio_plots <- setNames(lapply(models, function(mdl)
+  ratio_heatmap(nratio_df[nratio_df$model == mdl, ],
+                paste0("Genetic SD relative to n = ", n_ref, " (", mdl, ", ", gv_window, ")"),
+                fill_name = "g_sd ratio")), models)
+save_by_model(nratio_plots, "g_sd_ratio_vs_smallest_n_heatmap")
+```
+
+## 6.6 genetic variance report
+```{r}
+f3 <- function(x) sprintf("%.3f", x)
+ci3 <- function(r, lo, hi) sprintf("%.3f [%.3f, %.3f]", r, lo, hi)
+rule <- "------------------------------------------------------------------"
+
+gv_rep <- c(
+  "==================================================================",
+  " GENETIC VARIANCE (burn-in, generation < 10000)",
+  "==================================================================",
+  sprintf(" Per-run value: mean g_sd (and mean g_sd^2) over the %s time points.", gv_window),
+  " Unit of analysis: one run. Bootstrap CIs resample runs within groups",
+  sprintf(" (%d resamples). E/D/? uses the 90%% CI vs margin [%.2f, %.2f].",
+          n_boot, equiv_margin[1], equiv_margin[2]),
+  ""
+)
+
+# 1. ratio to psi = 0
+gv_rep <- c(gv_rep, rule, " 1. Genetic SD relative to psi = 0: ratio [90% CI] [95% CI]", rule)
+for (mdl in models) {
+  d <- psi0_df[psi0_df$model == mdl, ]
+  if (!nrow(d)) next
+  cnt <- table(factor(d$class, levels = names(class_code)))
+  gv_rep <- c(gv_rep, "", sprintf(" %s: equivalent %d, different %d, inconclusive %d (of %d cells)",
+                                  mdl, cnt[["equivalent"]], cnt[["different"]], cnt[["inconclusive"]], nrow(d)))
+  grid <- tapply(sprintf("%.2f%s", d$ratio, class_code[d$class]), list(d$psi, d$n), identity)
+  grid[is.na(grid)] <- "-"
+  gv_rep <- c(gv_rep, "   Grid (rows psi, columns n):", paste0("     ", capture.output(print(noquote(grid)))))
+}
+
+# 2. trend
+gv_rep <- c(gv_rep, "", rule, " 2. Trend of g_sd with psi (per n)",
+            "    effect size: slope of log(g_sd) on psi [95% CI], % change per 0.1 psi",
+            "    tests: Spearman rho, Jonckheere-Terpstra (one-sided, increasing); Holm across n", rule)
+for (i in seq_len(nrow(trend_df))) {
+  t <- trend_df[i, ]
+  gv_rep <- c(gv_rep, sprintf("   %-4s n = %-4s slope = %s (%+.1f%% per 0.1 psi); rho = %s, p_holm %s; JT z = %s, p_holm %s",
+                              t$model, t$n, ci3(t$slope_log_gsd, t$slope_lo, t$slope_hi), t$pct_per_0.1psi,
+                              f3(t$spearman_rho), fmt_p(t$spearman_p_holm), f3(t$jt_z), fmt_p(t$jt_p_holm)))
+}
+
+# 3. mechanism
+gv_rep <- c(gv_rep, "", rule, " 3. Mechanism: slope of log(g_sd^2) on -2 log(1 - psi), psi < 1",
+            "    ~1 = V_g proportional to Vs (house of cards); ~0.5 = proportional to sqrt(Vs) (Gaussian)", rule)
+for (i in seq_len(nrow(mech_df))) {
+  t <- mech_df[i, ]
+  gv_rep <- c(gv_rep, sprintf("   %-4s n = %-4s slope = %s, R^2 = %s",
+                              t$model, t$n, ci3(t$slope, t$slope_lo, t$slope_hi), f3(t$r_squared)))
+}
+
+# 4. neutral ceiling
+gv_rep <- c(gv_rep, "", rule,
+            sprintf(" 4. Neutral ceiling at psi = 1: V_g expected = 2 Ne Vm = 2 x %g x %g = %g", N_e, V_m, V_g_neutral),
+            "    observed mean V_g / expected [95% CI]", rule)
+if (is.null(neut_df)) {
+  gv_rep <- c(gv_rep, "   no runs at psi = 1")
+} else for (i in seq_len(nrow(neut_df))) {
+  t <- neut_df[i, ]
+  gv_rep <- c(gv_rep, sprintf("   %-4s n = %-4s V_g = %-9s ratio = %s",
+                              t$model, t$n, fmt(t$mean_Vg), ci3(t$ratio, t$ratio_lo, t$ratio_hi)))
+}
+
+# 5. group size
+gv_rep <- c(gv_rep, "", rule, " 5. Effect of group size n on g_sd (within each psi)",
+            "    effect size: % change in g_sd per doubling of n [95% CI of log slope]",
+            "    test: Kruskal-Wallis across n, Holm across psi within model", rule)
+for (i in seq_len(nrow(gs_df))) {
+  t <- gs_df[i, ]
+  gv_rep <- c(gv_rep, sprintf("   %-4s psi = %-5s %+6.1f%% per doubling (log slope %s); KW chi2(%d) = %s, p_holm %s",
+                              t$model, t$psi, t$pct_per_doubling_n,
+                              ci3(t$slope_log_gsd_per_log2n, t$slope_lo, t$slope_hi),
+                              t$kw_df, fmt(t$kw_chisq), fmt_p(t$kw_p_holm)))
+}
+for (mdl in models) {
+  d <- nratio_df[nratio_df$model == mdl, ]
+  if (!nrow(d)) next
+  cnt <- table(factor(d$class, levels = names(class_code)))
+  gv_rep <- c(gv_rep, "", sprintf(" %s, g_sd(n) / g_sd(n = %s): equivalent %d, different %d, inconclusive %d (of %d cells)",
+                                  mdl, n_ref, cnt[["equivalent"]], cnt[["different"]], cnt[["inconclusive"]], nrow(d)))
+  grid <- tapply(sprintf("%.2f%s", d$ratio, class_code[d$class]), list(d$psi, d$n), identity)
+  grid[is.na(grid)] <- "-"
+  gv_rep <- c(gv_rep, "   Grid (rows psi, columns n):", paste0("     ", capture.output(print(noquote(grid)))))
+}
+
+cat(gv_rep, sep = "\n")
+writeLines(gv_rep, gv_path("genetic_variance_report.txt"))
+```
+
+# 7. phenotypic variance (always uses z_sd and g_sd, independent of `trait`)
+```{r}
+# Settings for this section. Results go to their own folder inside base_plot_folder.
+pv_folder <- file.path(base_plot_folder, "phenotypic_variance")
+dir.create(pv_folder, recursive = TRUE, showWarnings = FALSE)
+pv_path <- function(name) file.path(pv_folder, name)
+
+optimum_burnin <- 0       # optimum before the shift (SLiM: optimum = 0.0 until shift_time)
+n_mc_inds      <- 20000   # simulated individuals per prediction for the fit/ext order statistics
+
+# Per-run values over the same window as section 6 (gv_window); one shift_size per run.
+pv_df <- cons_data_df[cons_data_df[[tick_col]] < burnin_end & cons_data_df$reg %in% models,
+                      c(tick_col, "psi", "n", "reg", "rep", "shift_size", "z_sd", "g_sd", "g_mean")]
+names(pv_df)[1] <- "tick"
+pv_key <- interaction(pv_df$psi, pv_df$n, pv_df$reg, pv_df$rep, drop = TRUE)
+pv_df  <- pv_df[pv_df$shift_size == ave(pv_df$shift_size, pv_key, FUN = function(x) min(x, na.rm = TRUE)), ]
+pv_df  <- pv_df[!duplicated(pv_df[c("psi", "n", "reg", "rep", "tick")]), ]
+pv_df  <- pv_df[order(pv_df$reg, pv_df$psi, pv_df$n, pv_df$rep, pv_df$tick), ]
+
+pv_run <- do.call(rbind, lapply(split(pv_df, list(pv_df$reg, pv_df$psi, pv_df$n, pv_df$rep), drop = TRUE),
+  function(d) {
+    w <- if (gv_window == "last25") tail(d, n_last) else d
+    data.frame(model = d$reg[1], psi = d$psi[1], n = d$n[1], rep = d$rep[1],
+               z_sd  = mean(w$z_sd,   na.rm = TRUE), z_var = mean(w$z_sd^2, na.rm = TRUE),
+               g_sd  = mean(w$g_sd,   na.rm = TRUE), g_var = mean(w$g_sd^2, na.rm = TRUE),
+               g_mean = mean(w$g_mean, na.rm = TRUE))
+  }))
+pv_run$model <- factor(pv_run$model, levels = models)
+pv_run$zg_ratio <- pv_run$z_sd / pv_run$g_sd   # per-run shrinkage (<1) / amplification (>1)
+rownames(pv_run) <- NULL
+
+# Bootstrap a cell mean over runs: returns 90% and 95% percentile CIs.
+boot_mean_ci <- function(x, n_boot) {
+  bm <- colMeans(matrix(x[sample.int(length(x), length(x) * n_boot, replace = TRUE)], nrow = length(x)))
+  c(lo90 = quantile(bm, 0.05, names = FALSE), hi90 = quantile(bm, 0.95, names = FALSE),
+    lo   = quantile(bm, 0.025, names = FALSE), hi  = quantile(bm, 0.975, names = FALSE))
+}
+
+# Save one PNG per model plus a multi-page PDF with the same plots.
+save_by_model_pv <- function(plots, stem, width = 7, height = 6) {
+  for (mdl in names(plots)) ggsave(pv_path(paste0(stem, "_", mdl, ".pdf")), plots[[mdl]],
+                                   width = width, height = height, dpi = 300)
+  pdf(pv_path(paste0(stem, "_by_model.pdf")), width = width, height = height)
+  for (p in plots) print(p)
+  dev.off()
+}
+```
+
+## 7.0 phenotypic variance factor Var(P) / V_g under each social rule
+```{r}
+# Factor c such that Var(phenotype) = c * V_g, for genotypes a ~ Normal within the
+# population and random groups of size n (exact SLiM rules):
+#   ave: P_i = [(n-1)(1-psi) a_i + psi * sum(group a)] / (n-1+psi)   -> closed form
+#   fit: P_i = (1-psi) a_i + psi * a_best, best = member closest to the optimum
+#   ext: P_i = (1-psi) a_i + psi * a_ext,  ext  = member farthest from the group mean
+# fit and ext are order statistics, computed numerically with common random numbers
+# (the same standard-normal draws for every call, so predictions vary smoothly).
+# d = (g_mean - optimum) / g_sd matters only for fit.
+old_seed <- .Random.seed
+set.seed(1)
+Z_cache <- lapply(setNames(nm = sort(unique(pv_run$n))), function(nn)
+  matrix(rnorm(ceiling(n_mc_inds / nn) * nn), ncol = nn))   # rows = groups, cols = members
+.Random.seed <- old_seed   # keep the bootstrap RNG stream unchanged
+
+pheno_var_factor <- function(model, psi, n, d = 0) {
+  if (model == "ave") return((((n - 1) * (1 - psi) + psi)^2 + (n - 1) * psi^2) / (n - 1 + psi)^2)
+  A <- Z_cache[[as.character(n)]] + d
+  pick <- if (model == "fit") max.col(-abs(A), ties.method = "first") else
+                              max.col(abs(A - rowMeans(A)), ties.method = "first")
+  copied <- A[cbind(seq_len(nrow(A)), pick)]
+  var(as.vector((1 - psi) * A + psi * copied)) / var(as.vector(A))
+}
+
+# Theory grid at d = 0 (population mean on the optimum), used as reference curves.
+theory_df <- expand.grid(model = models, psi = sort(unique(pv_run$psi)), n = sort(unique(pv_run$n)),
+                         stringsAsFactors = FALSE)
+theory_df$factor <- mapply(pheno_var_factor, theory_df$model, theory_df$psi, theory_df$n)
+theory_df$sd_ratio_theory <- sqrt(theory_df$factor)
+theory_df$model <- factor(theory_df$model, levels = models)
+write.csv(theory_df, pv_path("theory_variance_factor.csv"), row.names = FALSE)
+```
+
+## 7.1 phenotypic SD relative to psi = 0
+```{r}
+# Same as 6.1 but for z_sd: mean z_sd(psi) / mean z_sd(psi = 0) within each model and n.
+pz0_list <- list()
+for (mdl in models) for (nn in sort(unique(pv_run$n))) {
+  sub <- pv_run[pv_run$model == mdl & pv_run$n == nn, ]
+  ref <- sub$z_sd[sub$psi == 0]
+  if (length(ref) < 2) next
+  for (ps in setdiff(sort(unique(sub$psi)), 0)) {
+    x <- sub$z_sd[sub$psi == ps]
+    if (length(x) < 2) next
+    ci <- boot_diff_ratio(ref, x, n_boot)
+    pz0_list[[length(pz0_list) + 1]] <- data.frame(
+      model = mdl, n = nn, psi = ps, ratio = mean(x) / mean(ref),
+      ratio_lo90 = ci[["ratio_lo90"]], ratio_hi90 = ci[["ratio_hi90"]],
+      ratio_lo   = ci[["ratio_lo"]],   ratio_hi   = ci[["ratio_hi"]])
+  }
+}
+pz0_df <- do.call(rbind, pz0_list)
+pz0_df$class <- classify_equiv(pz0_df$ratio_lo90, pz0_df$ratio_hi90, equiv_margin)
+write.csv(pz0_df, pv_path("z_sd_ratio_vs_psi0.csv"), row.names = FALSE)
+
+pz0_plots <- setNames(lapply(models, function(mdl)
+  ratio_heatmap(pz0_df[pz0_df$model == mdl, ],
+                paste0("Phenotypic SD relative to psi = 0 (", mdl, ", ", gv_window, ")"),
+                fill_name = "z_sd ratio")), models)
+save_by_model_pv(pz0_plots, "z_sd_ratio_vs_psi0_heatmap")
+```
+
+## 7.2 phenotypic SD against n
+```{r}
+# Left: observed z_sd vs n (log-log), one line per psi, one panel per model.
+# Right: z_sd / g_sd vs n, with the order-statistic theory sqrt(c(psi, n)) as dashed lines;
+#   dividing by g_sd removes the change in V_g with n, isolating the social rule.
+# Expected scaling (at fixed V_g): ave falls ~ 1/sqrt(n) at psi = 1, ext rises with n,
+# fit falls fastest.
+cell_mean <- function(v) {
+  a <- aggregate(pv_run[[v]], pv_run[c("model", "psi", "n")],
+                 function(x) c(m = mean(x), se = sd(x) / sqrt(length(x))))
+  a <- do.call(data.frame, a); names(a)[4:5] <- c("m", "se"); a
+}
+zc <- cell_mean("z_sd"); rc <- cell_mean("zg_ratio")
+
+p_zn <- ggplot(zc, aes(n, m, color = psi, group = psi)) +
+  geom_errorbar(aes(ymin = m - 1.96 * se, ymax = m + 1.96 * se), width = 0.03) +
+  geom_line(linewidth = 0.5) + geom_point(size = 1.3) +
+  facet_wrap(~ model) + scale_x_log10(breaks = sort(unique(zc$n))) + scale_y_log10() +
+  scale_color_viridis_c(end = 0.9) +
+  labs(x = "n (log scale)", y = "Phenotypic SD (log scale)", color = expression(psi),
+       caption = "Mean over runs, 95% CI") +
+  theme_bw()
+ggsave(pv_path("z_sd_vs_n.pdf"), p_zn, width = 11, height = 4.5, dpi = 300)
+
+p_rn <- ggplot(rc, aes(n, m, color = psi, group = psi)) +
+  geom_line(data = theory_df, aes(y = sd_ratio_theory), linetype = "dashed", linewidth = 0.4) +
+  geom_errorbar(aes(ymin = m - 1.96 * se, ymax = m + 1.96 * se), width = 0.03) +
+  geom_line(linewidth = 0.5) + geom_point(size = 1.3) +
+  facet_wrap(~ model) + scale_x_log10(breaks = sort(unique(rc$n))) + scale_y_log10() +
+  scale_color_viridis_c(end = 0.9) +
+  labs(x = "n (log scale)", y = "z_sd / g_sd (log scale)", color = expression(psi),
+       caption = "Solid = observed mean over runs (95% CI); dashed = order-statistic theory at fixed V_g") +
+  theme_bw()
+ggsave(pv_path("zg_ratio_vs_n.pdf"), p_rn, width = 11, height = 4.5, dpi = 300)
+
+# Effect size: % change per doubling of n (slope of log value on log2 n, lm over runs),
+# for observed z_sd, observed z_sd/g_sd, and theory sqrt(c).
+scale_list <- list()
+for (mdl in models) for (ps in sort(unique(pv_run$psi))) {
+  sub <- pv_run[pv_run$model == mdl & pv_run$psi == ps & pv_run$z_sd > 0, ]
+  if (length(unique(sub$n)) < 2) next
+  fz <- lm(log(z_sd) ~ log2(n), data = sub);     cz <- confint(fz)["log2(n)", ]
+  fr <- lm(log(zg_ratio) ~ log2(n), data = sub); cr <- confint(fr)["log2(n)", ]
+  th <- theory_df[theory_df$model == mdl & theory_df$psi == ps, ]
+  ft <- lm(log(sd_ratio_theory) ~ log2(n), data = th)
+  pct <- function(b) 100 * (exp(b) - 1)
+  scale_list[[length(scale_list) + 1]] <- data.frame(
+    model = mdl, psi = ps,
+    z_sd_pct_per_doubling = pct(coef(fz)[[2]]), z_sd_lo = pct(cz[[1]]), z_sd_hi = pct(cz[[2]]),
+    ratio_pct_per_doubling = pct(coef(fr)[[2]]), ratio_lo = pct(cr[[1]]), ratio_hi = pct(cr[[2]]),
+    theory_pct_per_doubling = pct(coef(ft)[[2]]))
+}
+scale_df <- do.call(rbind, scale_list)
+write.csv(scale_df, pv_path("z_sd_scaling_with_n.csv"), row.names = FALSE)
+p_zn; p_rn
+```
+
+## 7.3 decomposition: phenotypic SD / genetic SD
+```{r}
+# Per run, z_sd / g_sd (same run, same window); cell = mean over runs with a
+# bootstrap CI. < 1: the social rule shrinks genetic variation; > 1: amplifies it.
+# E/D/? here means "no net change" vs "shrinks/amplifies" relative to 1.
+dec_list <- list()
+for (mdl in models) for (ps in sort(unique(pv_run$psi))) for (nn in sort(unique(pv_run$n))) {
+  x <- pv_run$zg_ratio[pv_run$model == mdl & pv_run$psi == ps & pv_run$n == nn]
+  if (length(x) < 2) next
+  ci <- boot_mean_ci(x, n_boot)
+  dec_list[[length(dec_list) + 1]] <- data.frame(
+    model = mdl, psi = ps, n = nn, ratio = mean(x),
+    ratio_lo90 = ci[["lo90"]], ratio_hi90 = ci[["hi90"]], ratio_lo = ci[["lo"]], ratio_hi = ci[["hi"]])
+}
+dec_df <- do.call(rbind, dec_list)
+dec_df$class <- classify_equiv(dec_df$ratio_lo90, dec_df$ratio_hi90, equiv_margin)
+dec_df <- merge(dec_df, theory_df[c("model", "psi", "n", "sd_ratio_theory")])
+dec_df <- dec_df[order(dec_df$model, dec_df$psi, dec_df$n), ]
+write.csv(dec_df, pv_path("zg_ratio_decomposition.csv"), row.names = FALSE)
+
+dec_plots <- setNames(lapply(models, function(mdl)
+  ratio_heatmap(dec_df[dec_df$model == mdl, ],
+                paste0("Phenotypic SD / genetic SD (", mdl, ", ", gv_window, ")"),
+                fill_name = "z_sd / g_sd")), models)
+save_by_model_pv(dec_plots, "zg_ratio_heatmap")
+```
+
+## 7.4 analytical prediction of phenotypic variance
+```{r}
+# Predict each run's phenotypic variance from its own V_g (mean g_sd^2 over the window):
+#   V_z_pred = c(model, psi, n, d) * V_g, with d = (g_mean - optimum) / g_sd (fit only).
+# ave also gets the formula (1-psi)^2 V_g + psi^2 V_g / n for comparison; it differs from
+# the SLiM rule (different weighting, and it omits the 2 psi (1-psi) V_g / n covariance
+# between a_i and the group mean).
+# Assumes normally distributed genotypes; fit/ext predictions depend on the tails.
+pv_run$d <- (pv_run$g_mean - optimum_burnin) / pv_run$g_sd
+pv_run$factor_pred <- mapply(function(m, p, n, d) pheno_var_factor(as.character(m), p, n, d),
+                             pv_run$model, pv_run$psi, pv_run$n, pv_run$d)
+pv_run$z_var_pred <- pv_run$factor_pred * pv_run$g_var
+pv_run$z_var_pred_simple <- ifelse(pv_run$model == "ave",
+                                   ((1 - pv_run$psi)^2 + pv_run$psi^2 / pv_run$n) * pv_run$g_var, NA)
+pv_run$obs_over_pred <- pv_run$z_var / pv_run$z_var_pred
+write.csv(pv_run, pv_path("pv_per_run_with_predictions.csv"), row.names = FALSE)
+
+p_pred <- ggplot(pv_run[pv_run$z_var > 0 & pv_run$z_var_pred > 0, ],
+                 aes(z_var_pred, z_var, color = psi, shape = factor(n))) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey40") +
+  geom_point(alpha = 0.6, size = 1.2) +
+  facet_wrap(~ model) + scale_x_log10() + scale_y_log10() +
+  scale_color_viridis_c(end = 0.9) +
+  labs(x = "Predicted phenotypic variance c * V_g (log)", y = "Observed phenotypic variance (log)",
+       color = expression(psi), shape = "n", caption = "One point per run; dashed = 1:1") +
+  theme_bw()
+ggsave(pv_path("pred_vs_obs_z_var.pdf"), p_pred, width = 11, height = 4.5, dpi = 300)
+p_pred
+
+# Agreement per model and per cell: mean observed / predicted (bootstrap CI over runs),
+# plus log-log slope and R^2 of observed on predicted across runs.
+agree_one <- function(obs, pred) {
+  ok <- obs > 0 & pred > 0 & is.finite(obs / pred)
+  r  <- obs[ok] / pred[ok]; ci <- boot_mean_ci(r, n_boot)
+  f  <- lm(log(obs[ok]) ~ log(pred[ok]))
+  data.frame(n_runs = sum(ok), obs_over_pred = mean(r), lo = ci[["lo"]], hi = ci[["hi"]],
+             loglog_slope = coef(f)[[2]], r_squared = summary(f)$r.squared)
+}
+agree_df <- do.call(rbind, lapply(models, function(mdl) {
+  s <- pv_run[pv_run$model == mdl, ]
+  cbind(model = mdl, prediction = "SLiM rule", agree_one(s$z_var, s$z_var_pred))
+}))
+s_ave <- pv_run[pv_run$model == "ave", ]
+agree_df <- rbind(agree_df, cbind(model = "ave", prediction = "(1-psi)^2 Vg + psi^2 Vg/n",
+                                  agree_one(s_ave$z_var, s_ave$z_var_pred_simple)))
+write.csv(agree_df, pv_path("prediction_agreement.csv"), row.names = FALSE)
+
+cell_agree <- aggregate(obs_over_pred ~ model + psi + n, data = pv_run, FUN = mean)
+write.csv(cell_agree, pv_path("prediction_obs_over_pred_by_cell.csv"), row.names = FALSE)
+```
+
+## 7.5 phenotypic variance report
+```{r}
+grid_txt <- function(d, value_fmt = "%.2f%s", with_class = TRUE) {
+  lab <- if (with_class) sprintf(value_fmt, d$ratio, class_code[d$class]) else sprintf(value_fmt, d$ratio)
+  g <- tapply(lab, list(d$psi, d$n), identity); g[is.na(g)] <- "-"
+  paste0("     ", capture.output(print(noquote(g))))
+}
+
+pv_rep <- c(
+  "==================================================================",
+  " PHENOTYPIC VARIANCE (burn-in, generation < 10000)",
+  "==================================================================",
+  sprintf(" Per-run value: mean over the %s time points. Unit of analysis: one run.", gv_window),
+  sprintf(" Bootstrap CIs resample runs (%d resamples). E/D/? uses the 90%% CI vs [%.2f, %.2f].",
+          n_boot, equiv_margin[1], equiv_margin[2]),
+  ""
+)
+
+pv_rep <- c(pv_rep, rule, " 1. Phenotypic SD relative to psi = 0 (grid rows psi, columns n)", rule)
+for (mdl in models) {
+  d <- pz0_df[pz0_df$model == mdl, ]; if (!nrow(d)) next
+  cnt <- table(factor(d$class, levels = names(class_code)))
+  pv_rep <- c(pv_rep, "", sprintf(" %s: equivalent %d, different %d, inconclusive %d (of %d cells)",
+                                  mdl, cnt[["equivalent"]], cnt[["different"]], cnt[["inconclusive"]], nrow(d)),
+              grid_txt(d))
+}
+
+pv_rep <- c(pv_rep, "", rule, " 2. Scaling with n: % change per doubling of n",
+            "    z_sd = observed [95% CI]; z/g = observed z_sd/g_sd [95% CI]; theory = sqrt(c) at fixed V_g",
+            "    expected: ave ~ -29% per doubling at psi = 1 (1/sqrt(n)); ext rising; fit falling fastest", rule)
+for (i in seq_len(nrow(scale_df))) {
+  t <- scale_df[i, ]
+  pv_rep <- c(pv_rep, sprintf("   %-4s psi = %-5s z_sd %+6.1f%% [%+.1f, %+.1f]   z/g %+6.1f%% [%+.1f, %+.1f]   theory %+6.1f%%",
+                              t$model, t$psi, t$z_sd_pct_per_doubling, t$z_sd_lo, t$z_sd_hi,
+                              t$ratio_pct_per_doubling, t$ratio_lo, t$ratio_hi, t$theory_pct_per_doubling))
+}
+
+pv_rep <- c(pv_rep, "", rule, " 3. Decomposition: z_sd / g_sd per cell (<1 shrinks, >1 amplifies)",
+            "    grid: observed ratio + E/D/? vs 1; second grid: order-statistic theory sqrt(c)", rule)
+for (mdl in models) {
+  d <- dec_df[dec_df$model == mdl, ]; if (!nrow(d)) next
+  cnt <- table(factor(d$class, levels = names(class_code)))
+  th <- d; th$ratio <- th$sd_ratio_theory
+  pv_rep <- c(pv_rep, "", sprintf(" %s: equivalent to 1: %d, different: %d, inconclusive: %d (of %d cells)",
+                                  mdl, cnt[["equivalent"]], cnt[["different"]], cnt[["inconclusive"]], nrow(d)),
+              "   observed:", grid_txt(d), "   theory:", grid_txt(th, "%.2f", with_class = FALSE))
+}
+
+pv_rep <- c(pv_rep, "", rule, " 4. Prediction of phenotypic variance from each run's V_g",
+            "    obs/pred = mean over runs of observed V_z / predicted V_z [95% CI]; 1 = perfect", rule)
+for (i in seq_len(nrow(agree_df))) {
+  t <- agree_df[i, ]
+  pv_rep <- c(pv_rep, sprintf("   %-4s %-28s obs/pred = %s; log-log slope = %s, R^2 = %s (n = %d runs)",
+                              t$model, t$prediction, ci3(t$obs_over_pred, t$lo, t$hi),
+                              f3(t$loglog_slope), f3(t$r_squared), t$n_runs))
+}
+for (mdl in models) {
+  d <- cell_agree[cell_agree$model == mdl, ]; if (!nrow(d)) next
+  d$ratio <- d$obs_over_pred
+  pv_rep <- c(pv_rep, "", sprintf("   %s obs/pred by cell (rows psi, columns n):", mdl),
+              grid_txt(d, "%.2f", with_class = FALSE))
+}
+
+cat(pv_rep, sep = "\n")
+writeLines(pv_rep, pv_path("phenotypic_variance_report.txt"))
+```
+
+# 8. run-to-run heterogeneity
+```{r}
+# CV across runs of the per-run SD (sd / mean over the runs in a psi x n cell), for
+# phenotypic (z_sd) and genetic (g_sd) SD, using the per-run values from section 7.
+# High CV marks unstable regions where cell averages may hide diverging runs; those
+# cells are flagged and their individual trajectories plotted for inspection.
+het_folder <- file.path(base_plot_folder, "heterogeneity")
+dir.create(het_folder, recursive = TRUE, showWarnings = FALSE)
+het_path <- function(name) file.path(het_folder, name)
+
+cv_flag           <- 0.2   # flag cells whose CV of per-run SD exceeds this
+max_inspect_cells <- 24    # at most this many flagged cells (highest CV first) get trajectory plots
+het_vars <- c(z_sd = "Phenotypic SD", g_sd = "Genetic SD")
+
+cv_list <- list()
+for (v in names(het_vars)) for (mdl in models) for (ps in sort(unique(pv_run$psi))) for (nn in sort(unique(pv_run$n))) {
+  x <- pv_run[[v]][pv_run$model == mdl & pv_run$psi == ps & pv_run$n == nn]
+  if (length(x) < 3) next
+  # bootstrap the CV over runs for a 95% CI
+  bx <- matrix(x[sample.int(length(x), length(x) * n_boot, replace = TRUE)], nrow = length(x))
+  bcv <- apply(bx, 2, sd) / colMeans(bx)
+  # the most atypical run: largest |log(run SD / cell median)|
+  dev <- abs(log(x / median(x)))
+  reps <- pv_run$rep[pv_run$model == mdl & pv_run$psi == ps & pv_run$n == nn]
+  cv_list[[length(cv_list) + 1]] <- data.frame(
+    variable = v, model = mdl, psi = ps, n = nn, n_runs = length(x),
+    mean_sd = mean(x), cv = sd(x) / mean(x),
+    cv_lo = quantile(bcv, 0.025, names = FALSE), cv_hi = quantile(bcv, 0.975, names = FALSE),
+    min_sd = min(x), max_sd = max(x),
+    most_atypical_rep = reps[which.max(dev)], most_atypical_fold = exp(max(dev)))
+}
+cv_df <- do.call(rbind, cv_list)
+cv_df$flag <- cv_df$cv > cv_flag
+write.csv(cv_df, het_path("cv_of_per_run_sd.csv"), row.names = FALSE)
+
+# Heatmap of CV, psi x n, one file per model and variable. The color scale is shared
+# across models (per variable) so that CVs can be compared between models;
+# "!" marks flagged cells.
+plot_cv_heatmap <- function(d, title, lims) {
+  d$label <- sprintf("%.2f%s", d$cv, ifelse(d$flag, "\n!", ""))
+  ggplot(d, aes(x = factor(n), y = factor(psi), fill = cv)) +
+    geom_tile(color = "white", linewidth = 0.6) +
+    geom_text(aes(label = label), size = 2.6, lineheight = 0.85, color = heat_label_col) +
+    scale_fill_gradient(low = "#f0efec", high = "#8073ac", limits = lims, trans = "sqrt",
+                        name = "CV across runs") +
+    labs(x = "n", y = expression(psi), title = title,
+         caption = sprintf("CV = sd / mean of per-run SD over runs (%s window); ! = CV > %.2f",
+                           gv_window, cv_flag)) +
+    theme_minimal(base_size = 10) +
+    theme(panel.grid = element_blank())
+}
+for (v in names(het_vars)) {
+  dv <- cv_df[cv_df$variable == v, ]
+  lims <- c(0, max(dv$cv, cv_flag, na.rm = TRUE))
+  plots <- setNames(lapply(models, function(mdl)
+    plot_cv_heatmap(dv[dv$model == mdl, ], paste0(het_vars[[v]], ": run-to-run CV (", mdl, ")"), lims)),
+    models)
+  for (mdl in models) ggsave(het_path(paste0("cv_heatmap_", v, "_", mdl, ".pdf")), plots[[mdl]],
+                             width = 7, height = 6, dpi = 300)
+  pdf(het_path(paste0("cv_heatmap_", v, "_by_model.pdf")), width = 7, height = 6)
+  for (p in plots) print(p)
+  dev.off()
+}
+
+# Trajectories of flagged cells: one line per run over the burn-in (log scale),
+# so diverging or non-stationary runs can be spotted before trusting cell averages.
+for (v in names(het_vars)) {
+  fl <- cv_df[cv_df$variable == v & cv_df$flag, ]
+  if (!nrow(fl)) next
+  fl <- head(fl[order(-fl$cv), ], max_inspect_cells)
+  fl$cell <- sprintf("%s psi=%s n=%s (CV %.2f)", fl$model, fl$psi, fl$n, fl$cv)
+  tr <- merge(pv_df, data.frame(reg = fl$model, psi = fl$psi, n = fl$n, cell = fl$cell))
+  tr$cell <- factor(tr$cell, levels = fl$cell)
+  tr <- tr[tr[[v]] > 0, ]
+  p <- ggplot(tr, aes(tick, .data[[v]], group = rep, color = factor(rep))) +
+    geom_line(linewidth = 0.3, alpha = 0.8) +
+    facet_wrap(~ cell, scales = "free_y") + scale_y_log10() +
+    labs(x = "Generation", y = paste(het_vars[[v]], "(log scale)"), color = "rep",
+         title = paste("Flagged cells:", het_vars[[v]], "trajectories per run")) +
+    theme_bw(base_size = 9) + theme(legend.position = "none")
+  ncols <- min(4, nrow(fl))
+  ggsave(het_path(paste0("flagged_trajectories_", v, ".pdf")), p,
+         width = 3 * ncols, height = 2.5 * ceiling(nrow(fl) / ncols) + 0.6, dpi = 200, limitsize = FALSE)
+}
+
+# Text report
+het_rep <- c(
+  "==================================================================",
+  " RUN-TO-RUN HETEROGENEITY (burn-in, generation < 10000)",
+  "==================================================================",
+  sprintf(" CV = sd / mean over runs of the per-run SD (%s window); 95%% bootstrap CI over runs.", gv_window),
+  " The CV CI is rough: when a few runs drive the CV, resamples that miss them give a",
+  " very low CV, so the interval is wide and skewed low. Inspect the trajectories instead.",
+  sprintf(" Flag: CV > %.2f. Atypical = run with the largest fold difference from the cell median.", cv_flag),
+  ""
+)
+for (v in names(het_vars)) {
+  het_rep <- c(het_rep, rule, paste0(" ", het_vars[[v]], " (", v, ")"), rule)
+  for (mdl in models) {
+    d <- cv_df[cv_df$variable == v & cv_df$model == mdl, ]
+    if (!nrow(d)) next
+    g <- tapply(sprintf("%.2f%s", d$cv, ifelse(d$flag, "!", "")), list(d$psi, d$n), identity)
+    g[is.na(g)] <- "-"
+    het_rep <- c(het_rep, "", sprintf(" %s: %d of %d cells flagged; CV grid (rows psi, columns n):",
+                                      mdl, sum(d$flag), nrow(d)),
+                 paste0("     ", capture.output(print(noquote(g)))))
+    fl <- d[d$flag, ]
+    fl <- fl[order(-fl$cv), ]
+    if (nrow(fl)) {
+      het_rep <- c(het_rep, "   Flagged cells (highest CV first):",
+                   sprintf("     psi = %-5s n = %-4s CV = %s  SD range [%s, %s]  most atypical: rep %s (%.2fx median)",
+                           fl$psi, fl$n, ci3(fl$cv, fl$cv_lo, fl$cv_hi), fmt(fl$min_sd), fmt(fl$max_sd),
+                           fl$most_atypical_rep, fl$most_atypical_fold))
+    }
+  }
+  het_rep <- c(het_rep, "")
+}
+cat(het_rep, sep = "\n")
+writeLines(het_rep, het_path("heterogeneity_report.txt"))
+```
+
+# 9. mean fitness and genetic load
+```{r}
+# Mean population fitness across psi x n, and how it follows from the variance results.
+# SLiM fitness: w = dnorm(P, optimum, sqrt(Vs)) with Vs = 2N, so relative fitness is
+# w / w_max with w_max = 1 / sqrt(2 pi Vs), and load L = 1 - mean relative fitness.
+# Gaussian prediction for phenotypes P ~ N(zbar, V_z):
+#   W/W_max = sqrt(Vs / (Vs + V_z)) * exp(-(zbar - optimum)^2 / (2 (Vs + V_z)))
+#   variance load L_var = 1 - sqrt(Vs / (Vs + V_z)); the rest is load from the mean offset.
+# For small V_z / Vs, L ~ (V_z + (zbar - optimum)^2) / (2 Vs) whatever the shape of P.
+fl_folder <- file.path(base_plot_folder, "fitness_load")
+dir.create(fl_folder, recursive = TRUE, showWarnings = FALSE)
+fl_path <- function(name) file.path(fl_folder, name)
+
+Vs    <- 2000                   # SLiM: Vs = 2 * N
+w_max <- 1 / sqrt(2 * pi * Vs)
+if (!"fitness_mean" %in% names(cons_data_df)) stop("cons_data_df has no fitness_mean column")
+
+fl_df <- cons_data_df[cons_data_df[[tick_col]] < burnin_end & cons_data_df$reg %in% models,
+                      c(tick_col, "psi", "n", "reg", "rep", "shift_size", "fitness_mean", "z_mean", "z_sd")]
+names(fl_df)[1] <- "tick"
+fl_key <- interaction(fl_df$psi, fl_df$n, fl_df$reg, fl_df$rep, drop = TRUE)
+fl_df  <- fl_df[fl_df$shift_size == ave(fl_df$shift_size, fl_key, FUN = function(x) min(x, na.rm = TRUE)), ]
+fl_df  <- fl_df[!duplicated(fl_df[c("psi", "n", "reg", "rep", "tick")]), ]
+# abs_fit is only filled in SLiM from shift_time - 50; earlier values are 0 = not recorded.
+n_unset <- sum(!(fl_df$fitness_mean > 0), na.rm = TRUE) + sum(is.na(fl_df$fitness_mean))
+if (n_unset > 0) warning(n_unset, " time points with fitness_mean <= 0 or NA were dropped (fitness not recorded)")
+fl_df  <- fl_df[!is.na(fl_df$fitness_mean) & fl_df$fitness_mean > 0, ]
+fl_df  <- fl_df[order(fl_df$reg, fl_df$psi, fl_df$n, fl_df$rep, fl_df$tick), ]
+
+# Per time point: observed relative fitness, and the Gaussian prediction from z_mean, z_sd.
+fl_df$w_rel      <- fl_df$fitness_mean / w_max
+fl_df$w_pred     <- sqrt(Vs / (Vs + fl_df$z_sd^2)) *
+                    exp(-(fl_df$z_mean - optimum_burnin)^2 / (2 * (Vs + fl_df$z_sd^2)))
+fl_df$w_pred_var <- sqrt(Vs / (Vs + fl_df$z_sd^2))   # variance part only
+
+# Per run: average over the same window as sections 6-8 (gv_window).
+fl_run <- do.call(rbind, lapply(split(fl_df, list(fl_df$reg, fl_df$psi, fl_df$n, fl_df$rep), drop = TRUE),
+  function(d) {
+    w <- if (gv_window == "last25") tail(d, n_last) else d
+    data.frame(model = d$reg[1], psi = d$psi[1], n = d$n[1], rep = d$rep[1], n_timepoints = nrow(w),
+               w_rel = mean(w$w_rel), load = 1 - mean(w$w_rel),
+               load_pred = 1 - mean(w$w_pred), load_pred_var = 1 - mean(w$w_pred_var))
+  }))
+fl_run$model <- factor(fl_run$model, levels = models)
+fl_run$load_pred_mean <- fl_run$load_pred - fl_run$load_pred_var     # load from the mean offset
+rownames(fl_run) <- NULL
+write.csv(fl_run, fl_path("fitness_per_run.csv"), row.names = FALSE)
+
+# Cell summaries: mean over runs with a 95% bootstrap CI.
+fl_cell_list <- list()
+for (mdl in models) for (ps in sort(unique(fl_run$psi))) for (nn in sort(unique(fl_run$n))) {
+  s <- fl_run[fl_run$model == mdl & fl_run$psi == ps & fl_run$n == nn, ]
+  if (nrow(s) < 2) next
+  cw <- boot_mean_ci(s$w_rel, n_boot); cl <- boot_mean_ci(s$load, n_boot)
+  fl_cell_list[[length(fl_cell_list) + 1]] <- data.frame(
+    model = mdl, psi = ps, n = nn, n_runs = nrow(s),
+    w_rel = mean(s$w_rel), w_rel_lo = cw[["lo"]], w_rel_hi = cw[["hi"]],
+    load = mean(s$load), load_lo = cl[["lo"]], load_hi = cl[["hi"]],
+    load_pred = mean(s$load_pred),
+    share_var = mean(s$load_pred_var) / mean(s$load_pred))   # fraction of predicted load from variance
+}
+fl_cell <- do.call(rbind, fl_cell_list)
+fl_cell$model <- factor(fl_cell$model, levels = models)
+write.csv(fl_cell, fl_path("fitness_load_by_cell.csv"), row.names = FALSE)
+```
+
+## 9.1 plots: mean fitness and load across psi x n
+```{r}
+# (a) Heatmap of mean relative fitness, psi x n, one file per model. Fitness is close to 1
+#     everywhere, so cells are colored by load (1 - fitness) on a log scale, shared across
+#     models (darker = lower fitness); labels give both fitness and load.
+plot_w_heatmap <- function(d, title, lims) {
+  ggplot(d, aes(x = factor(n), y = factor(psi), fill = load)) +
+    geom_tile(color = "white", linewidth = 0.6) +
+    geom_text(aes(label = sprintf("%.4f\nL = %.2g", w_rel, load)), size = 2.3, lineheight = 0.85,
+              color = heat_label_col) +
+    scale_fill_gradient(low = "#f0efec", high = "#5aae61", limits = lims, trans = "log10",
+                        name = "Load\n(1 - fitness)") +
+    labs(x = "n", y = expression(psi), title = title,
+         caption = sprintf("Label: mean relative fitness (w / w_max, Vs = %g) and load L; window: %s",
+                           Vs, gv_window)) +
+    theme_minimal(base_size = 10) + theme(panel.grid = element_blank())
+}
+w_lims <- range(fl_cell$load[fl_cell$load > 0], na.rm = TRUE)
+w_plots <- setNames(lapply(models, function(mdl)
+  plot_w_heatmap(fl_cell[fl_cell$model == mdl, ], paste0("Mean relative fitness (", mdl, ")"), w_lims)), models)
+for (mdl in models) ggsave(fl_path(paste0("fitness_heatmap_", mdl, ".pdf")), w_plots[[mdl]],
+                           width = 7, height = 6, dpi = 300)
+pdf(fl_path("fitness_heatmap_by_model.pdf"), width = 7, height = 6)
+for (p in w_plots) print(p)
+dev.off()
+
+# (b) Load vs psi, one line per n, one panel per model (log y; 95% CI over runs).
+p_load <- ggplot(fl_cell, aes(psi, load, color = factor(n), group = factor(n))) +
+  geom_errorbar(aes(ymin = load_lo, ymax = load_hi), width = 0.01) +
+  geom_line(linewidth = 0.6) + geom_point(size = 1.5) +
+  facet_wrap(~ model) + scale_y_log10() + scale_color_viridis_d(end = 0.9) +
+  labs(x = expression(psi), y = "Load = 1 - mean relative fitness (log)", color = "n",
+       caption = "Mean over runs, 95% bootstrap CI") +
+  theme_bw()
+ggsave(fl_path("load_vs_psi.pdf"), p_load, width = 11, height = 4.5, dpi = 300)
+
+# (c) Load relative to psi = 0 (bootstrap over runs), E/D/? labels, one file per model.
+lr_list <- list()
+for (mdl in models) for (nn in sort(unique(fl_run$n))) {
+  s <- fl_run[fl_run$model == mdl & fl_run$n == nn, ]
+  ref <- s$load[s$psi == 0]
+  if (length(ref) < 2 || mean(ref) <= 0) next
+  for (ps in setdiff(sort(unique(s$psi)), 0)) {
+    x <- s$load[s$psi == ps]
+    if (length(x) < 2) next
+    ci <- boot_diff_ratio(ref, x, n_boot)
+    lr_list[[length(lr_list) + 1]] <- data.frame(
+      model = mdl, n = nn, psi = ps, ratio = mean(x) / mean(ref),
+      ratio_lo90 = ci[["ratio_lo90"]], ratio_hi90 = ci[["ratio_hi90"]],
+      ratio_lo   = ci[["ratio_lo"]],   ratio_hi   = ci[["ratio_hi"]])
+  }
+}
+lr_df <- do.call(rbind, lr_list)
+lr_df$class <- classify_equiv(lr_df$ratio_lo90, lr_df$ratio_hi90, equiv_margin)
+write.csv(lr_df, fl_path("load_ratio_vs_psi0.csv"), row.names = FALSE)
+lr_plots <- setNames(lapply(models, function(mdl)
+  ratio_heatmap(lr_df[lr_df$model == mdl, ], paste0("Load relative to psi = 0 (", mdl, ")"),
+                fill_name = "load ratio")), models)
+for (mdl in models) ggsave(fl_path(paste0("load_ratio_vs_psi0_heatmap_", mdl, ".pdf")), lr_plots[[mdl]],
+                           width = 7, height = 6, dpi = 300)
+pdf(fl_path("load_ratio_vs_psi0_heatmap_by_model.pdf"), width = 7, height = 6)
+for (p in lr_plots) print(p)
+dev.off()
+
+# (d) Link to variance: observed load vs the Gaussian prediction from z_mean and z_sd
+#     (one point per run; dashed = 1:1).
+p_link <- ggplot(fl_run[fl_run$load > 0 & fl_run$load_pred > 0, ],
+                 aes(load_pred, load, color = psi, shape = factor(n))) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "grey40") +
+  geom_point(alpha = 0.6, size = 1.2) +
+  facet_wrap(~ model) + scale_x_log10() + scale_y_log10() + scale_color_viridis_c(end = 0.9) +
+  labs(x = "Predicted load from phenotypic mean and variance (log)", y = "Observed load (log)",
+       color = expression(psi), shape = "n", caption = "One point per run; dashed = 1:1") +
+  theme_bw()
+ggsave(fl_path("load_obs_vs_pred.pdf"), p_link, width = 11, height = 4.5, dpi = 300)
+p_load; p_link
+```
+
+## 9.2 fitness and load report
+```{r}
+fl_agree <- do.call(rbind, lapply(models, function(mdl) {
+  s <- fl_run[fl_run$model == mdl, ]
+  cbind(model = mdl, agree_one(s$load, s$load_pred))
+}))
+write.csv(fl_agree, fl_path("load_prediction_agreement.csv"), row.names = FALSE)
+
+cell_grid <- function(d, v, f = "%.4f") {
+  g <- tapply(sprintf(f, d[[v]]), list(d$psi, d$n), identity); g[is.na(g)] <- "-"
+  paste0("     ", capture.output(print(noquote(g))))
+}
+
+fl_rep <- c(
+  "==================================================================",
+  " MEAN FITNESS AND GENETIC LOAD (burn-in, generation < 10000)",
+  "==================================================================",
+  sprintf(" Relative fitness = mean w / w_max, w_max = 1/sqrt(2 pi Vs), Vs = %g; load = 1 - relative fitness.", Vs),
+  sprintf(" Per-run value: mean over time points (window: %s); time points with fitness not recorded dropped.", gv_window),
+  " Unit of analysis: one run; CIs are bootstrap over runs.",
+  ""
+)
+for (mdl in models) {
+  d <- fl_cell[fl_cell$model == mdl, ]; if (!nrow(d)) next
+  fl_rep <- c(fl_rep, rule, paste0(" ", mdl), rule,
+              " Mean relative fitness (rows psi, columns n):", cell_grid(d, "w_rel"),
+              " Load (rows psi, columns n):",                  cell_grid(d, "load"),
+              " Share of predicted load due to phenotypic variance (rest = mean offset):",
+              cell_grid(d, "share_var", "%.2f"))
+  dl <- lr_df[lr_df$model == mdl, ]
+  if (nrow(dl)) {
+    cnt <- table(factor(dl$class, levels = names(class_code)))
+    fl_rep <- c(fl_rep, sprintf(" Load relative to psi = 0: equivalent %d, different %d, inconclusive %d (of %d cells)",
+                                cnt[["equivalent"]], cnt[["different"]], cnt[["inconclusive"]], nrow(dl)),
+                grid_txt(dl))
+  }
+  t <- fl_agree[fl_agree$model == mdl, ]
+  fl_rep <- c(fl_rep, sprintf(" Observed / Gaussian-predicted load = %s; log-log slope = %s, R^2 = %s (%d runs)",
+                              ci3(t$obs_over_pred, t$lo, t$hi), f3(t$loglog_slope), f3(t$r_squared), t$n_runs),
+              "")
+}
+cat(fl_rep, sep = "\n")
+writeLines(fl_rep, fl_path("fitness_load_report.txt"))
+```

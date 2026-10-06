@@ -1,0 +1,435 @@
+
+```{r}
+.plot_lines_multi_impl <- function(
+  df,
+  filters,
+  ycol,  # NOW: can be length 1 or >1 (tick mode supports multi)
+  labels = list(title = NULL, x = "Tick", y = ycol),
+  show_rep = TRUE,
+  cols = NULL,          # colors per filter (unchanged meaning)
+  xlim = NULL,
+  ylim = NULL,
+  tick_col = "tick",
+  lwd_mean = 3,
+  lwd_rep  = 1,
+  rep_alpha = 0.35,
+  xcol = tick_col,
+  ltys = NULL,           # NEW: line types per ycol (tick mode only)
+  style = "dot",
+  cex_point = 1,
+  show_ci = FALSE,       # draw a confidence band across replicates
+  ci_level = 0.95,
+  ci_alpha = 0.20
+) {
+  stopifnot(is.data.frame(df), length(filters) >= 1, is.character(ycol))
+  if (!is.numeric(ci_level) || length(ci_level) != 1 ||
+      !is.finite(ci_level) || ci_level <= 0 || ci_level >= 1) {
+    stop("ci_level must be a single number strictly between 0 and 1.")
+  }
+  if (!is.numeric(ci_alpha) || length(ci_alpha) != 1 ||
+      !is.finite(ci_alpha) || ci_alpha < 0 || ci_alpha > 1) {
+    stop("ci_alpha must be a single number between 0 and 1.")
+  }
+
+  # xcol default
+  if (is.null(xcol)) xcol <- tick_col
+
+  # Only require tick_col if used as x
+  if (identical(xcol, tick_col) && !tick_col %in% names(df)) {
+    stop("tick column '", tick_col, "' not found.")
+  }
+
+  # Validate ycol(s)
+  if (!all(ycol %in% names(df))) {
+    bad <- ycol[!(ycol %in% names(df))]
+    stop("y column(s) not found in df: ", paste(bad, collapse = ", "))
+  }
+
+  # Helper: apply one filter list to df (AND across fields; OR within vectors)
+  apply_filter <- function(d, f) {
+    keep <- rep(TRUE, nrow(d))
+    for (nm in names(f)) {
+      if (!nm %in% names(d)) next
+      v <- f[[nm]]
+      keep <- keep & (d[[nm]] %in% v)
+    }
+    d[keep, , drop = FALSE]
+  }
+
+  # Fix labels
+  if (is.null(labels$y)) {
+    labels$y <- if (length(ycol) == 1) ycol else paste(ycol, collapse = ", ")
+  }
+  if (is.null(labels$x) ||
+      (identical(labels$x, "Tick") && !identical(xcol, tick_col))) {
+    labels$x <- xcol
+  }
+
+  make_step_line <- function(dat) {
+    dat <- dat[order(dat$tick), , drop = FALSE]
+
+    if (nrow(dat) <= 1) return(dat)
+
+    out <- dat[1, , drop = FALSE]
+
+    for (k in 2:nrow(dat)) {
+      old_y <- dat$y[k - 1]
+      new_y <- dat$y[k]
+      new_t <- dat$tick[k]
+
+      if (is.finite(old_y) && is.finite(new_y) && old_y != new_y) {
+        # add point at the new generation but with old optimum
+        out <- rbind(
+          out,
+          data.frame(tick = new_t, y = old_y)
+        )
+      }
+
+      out <- rbind(out, dat[k, , drop = FALSE])
+    }
+
+    rownames(out) <- NULL
+    out
+  }
+
+  # Compute a t confidence interval from one value per replicate at each x.
+  # Averaging first avoids giving extra weight to replicates with duplicate rows.
+  replicate_ci <- function(d, x_name, y_name) {
+    if (!"rep" %in% names(d)) {
+      stop("show_ci = TRUE requires a 'rep' column in df.")
+    }
+
+    rep_means <- aggregate(
+      d[[y_name]],
+      by = list(x = d[[x_name]], rep = d$rep),
+      FUN = mean,
+      na.rm = TRUE
+    )
+    names(rep_means)[3] <- "y"
+
+    out <- do.call(rbind, lapply(split(rep_means, rep_means$x), function(z) {
+      n <- sum(is.finite(z$y))
+      mu <- mean(z$y, na.rm = TRUE)
+      se <- if (n > 1) stats::sd(z$y, na.rm = TRUE) / sqrt(n) else 0
+      margin <- if (n > 1) stats::qt((1 + ci_level) / 2, df = n - 1) * se else 0
+      data.frame(x = z$x[1], mean = mu, lower = mu - margin, upper = mu + margin)
+    }))
+    out[order(out$x), , drop = FALSE]
+  }
+
+  plot_tick_mode <- function(df, filters, ycols, labels, show_rep, cols, xlim, ylim,
+                             tick_col, lwd_mean, lwd_rep, rep_alpha, ltys,
+                             show_ci, ci_alpha) {
+
+    # colors per filter (original meaning)
+    if (is.null(cols)) cols <- rep("black", length(filters))
+    if (length(cols) < length(filters)) cols <- rep(cols, length.out = length(filters))
+
+    # line types per y column
+    if (is.null(ltys)) ltys <- rep(1, length(ycols))
+    if (length(ltys) < length(ycols)) ltys <- rep(ltys, length.out = length(ycols))
+
+    all_ticks <- numeric(0)
+    all_vals  <- numeric(0)
+
+    summaries <- lapply(seq_along(filters), function(i) {
+      f <- filters[[i]]
+      d <- apply_filter(df, f)
+
+      d[[tick_col]] <- suppressWarnings(as.integer(d[[tick_col]]))
+      d$rep         <- suppressWarnings(as.integer(d$rep))
+      for (yc in ycols) d[[yc]] <- suppressWarnings(as.numeric(d[[yc]]))
+
+      keep <- is.finite(d[[tick_col]]) & is.finite(d$rep)
+      for (yc in ycols) keep <- keep & is.finite(d[[yc]])
+      d <- d[keep, , drop = FALSE]
+
+      if (nrow(d) == 0) {
+        stop("no rows after filtering with filter ", i, ": ", paste(names(f), f, sep = "=", collapse = ", "))
+        return(list(
+          reps = setNames(vector("list", length(ycols)), ycols),
+          mean = setNames(vector("list", length(ycols)), ycols)
+        ))
+      }
+
+      # split by rep (store per ycol)
+      by_rep <- split(d, d$rep)
+
+      reps_by_y <- lapply(ycols, function(yc) {
+        lapply(by_rep, function(x) {
+          o <- order(x[[tick_col]])
+          data.frame(tick = x[[tick_col]][o], y = x[[yc]][o])
+        })
+      })
+      names(reps_by_y) <- ycols
+
+      # mean per tick (per ycol)
+      mean_list <- lapply(ycols, function(yc) {
+        m <- aggregate(d[[yc]], by = list(tick = d[[tick_col]]), FUN = mean, na.rm = TRUE)
+        names(m)[2] <- "y"
+        m <- m[order(m$tick), ]
+        all_ticks <<- c(all_ticks, m$tick)
+        all_vals  <<- c(all_vals,  m$y)
+        m
+      })
+      names(mean_list) <- ycols
+
+      ci_list <- if (show_ci) {
+        out <- lapply(ycols, function(yc) replicate_ci(d, tick_col, yc))
+        names(out) <- ycols
+        out
+      } else {
+        setNames(vector("list", length(ycols)), ycols)
+      }
+      if (show_ci) {
+        for (ci in ci_list) all_vals <<- c(all_vals, ci$lower, ci$upper)
+      }
+
+      list(reps = reps_by_y, mean = mean_list, ci = ci_list)
+    })
+
+    if (is.null(xlim)) xlim <- range(all_ticks, na.rm = TRUE)
+    if (is.null(ylim)) ylim <- range(all_vals,  na.rm = TRUE)
+
+    plot(NA, NA, xlim = xlim, ylim = ylim,
+         xlab = labels$x, ylab = labels$y, main = labels$title)
+
+    for (i in seq_along(summaries)) {
+      col_i <- cols[i]
+      s <- summaries[[i]]
+
+      for (j in seq_along(ycols)) {
+        yc <- ycols[j]
+        lty_j <- ltys[j]
+        if (yc == "optimum") color = "black" else color = col_i
+
+        # Confidence band across replicate means at each tick.
+        ci <- s$ci[[yc]]
+        if (show_ci && yc != "optimum" && !is.null(ci) && nrow(ci) > 0) {
+          ci_col <- tryCatch(adjustcolor(color, alpha.f = ci_alpha),
+                             error = function(e) color)
+          polygon(c(ci$x, rev(ci$x)), c(ci$lower, rev(ci$upper)),
+                  col = ci_col, border = NA)
+        }
+
+        # replicate points for this y column
+        if (show_rep && length(s$reps[[yc]]) && yc != "optimum") {
+          col_rep <- tryCatch(adjustcolor(color, alpha.f = rep_alpha),
+                              error = function(e) color)
+          for (rp in s$reps[[yc]]) {
+            if (nrow(rp) > 1) {
+              if (style == "dot") {
+                points(rp$tick, rp$y, col = col_rep, pch = 16, cex = cex_point)
+              } else if (style == "line") {
+                lines(rp$tick, rp$y, col = col_rep, lwd = lwd_rep, pch = 16)
+              }
+            }
+          }
+        }
+
+        # mean line for this y column
+        m <- s$mean[[yc]]
+        if (!is.null(m) && nrow(m) > 1) {
+
+          if (yc == "optimum") {
+            m <- make_step_line(m)
+          }
+          if (style == "dot") {
+            points(m$tick, m$y, col = color, pch = 16, cex = cex_point)
+          } else if (style == "line") {
+            lines(m$tick, m$y, col = color, lwd = lwd_mean, lty = lty_j)
+          }
+        }
+      }
+    }
+
+    invisible(NULL)
+  }
+
+plot_generic_x_mode <- function(df, filters, ycol_single, labels, show_rep, cols,
+                                xlim, ylim, xcol, lwd_mean, rep_alpha, show_ci,
+                                ci_alpha) {
+
+  if (is.null(cols)) cols <- rep("black", length(filters))
+  if (length(cols) < length(filters)) cols <- rep(cols, length.out = length(filters))
+
+  subsets <- vector("list", length(filters))
+  all_x <- numeric(0)
+  all_y <- numeric(0)
+
+  for (i in seq_along(filters)) {
+    f <- filters[[i]]
+    d <- apply_filter(df, f)
+
+    if (nrow(d) == 0) {
+      subsets[[i]] <- NULL
+      next
+    }
+
+    d[[xcol]] <- suppressWarnings(as.numeric(d[[xcol]]))
+    d[[ycol_single]] <- suppressWarnings(as.numeric(d[[ycol_single]]))
+    d <- d[is.finite(d[[xcol]]) & is.finite(d[[ycol_single]]), , drop = FALSE]
+
+    if (nrow(d) == 0) {
+      subsets[[i]] <- NULL
+      next
+    }
+
+    subsets[[i]] <- d
+    all_x <- c(all_x, d[[xcol]])
+    all_y <- c(all_y, d[[ycol_single]])
+    if (show_ci) {
+      ci <- replicate_ci(d, xcol, ycol_single)
+      all_y <- c(all_y, ci$lower, ci$upper)
+    }
+  }
+
+  if (!length(all_x) || !length(all_y)) {
+    warning("No data to plot after filtering.")
+    return(invisible(NULL))
+  }
+
+  if (is.null(xlim)) xlim <- range(all_x, na.rm = TRUE)
+  if (is.null(ylim)) ylim <- range(all_y, na.rm = TRUE)
+
+  plot(NA, NA,
+       xlim = xlim,
+       ylim = ylim,
+       xlab = labels$x,
+       ylab = labels$y,
+       main = labels$title)
+
+  for (i in seq_along(subsets)) {
+    d <- subsets[[i]]
+    if (is.null(d) || nrow(d) == 0) next
+
+    col_i <- cols[i]
+    col_pts <- tryCatch(adjustcolor(col_i, alpha.f = rep_alpha),
+                        error = function(e) col_i)
+
+    if (show_ci) {
+      ci <- replicate_ci(d, xcol, ycol_single)
+      ci_col <- tryCatch(adjustcolor(col_i, alpha.f = ci_alpha),
+                         error = function(e) col_i)
+      polygon(c(ci$x, rev(ci$x)), c(ci$lower, rev(ci$upper)),
+              col = ci_col, border = NA)
+    }
+
+    x_vals <- sort(unique(d[[xcol]]))
+
+    mean_x <- numeric(0)
+    mean_y <- numeric(0)
+
+    for (xv in x_vals) {
+      dx <- d[d[[xcol]] == xv, , drop = FALSE]
+      y <- dx[[ycol_single]]
+
+      if (show_rep) {
+        points(jitter(rep(xv, length(y)), amount = diff(range(all_x))*0.005),
+               y,
+               col = col_pts,
+               pch = 16,
+               cex = cex_point)
+      }
+
+      mu <- mean(y, na.rm = TRUE)
+      sdv <- sd(y, na.rm = TRUE)
+      if (!is.finite(sdv)) sdv <- 0
+
+      # Preserve the existing SD bars unless the CI band is requested.
+      if (!show_ci) {
+        arrows(xv, mu - sdv,
+               xv, mu + sdv,
+               angle = 90, code = 3, length = 0.04,
+               col = col_i, lwd = max(1, lwd_mean * 0.5))
+      }
+
+      points(xv, mu,
+             pch = 21,
+             bg = col_i,
+             col = col_i,
+             cex = 1.1)
+
+      mean_x <- c(mean_x, xv)
+      mean_y <- c(mean_y, mu)
+    }
+
+    if (length(mean_x) >= 2) {
+      o <- order(mean_x)
+      if (style == "dot") {
+        points(mean_x[o], mean_y[o], col = col_i, pch = 16, cex = cex_point)
+      } else if (style == "line") {
+        lines(mean_x[o], mean_y[o], col = col_i, lwd = lwd_mean)
+      }
+    }
+  }
+
+  invisible(NULL)
+}
+
+  if (identical(xcol, tick_col)) {
+    plot_tick_mode(df, filters, ycol, labels, show_rep, cols, xlim, ylim,
+                   tick_col, lwd_mean, lwd_rep, rep_alpha, ltys,
+                   show_ci, ci_alpha)
+  } else {
+    # generic x mode: assume one column; if user passed multiple, take first
+    plot_generic_x_mode(df, filters, ycol[1], labels, show_rep, cols,
+                        xlim, ylim, xcol, lwd_mean, rep_alpha, show_ci,
+                        ci_alpha)
+  }
+
+  invisible(NULL)
+}
+
+# Tick/time-series interface. `tick_col` is always used as the x axis.
+plot_lines_multi_tick <- function(
+  df, filters, ycol,
+  labels = list(title = NULL, x = "Tick", y = ycol),
+  show_rep = TRUE, cols = NULL, xlim = NULL, ylim = NULL,
+  tick_col = "tick", lwd_mean = 3, lwd_rep = 1, rep_alpha = 0.35,
+  ltys = NULL, style = "dot", cex_point = 1,
+  show_ci = FALSE, ci_level = 0.95, ci_alpha = 0.20
+) {
+  .plot_lines_multi_impl(
+    df = df, filters = filters, ycol = ycol, labels = labels,
+    show_rep = show_rep, cols = cols, xlim = xlim, ylim = ylim,
+    tick_col = tick_col, lwd_mean = lwd_mean, lwd_rep = lwd_rep,
+    rep_alpha = rep_alpha, xcol = tick_col, ltys = ltys, style = style,
+    cex_point = cex_point, show_ci = show_ci, ci_level = ci_level,
+    ci_alpha = ci_alpha
+  )
+}
+
+# Generic-x interface. Supply the column to use for x explicitly.
+plot_lines_multi_generic_x <- function(
+  df, filters, ycol, xcol,
+  labels = list(title = NULL, x = xcol, y = ycol),
+  show_rep = TRUE, cols = NULL, xlim = NULL, ylim = NULL,
+  tick_col = "tick", lwd_mean = 3, lwd_rep = 1, rep_alpha = 0.35,
+  ltys = NULL, style = "dot", cex_point = 1,
+  show_ci = FALSE, ci_level = 0.95, ci_alpha = 0.20
+) {
+  if (identical(xcol, tick_col)) {
+    stop("For tick-based plots, use plot_lines_multi_tick().")
+  }
+  .plot_lines_multi_impl(
+    df = df, filters = filters, ycol = ycol, labels = labels,
+    show_rep = show_rep, cols = cols, xlim = xlim, ylim = ylim,
+    tick_col = tick_col, lwd_mean = lwd_mean, lwd_rep = lwd_rep,
+    rep_alpha = rep_alpha, xcol = xcol, ltys = ltys, style = style,
+    cex_point = cex_point, show_ci = show_ci, ci_level = ci_level,
+    ci_alpha = ci_alpha
+  )
+}
+
+# Backward-compatible dispatcher for existing notebooks.
+plot_lines_multi <- function(..., xcol = NULL, tick_col = "tick") {
+  if (is.null(xcol) || identical(xcol, tick_col)) {
+    plot_lines_multi_tick(..., tick_col = tick_col)
+  } else {
+    plot_lines_multi_generic_x(..., xcol = xcol, tick_col = tick_col)
+  }
+}
+
+
+```

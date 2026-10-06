@@ -1,0 +1,300 @@
+---
+title: "plot genotype, phenotype data for multiple models"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+## evolving sociality data
+```{r setup, include=FALSE}
+library(progress)
+dataset_name <- "cons_env_data"
+
+analysis_root <- "figure/cons_env_plot"
+data_root     <- "data"
+
+base_data_folders <- file.path(data_root, dataset_name)
+r_data_folder    <- file.path("figure", "r_data", dataset_name)
+additional_data_folder <- file.path(data_root, "cons_env_data_second_batch")
+
+dir.create(r_data_folder, recursive = TRUE, showWarnings = FALSE)
+```
+
+```{r}
+# ---- Helper: choose the generation key column name ----
+.gen_key <- function(d) {
+  if ("tick" %in% names(d)) return("tick")
+  if ("generation" %in% names(d)) return("generation")
+  names(d)[1]
+}
+
+# ---- Helper: extract metadata from filename ----
+extract_metadata <- function(path) {
+  rx <- "n_(\\d+)_psi_(-?[0-9.]+)_sz_(-?\\d+)_reg_(fit|ext|ave)_(\\d+)_(\\d+)\\.tsv$"
+  p  <- regmatches(basename(path), regexec(rx, basename(path)))[[1]]
+
+  if (length(p) != 7) {
+    stop("Could not extract metadata from file: ", basename(path))
+  }
+
+  data.frame(
+    n          = as.integer(p[2]),
+    psi        = as.numeric(p[3]),
+    shift_size = as.integer(p[4]),
+    reg        = p[5],
+    rep        = as.integer(p[6]),
+    ID        = as.integer(p[7]),
+    file_id    = basename(path),
+    stringsAsFactors = FALSE
+  )
+}
+
+# ---- Helper: read one data file and attach metadata ----
+read_one_data_file <- function(file) {
+  df <- tryCatch(
+    read.table(file, header = TRUE, sep = "\t", check.names = FALSE),
+    error = function(e) NULL
+  )
+
+  if (is.null(df)) {
+    warning("Failed to read: ", file)
+    return(NULL)
+  }
+
+  meta <- extract_metadata(file)
+
+  df$n          <- meta$n
+  df$psi        <- meta$psi
+  df$shift_size <- meta$shift_size
+  df$reg        <- meta$reg
+  df$rep        <- meta$rep
+  df$file_id    <- meta$file_id
+  df$ID         <- meta$ID
+
+  df
+}
+
+# ---- Helper: filter files by metadata ----
+file_matches_filters <- function(file, psi_values, regimes, reps, group_sizes, shift_sizes) {
+  meta <- tryCatch(extract_metadata(file), error = function(e) NULL)
+  if (is.null(meta)) return(FALSE)
+
+  (length(psi_values) == 0 || meta$psi %in% psi_values) &&
+    (length(regimes) == 0 || meta$reg %in% regimes) &&
+    (length(reps) == 0 || meta$rep %in% reps) &&
+    (length(group_sizes) == 0 || meta$n %in% group_sizes) &&
+    (length(shift_sizes) == 0 || meta$shift_size %in% shift_sizes)
+}
+
+# ---- Helper: load one data type folder ----
+load_data_type <- function(data_type,
+                           base_data_folder,
+                           psi_values = c(),
+                           regimes = c(),
+                           reps = c(),
+                           group_sizes = c(),
+                           shift_size = c()) {
+  
+  folder <- file.path(base_data_folder, data_type)
+
+  if (!dir.exists(folder)) {
+    warning("Folder does not exist: ", folder)
+    return(NULL)
+  }
+
+  file_list <- list.files(
+    path = folder,
+    pattern = "\\.tsv$",
+    full.names = TRUE,
+    recursive = TRUE
+  )
+
+  file_list <- Filter(
+    function(file) file_matches_filters(file, psi_values, regimes, reps, group_sizes, shift_size),
+    file_list
+  )
+
+  if (length(file_list) == 0) {
+    warning("No matching files found in: ", folder)
+    return(NULL)
+  }
+
+  pb <- progress_bar$new(
+    format = "[:bar] :current/:total | :percent | ETA: :eta",
+    total = length(file_list),
+    clear = FALSE
+  )
+
+  checkpoint_length <- length(file_list) / 5
+  if (checkpoint_length == 0) checkpoint_length <- length(file_list)
+  
+  df_list <- c()
+  for (i in seq_along(file_list)){
+    df_list[[i]] <- read_one_data_file(file_list[i])
+    pb$tick()
+    if ( i %% checkpoint_length == 0) {
+      cat("Processed", i, "files out of", length(file_list), "\n")
+      checkpoint <- do.call(rbind, df_list)
+
+      # if(i != length(file_list)) {
+      #   cat("Checkpointing at file #", i, "\n")
+      #   saveRDS(checkpoint, file = file.path(r_data_folder, paste0(data_type, "_checkpoint_", i, ".rds")))
+      # }
+    }
+  } 
+ 
+  if (length(df_list) == 0) {
+    warning("No readable files found in: ", folder)
+    return(NULL)
+  }
+  df <- do.call(rbind, df_list)
+
+  df
+}
+
+# ---- Helper: append only source files not already represented by file_id ----
+append_new_files_by_file_id <- function(rds_file, data_folder) {
+  if (!file.exists(rds_file)) {
+    stop("RDS file does not exist: ", rds_file)
+  }
+  if (!dir.exists(data_folder)) {
+    stop("Data folder does not exist: ", data_folder)
+  }
+
+  existing_data <- readRDS(rds_file)
+  if (!is.data.frame(existing_data) || !"file_id" %in% names(existing_data)) {
+    stop("RDS file must contain a data frame with a 'file_id' column: ", rds_file)
+  }
+
+  candidate_files <- list.files(
+    data_folder, pattern = "\\.tsv$", full.names = TRUE, recursive = TRUE
+  )
+  valid_file <- vapply(candidate_files, function(file) {
+    !is.null(tryCatch(extract_metadata(file), error = function(e) NULL))
+  }, logical(1))
+  if (any(!valid_file)) {
+    warning("Ignoring files whose names do not match the expected metadata pattern.")
+    candidate_files <- candidate_files[valid_file]
+  }
+
+  candidate_file_ids <- basename(candidate_files)
+  duplicate_ids <- unique(candidate_file_ids[duplicated(candidate_file_ids)])
+  if (length(duplicate_ids)) {
+    stop(
+      "Each file_id must identify exactly one source file. Duplicate file_id(s): ",
+      paste(duplicate_ids, collapse = ", ")
+    )
+  }
+
+  recorded_file_ids <- unique(as.character(existing_data$file_id))
+  new_files <- candidate_files[!(candidate_file_ids %in% recorded_file_ids)]
+  if (!length(new_files)) {
+    message("No new files to append to: ", rds_file)
+    return(invisible(existing_data))
+  }
+
+  progress <- progress::progress_bar$new(
+    format = "[:bar] :current/:total | :percent | ETA: :eta",
+    total = length(new_files),
+    clear = FALSE
+  )
+  checkpoint_interval <- max(1, floor(length(new_files) / 3))
+  new_data <- vector("list", length(new_files))
+
+  for (i in seq_along(new_files)) {
+    new_data[[i]] <- read_one_data_file(new_files[[i]])
+    progress$tick()
+
+    # Checkpoints contain only rows read during this append operation.
+    # The final append to `rds_file` below is the complete updated dataset.
+    if (i %% checkpoint_interval == 0 && i < length(new_files)) {
+      checkpoint_data <- Filter(Negate(is.null), new_data[seq_len(i)])
+      if (length(checkpoint_data)) {
+        checkpoint_file <- file.path(
+          dirname(rds_file),
+          paste0(
+            tools::file_path_sans_ext(basename(rds_file)),
+            "_new_data_checkpoint_", i, ".rds"
+          )
+        )
+        saveRDS(do.call(rbind, checkpoint_data), checkpoint_file)
+        message("Saved new-data checkpoint: ", checkpoint_file)
+      }
+    }
+  }
+
+  new_data <- Filter(Negate(is.null), new_data)
+  if (!length(new_data)) {
+    warning("No new files could be read; RDS file was not changed.")
+    return(invisible(existing_data))
+  }
+
+  message("Appending ", length(new_data), " new file(s) to: ", rds_file)
+  updated_data <- rbind(existing_data, do.call(rbind, new_data))
+  message("saving updated data to: ", rds_file)
+  saveRDS(updated_data, rds_file)
+  message("Appended ", length(new_data), " file(s) to: ", rds_file)
+
+  invisible(updated_data)
+}
+```
+
+# load all data
+```{r}
+data_type_to_load <- c("genotype", "phenotype")
+psi_values <- c()
+regimes <- c()
+reps <- 1:20
+group_sizes <- c()
+shift_size <- c()
+
+for (data_type in data_type_to_load) {
+  cat("Loading data type:", data_type, "\n")
+
+  df <- load_data_type(
+    data_type = data_type,
+    base_data_folder = base_data_folders,
+    psi_values = psi_values,
+    regimes = regimes,
+    reps = reps,
+    group_sizes = group_sizes,
+    shift_size = shift_size
+  )
+
+  if (is.null(df)) {
+    cat("Skipping data type:", data_type, "\n")
+    next
+  }
+
+  out_file <- switch(
+    data_type,
+    # "data"       = file.path(r_data_folder, "data_summary_fit.rds"),
+    "data"       = file.path(r_data_folder, "data_summary.rds"),
+    "genotype"   = file.path(r_data_folder, "genotype.rds"),
+    "phenotype"  = file.path(r_data_folder, "phenotype.rds"),
+    "fitness"    = file.path(r_data_folder, "fitness.rds"),
+    "allele"     = file.path(r_data_folder, "allele.rds"),
+    "copied_val" = file.path(r_data_folder, "copied_val.rds"),
+    "group_tag" = file.path(r_data_folder, "group_tag.rds"),
+    file.path(r_data_folder, paste0(data_type, ".rds"))
+  )
+
+  saveRDS(df, file = out_file)
+
+  cat("Saved to:", out_file, "\n")
+  cat("Done loading data type:", data_type, "\n")
+}
+```
+
+# append files to one existing RDS data file
+```{r append-new-files, eval=FALSE}
+# Set these two paths, then run this chunk when the existing RDS should receive
+# every new TSV file found in `data_folder`.
+rds_file <- file.path(r_data_folder, "data_summary.rds")
+data_folder <- file.path(additional_data_folder, "data")
+
+append_new_files_by_file_id(
+  rds_file = rds_file,
+  data_folder = data_folder
+)
+```

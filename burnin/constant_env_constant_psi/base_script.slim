@@ -124,6 +124,8 @@ late() {
 
 shift_time-100 late(){
 	sim.outputFull(filePath=pop_output, binary=T, pedigreeIDs=T, objectTags=T, substitutions=T); 
+	// print(community.tick+": output population to "+pop_output);
+	// sim.simulationFinished();
 }
 
 shift_time-30: early(){
@@ -160,12 +162,17 @@ shift_time-30 late(){
 	log.addCustomColumn("g_opt", "optimum-mean(p1.individuals.sumOfMutationsOfType(m1) + (2 * sum(sim.substitutions.selectionCoeff)));");
     log.addCustomColumn("optimum", "optimum;");
 
-	log.addCustomColumn("dz1", " mean(p1.individuals.tagF) - mean(last_gen_z);");
-	log.addCustomColumn("par_gen_meanz", "mean(last_gen_z);");
-	log.addCustomColumn("h2", "var(last_gen_g)/var(last_gen_z);");
-	log.addCustomColumn("s", "parent_mean=mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]); parent_mean-mean(last_gen_z);");
-	log.addCustomColumn("dz1_pred", "parent_mean=mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]); var(last_gen_g)/var(last_gen_z)*(parent_mean-mean(last_gen_z));");
-	
+	// log.addCustomColumn("dz1", " mean(p1.individuals.tagF) - mean(last_gen_z);");
+	// log.addCustomColumn("par_gen_meanz", "mean(last_gen_z);");
+	// log.addCustomColumn("h2", "var(last_gen_g)/var(last_gen_z);");
+	// log.addCustomColumn("s", "parent_mean=mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]); parent_mean-mean(last_gen_z);");
+	// log.addCustomColumn("dz1_pred", "parent_mean=mean(last_gen_z[p1.lifetimeReproductiveOutput != 0]); var(last_gen_g)/var(last_gen_z)*(parent_mean-mean(last_gen_z));");
+	log.addCustomColumn("s", "w = p1.lifetimeReproductiveOutput; sum(w*last_gen_z)/sum(w) - mean(last_gen_z);");
+	log.addCustomColumn("b_gz", "cov(last_gen_g, last_gen_z)/var(last_gen_z);");
+	log.addCustomColumn("dz1_pred", "w = p1.lifetimeReproductiveOutput; s = sum(w*last_gen_z)/sum(w) - mean(last_gen_z); cov(last_gen_g, last_gen_z)/var(last_gen_z) * s;");
+	log.addCustomColumn("dg_sel", "w = p1.lifetimeReproductiveOutput; sum(w*last_gen_g)/sum(w) - mean(last_gen_g);");
+	log.addCustomColumn("dg_obs", "mean(p1.individuals.sumOfMutationsOfType(m1) + (2 * sum(sim.substitutions.selectionCoeff))) - mean(last_gen_g);");
+
 	log.addCustomColumn("Ne_heterozygosity", "estimateNe_Heterozygosity(p1);"); 
 	log.addCustomColumn("H", "calcHeterozygosity(p1.haplosomes);"); 
 	log.addCustomColumn("PI", "calcPi(p1.haplosomes);"); 

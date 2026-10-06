@@ -9,12 +9,12 @@ output: pdf_document
 ```{r setup, include=FALSE}
 # parameters for plotting
 dataset_name <- "fluc_env"
-date <- "6_16"
+date <- "8_4"
 
 # set these once for your machine / project
-analysis_root <- "../zc524/collective_behavior_evo/figure/1_26_fluctuating_env"
-base_plot_folder     <- file.path("../zc524/collective_behavior_evo/figure/plots", date)
-r_data_folder    <- file.path("../zc524/collective_behavior_evo/figure", "r_data", dataset_name)
+analysis_root <- "figure/1_26_fluctuating_env"
+base_plot_folder     <- file.path("figure/plots", date)
+r_data_folder    <- file.path("figure", "r_data", dataset_name)
 
 library(MetBrewer)
 
@@ -36,9 +36,9 @@ fluc_pheno_df <- readRDS(file.path(r_data_folder, "phenotype.rds"))
 ```
 
 ```{r}
-fluc_geno_df <- genotype_df
-fluc_pheno_df <- phenotype_df
-unique(fluc_geno_df$psi)
+# fluc_geno_df <- genotype_df
+# fluc_pheno_df <- phenotype_df
+unique(fluc_pheno_df$psi)
 
 ```
 
@@ -57,8 +57,8 @@ psi_col_map <- setNames(colors_for_psi, c(0.0, 0.2, 0.5, 0.8))
 
 for (gen in list(10050)) {
   for (n in c(8)){
-    for (sz in c(20)){
-      for (gap in c(50)){
+    for (sz in c(40, 90)){ 
+      for (gap in c(80, 30)){
         for (reg in c("fit")){
           for (type in c( "genotype", "phenotype")){
             cat("Plotting:", type, " generation:", gen, " n:", n, " shift_size:", sz, " reg:", reg, "\n")
@@ -334,7 +334,7 @@ for (n in c(8)){
 
 ```
 
-
+<!-- HERE -->
 ```{r}
 single_psi <- 0.8
 
@@ -344,24 +344,18 @@ psi_col_map <- setNames(colors_for_psi, c(0.0, 0.2, 0.5, 0.8))
 # gen <- c(seq(9900, 9995, by=5), seq(9996, 10009, by=1), seq(10010, 10300, by=5))
 # gen <- seq(9950, 10300, by=5)
 
-geno_zlim <- c(0, 0.05)
-pheno_zlim <- c(0, 0.1)
-
-geno_color_palette <-colorRampPalette(c("#000000","#1D9E75", "#5DCAA5", "#FFFFFF"))(64)
-pheno_color_palette <- colorRampPalette(c("#000000","#7F77DD", "#AFA9EC", "#FFFFFF"))(64)
-
-zlim <- c(0, 0.1)
+zlim <- c(0, 0.15)
 grey_color_palette <- colorRampPalette(c("#FFFFFF", "#000000"))(64)
 
 for (single_psi in c(0.8)){
   for (n in c(8)){
-    for (sz in c(100)){
+    for (sz in c(40, 90)){ 
       for (gap in c(30)){
-        for (reg in c("fit")){
+        for (reg in c("fit", "ext", "ave")){
           if (single_psi == 0.0 && reg != "fit"){
             next
           }
-          gen <- seq(10000, 10000 + gap * 8 +5, by=5)
+          gen <- seq(10000, 10210, by=5)
           
           breaks_vec <- seq(as.integer(-sz/2)-10.5, as.integer(sz/2)+10.5, by = 1)  
           if (sz == 10){
@@ -381,22 +375,22 @@ for (single_psi in c(0.8)){
           par(cex.axis = 2.0, cex.lab = 2.0, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
           # cols <- psi_col_map[as.character(sapply(fils, function(f) f$psi))]
 
-          if (gap == 90){
+          if (gap == 80){
             gen_vals=c(
-              seq(10000, 10040,     by = 5),
-              seq(10040, 10040 + gap, by = 5),
-              seq(10040 + gap, 10040 + 2 * gap, by = 5),
-              seq(10040 + 2 * gap, 10040 + 3 * gap, by = 5)
-              # seq(10040 + 3 * gap, 10040 + 4 * gap, by = 5)
+              seq(10000, 10050,     by = 5),
+              seq(10050, 10050 + gap, by = 5),
+              seq(10050 + gap, 10050 + 2 * gap, by = 5),
+              seq(10050 + 2 * gap, 10050 + 3 * gap, by = 5),
+              seq(10050 + 3 * gap, 10050 + 4 * gap, by = 5)
               # seq(10000 + 4 * gap, 10000 + 5 * gap, by = 5),
               # seq(10000 + 5 * gap, 10000 + 6 * gap, by = 5)
             )
             line_vals = c(
-              rep(as.integer(sz / 2), length(seq(10000,           10040,     by = 5))),
-              rep(as.integer(-sz / 2), length(seq(10040,     10040 + gap, by = 5))),
-              rep(as.integer(sz / 2), length(seq(10040 + gap, 10040 + 2 * gap, by = 5))),
-              rep(as.integer(-sz / 2), length(seq(10040 + 2 * gap, 10040 + 3 * gap, by = 5)))
-              # rep(as.integer(-sz / 2), length(seq(10000 + 4 * gap, 10000 + 5 * gap, by = 5))),
+              rep(as.integer(sz / 2), length(seq(10000, 10050, by = 5))),
+              rep(as.integer(-sz / 2), length(seq(10050, 10050 + gap, by = 5))),
+              rep(as.integer(sz / 2), length(seq(10050 + gap, 10050 + 2 * gap, by = 5))),
+              rep(as.integer(-sz / 2), length(seq(10050 + 2 * gap, 10050 + 3 * gap, by = 5))),
+              rep(as.integer(sz / 2), length(seq(10050 + 3 * gap, 10050 + 4 * gap, by = 5)))
               # rep(as.integer( sz / 2), length(seq(10000 + 3 * gap, 10000 + 4 * gap, by = 5)))
             )
           }else if (gap == 10){
@@ -426,7 +420,9 @@ for (single_psi in c(0.8)){
               seq(10010 + 4 * gap, 10010 + 5 * gap, by = 5),
               seq(10010 + 5 * gap, 10010 + 6 * gap, by = 5),
               seq(10010 + 6 * gap, 10010 + 7 * gap, by = 5),
-              seq(10010 + 7 * gap, 10010 + 8 * gap, by = 5)
+              seq(10010 + 7 * gap, 10010 + 8 * gap, by = 5),
+              seq(10010 + 8 * gap, 10010 + 9 * gap, by = 5),
+              seq(10010 + 9 * gap, 10290, by = 5)
             )
             line_vals = c(
               rep(as.integer(-sz / 2), length(seq(10000, 10010, by = 5))),
@@ -437,18 +433,20 @@ for (single_psi in c(0.8)){
               rep(as.integer(sz / 2), length(seq(10010 + 4 * gap, 10010 + 5 * gap, by = 5))),
               rep(as.integer(-sz / 2), length(seq(10010 + 5 * gap, 10010 + 6 * gap, by = 5))),
               rep(as.integer(sz / 2), length(seq(10010 + 6 * gap, 10010 + 7 * gap, by = 5))),
-              rep(as.integer(-sz / 2), length(seq(10010 + 7 * gap, 10010 + 8 * gap, by = 5)))
+              rep(as.integer(-sz / 2), length(seq(10010 + 7 * gap, 10010 + 8 * gap, by = 5))),
+              rep(as.integer(sz / 2), length(seq(10010 + 8 * gap, 10010 + 9 * gap, by = 5))),
+              rep(as.integer(-sz / 2), length(seq(10010 + 9 * gap, 10290, by = 5)))
             )
           }
-          if (gap == 90){
-              x_label_gens = seq(10040, 10040 + gap * 4, by=gap)
-              x_label_text = seq(0, 4 * gap, by=gap)
+          if (gap == 80){
+              x_label_gens = seq(10050, 10290, by=gap)
+              x_label_text = seq(0, 290, by=gap)
           } else if (gap == 10){
               x_label_gens = seq(10000, 10000 + gap * 4, by=2*gap)
               x_label_text = seq(0, 4 * gap, by=2*gap)
           } else if (gap == 30){
-              x_label_gens = seq(10010, 10010 + gap * 8, by=3*gap)
-              x_label_text = seq(0, 8 * gap, by=3*gap)
+              x_label_gens = seq(10050, 10290, by=80)
+              x_label_text = seq(0, 290, by=80)
           }
           plot_pheno_geno_heatmaps(
             cons_pheno_df = fluc_pheno_df,
@@ -465,8 +463,6 @@ for (single_psi in c(0.8)){
             x_label_gens = x_label_gens,
             x_label_text = x_label_text,
             zero_col = NULL,
-            # geno_color_palette = geno_color_palette,
-            # pheno_color_palette = pheno_color_palette,
             color_palette = grey_color_palette,
             gen_vals=gen_vals,
             line_vals = line_vals,
@@ -485,23 +481,6 @@ for (single_psi in c(0.8)){
   }
 }
 
-# make_colorbar_pdf(
-#   file = file.path(plot_folder, "geno_colorbar.pdf"),
-#   zlim = geno_zlim,
-#   label = "Density",
-#   zero_col = NULL,
-#   color_palette = c("black", geno_color_palette)
-#   # color_palette = colorRampPalette(c("#E1F5EE", "#5DCAA5", "#1D9E75", "#085041"))(64)
-# )
-# # colorRampPalette(c("#000000", "#00FFFF"))(64)
-# make_colorbar_pdf(
-#   file = file.path(plot_folder, "pheno_colorbar.pdf"),
-#   zlim = pheno_zlim,
-#   label = "Density",
-#   zero_col = NULL,
-#   color_palette = c("black", pheno_color_palette)
-#   # color_palette = colorRampPalette(c("#EEEDFE", "#AFA9EC", "#7F77DD", "#3C3489"))(64)
-# )
 make_colorbar_pdf(
   file = file.path(plot_folder, "grey_colorbar.pdf"),
   zlim = zlim,

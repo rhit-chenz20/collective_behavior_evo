@@ -1,0 +1,314 @@
+---
+title: "plot genotype data for multiple models"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+# parameters for plotting
+```{r setup, include=FALSE}
+# parameters for plotting
+dataset_name <- "constant_env_batch"
+date <- "9_29_2026"
+
+# set these once for your machine / project
+analysis_root <- "figure/cons_env_plot"
+base_plot_folder     <- file.path("figure/plots", date)
+r_data_folder    <- file.path("figure", "r_data", dataset_name)
+
+library(MetBrewer)
+
+if (!dir.exists(base_plot_folder)) {
+  dir.create(base_plot_folder, recursive = TRUE, showWarnings = FALSE)
+}
+
+met_brewer_pallete <- "Austria"  # color pattern for lines
+```
+
+# load genotype data
+```{r}
+cons_geno_df <- readRDS(file.path(r_data_folder, "genotype.rds"))
+cons_pheno_df <- readRDS(file.path(r_data_folder, "phenotype.rds"))
+# group_tag_df <- readRDS(file.path(r_data_folder, "group_tag.rds"))
+# fitness_df <- readRDS(file.path(r_data_folder, "fitness_norm.rds"))
+# copied_val_df <- readRDS(file.path(r_data_folder, "copied_val.rds"))
+```
+
+```{r}
+single_psi <- 0.5
+colors_for_psi <- met.brewer(name=met_brewer_pallete, n=4, type="discrete")
+psi_col_map <- setNames(colors_for_psi, c(0.0, 0.2, 0.5, 0.8))
+
+# gen <- c(seq(9900, 9995, by=5), seq(9996, 10009, by=1), seq(10010, 10300, by=5))
+gen <- seq(9950, 10300, by=5)
+
+zlim <- c(0, 0.16)
+grey_color_palette <- colorRampPalette(c("#FFFFFF", "#000000"))(64)
+
+for (single_psi in c(0.8)){
+  for (n in c(8)){
+    for (sz in c(40)){
+      for (reg in c("fit", "ext", "ave")){
+        if (single_psi == 0.0 && reg != "fit"){
+          next
+        }
+        breaks_vec <- seq(-20.5, 65.5, by = 1)  
+        gen_title <- paste0(gen[1], "-", gen[length(gen)])
+        
+        title <- paste0( "pheno_geno_dict_", gen_title, "/", reg, "_", sz,"_", n, "opt = ", 0)
+        
+        filt_single <- list(reg=reg, n=n, psi=single_psi, shift_size=sz)
+  
+        plot_folder = file.path(base_plot_folder, paste0("direc_pheno_geno_dict_", gen_title, "_", sz, "_", n))
+        
+        dir.create(plot_folder, recursive = TRUE, showWarnings=FALSE)
+        # pdf(file.path(plot_folder, paste0(reg, "_", sz,"_", n, ".pdf")), width=11.5, height=8)
+        
+        # par(cex.axis = 2.0, cex.lab = 2.0, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
+        par(cex.axis = 5, cex.lab = 5, cex.main = 2,
+                    mar = c(8, 10, 4, 0.8) + 0.2, mgp = c(4.5, 1.8, 0))
+
+        x_label_gens = c(10000, 10100, 10200, 10300)
+        x_label_text = c(0, 100, 200, 300)
+        plot_pheno_geno_heatmaps(
+          cons_pheno_df = cons_pheno_df,
+          cons_geno_df = cons_geno_df,
+          breaks = breaks_vec,
+          pheno_filter = filt_single,
+          geno_filter = filt_single,
+          pheno_generations = gen,
+          geno_generations = gen,
+          zlim = zlim,
+          file = file.path(plot_folder, paste0(reg, "_", sz,"_", n, "_" , single_psi, ".pdf")),
+          x_label_gens = x_label_gens,
+          x_label_text = x_label_text,
+          zero_col = NULL,
+          color_palette = grey_color_palette,
+          gen_vals=c(gen[1], 10000, 10000, gen[length(gen)]),
+          line_vals = c(0, sz),
+          show_mean_line = TRUE,
+          width = 11.5, height = 8
+        )
+        dev.off()
+      }
+    }
+  }
+}
+
+# make_colorbar_pdf(
+#   file = file.path(plot_folder, "grey_colorbar.pdf"),
+#   zlim = zlim,
+#   label = "Density",
+#   zero_col = NULL,
+#   color_palette = grey_color_palette,
+#   label_at = c(zlim[1], 0.08,zlim[2]),               # only label these values
+#   label_text = c(zlim[1], 0.08, zlim[2])
+# )
+```
+
+
+```{r}
+colors_for_psi <- met.brewer(name=met_brewer_pallete, n=4, type="discrete")
+psi_col_map <- setNames(colors_for_psi, c(0.0, 0.2, 0.5, 0.8))
+
+# stabilizing distribution plot
+stab_geno_df <- cons_geno_df[cons_geno_df$generation <= 9999, ]
+stab_pheno_df <- cons_pheno_df[cons_pheno_df$generation <= 9999, ]
+breaks_vec <- seq(-40.5, 40.5, by = 1)  
+gen <- c(9950, 9999)
+for (n in c(8)){
+  for (reg in c("fit", "ave", "ext")){
+    for (type in c("phenotype", "genotype")){
+      cat("Plotting:", type, "under stabilizing selection, generation <= 9999, reg:", reg, "n:", n, "\n")
+
+      if (type == "genotype"){
+        df_to_use <- stab_geno_df
+      } else if (type == "phenotype"){
+        df_to_use <- stab_pheno_df
+      }
+
+      gen_title <- "9950-9999"
+      
+      title <- paste0(type, "_", gen_title, "/", reg, "_", n, "opt = ", 0)
+      filt_A <- list(reg=reg, n=n, psi=0.0)
+      filt_B <- list(reg=reg, n=n, psi=0.2)
+      filt_C <- list(reg=reg, n=n, psi=0.5)
+      filt_D <- list(reg=reg, n=n, psi=0.8)
+
+      fils <- list(filt_A, filt_B, filt_C, filt_D)
+      plot_folder = file.path(base_plot_folder, paste0("stab_", type, "_", gen_title))
+
+      dir.create(plot_folder, recursive = TRUE, showWarnings=FALSE)
+      pdf(file.path(plot_folder, paste0(reg, "_",n, ".pdf")), width=11.5, height=8)
+      
+      par(cex.axis = 2.0, cex.lab = 2.0, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
+      cols <- psi_col_map[as.character(sapply(fils, function(f) f$psi))]
+
+      plot_hist_lines_multi(
+        df = df_to_use,
+        filters = fils,
+        generation = gen,
+        breaks = breaks_vec,
+        labels = list(title = title,
+                      x = ifelse(type == "genotype", "Genotype value", "Phenotype value"),
+                      y = "Proportion"),
+        show_rep = FALSE,
+        ymax = if (type == "phenotype") 0.15 else 0.05,
+        cols = cols,
+        lwd = 5
+      )
+      leg_expr <- as.expression(lapply(lapply(fils, function(f) f$psi), function(v) bquote(psi == .(v))))
+            
+      legend("topright", bty = "n",
+              legend = leg_expr,
+            col = cols, lwd = 2, cex=2.2)
+      dev.off()
+    }
+  }
+}
+
+
+```
+
+```{r}
+# cdf of phenotype distribution, reg = fit, psi = 0.2, generation <= 9999 (stabilizing)
+cdf_filt <- list(reg = "fit", n = 8, psi = 0.2)
+gen_title <- "9950-9999"
+
+cdf_df <- .filter_df(stab_pheno_df, cdf_filt)
+vcols <- .value_cols_int(cdf_df)
+cdf_values <- as.numeric(unlist(cdf_df[, vcols, drop = FALSE], use.names = FALSE))
+cdf_values <- cdf_values[is.finite(cdf_values)]
+
+title <- paste0("phenotype_cdf_", gen_title, "/fit_n8_psi0.2")
+
+plot_folder <- file.path(base_plot_folder, paste0("stab_phenotype_cdf_", gen_title))
+dir.create(plot_folder, recursive = TRUE, showWarnings = FALSE)
+pdf(file.path(plot_folder, "fit_8_psi0.2.pdf"), width = 11.5, height = 8)
+
+par(cex.axis = 2.0, cex.lab = 2.0, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
+
+plot(ecdf(cdf_values),
+     main = title,
+     xlab = "Phenotype value",
+     ylab = "Cumulative proportion",
+     col = psi_col_map[["0.2"]],
+     lwd = 5,
+     do.points = FALSE,
+     verticals = TRUE)
+
+dev.off()
+```
+
+
+
+
+
+
+
+```{r}
+plot_hist_row_by_row <- function(df, filters, generation, breaks, labels, show_rep = FALSE, ymax = NULL, cols = NULL, lwd = 2) {
+  # Filter the data frame based on the provided filters
+  for (filt in filters) {
+    for (key in names(filt)) {
+      df <- df[df[[key]] == filt[[key]], ]
+    }
+  }
+
+  # Get unique reps if show_rep is TRUE
+  reps <- if (show_rep) unique(df$rep) else NA
+
+  # Set up the plot area
+  plot(NA, NA, xlim = range(breaks), ylim = c(0, ymax), xlab = labels$x, ylab = labels$y, main = labels$title)
+
+  # Loop through each row and plot the histogram
+  for (i in seq_len(nrow(df))) {
+    row <- df[i, ]
+    value_cols <- grep("^[0-9]+$", names(row), value = TRUE)
+    values <- as.numeric(unlist(row[, value_cols], use.names = FALSE))
+
+    hist(values, breaks = breaks, add = TRUE, col = cols[i %% length(cols) + 1], border = NA)
+  }
+}
+```
+
+```{r}
+shift_size <- "no_sz"
+
+for (gen in list(c(9950, 9999))) {
+  for (reg in c("ext")) {
+
+    cat("Plotting variance decomposition:", "generation:", paste(gen, collapse = "-"),
+        "reg:", reg, "psi = 0.9\n")
+
+    if (length(gen) > 1) {
+      gen_title <- paste0(gen[1], "-", gen[2])
+    } else {
+      gen_title <- gen
+    }
+
+    title <- paste0("phenotype_var_decomp_", gen_title, "/", reg, "_", shift_size, "_psi0.9")
+
+    n_vals <- c(2, 5, 8, 20, 50)
+
+    within_vals  <- numeric(length(n_vals))
+    between_vals <- numeric(length(n_vals))
+    total_vals   <- numeric(length(n_vals))
+
+    for (i in seq_along(n_vals)) {
+      n_i <- n_vals[i]
+
+      filt <- list(reg = reg, n = n_i, psi = 0.9)
+
+      vd <- .var_decomp_for_filter(
+        df = cons_pheno_df,
+        filter = filt,
+        generation = gen
+      )
+
+      within_vals[i]  <- vd$mean_within
+      between_vals[i] <- vd$mean_between
+      total_vals[i]   <- vd$mean_total
+    }
+
+    out_dir <- file.path(base_plot_folder, paste0("/phenotype_var_decomp_", gen_title))
+    if (!dir.exists(out_dir)) {
+      dir.create(out_dir, recursive = TRUE)
+    }
+
+    pdf(file.path(out_dir, paste0(reg, "_", shift_size, "_psi0.9.pdf")),
+        width = 11.5, height = 8)
+
+    par(cex.axis = 2.0, cex.lab = 2.0, cex.main = 1.0,
+        mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
+
+    ylim <- range(c(within_vals, between_vals), na.rm = TRUE)
+    ylim[1] <- min(0, ylim[1])
+
+    plot(n_vals, within_vals,
+         type = "o",
+         lwd = 5,
+         pch = 16,
+         cex = 1.8,
+         xlab = "Group size (n)",
+         ylab = "Variance component",
+         main = title,
+         ylim = c(0, 600),
+         lty = 1)
+
+    lines(n_vals, between_vals,
+          type = "o",
+          lwd = 5,
+          pch = 16,
+          cex = 1.8,
+          lty = 2)
+
+    legend("topleft", bty = "n",
+           legend = c("Within-mode variance", "Between-mode variance"),
+           lty = c(1, 2),
+           lwd = 5, pch = 16, cex = 2.0)
+
+    dev.off()
+  }
+}
+```

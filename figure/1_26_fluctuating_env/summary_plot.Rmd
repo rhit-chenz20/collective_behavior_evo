@@ -8,12 +8,12 @@ output: pdf_document
 # parameter for plotting
 ```{r setup, include=FALSE}
 dataset_name <- "fluc_env"
-date <- "6_16"
+date <- "9_8"
 
 # set these once for your machine / project
-analysis_root <- "../zc524/collective_behavior_evo/figure/1_26_fluctuating_env"
-base_plot_folder     <- file.path("../zc524/collective_behavior_evo/figure/plots", date)
-r_data_folder    <- file.path("../zc524/collective_behavior_evo/figure", "r_data", dataset_name)
+analysis_root <- "figure/1_26_fluctuating_env"
+base_plot_folder     <- file.path("figure/plots", date)
+r_data_folder    <- file.path("figure", "r_data", dataset_name)
 
 library(MetBrewer)
 

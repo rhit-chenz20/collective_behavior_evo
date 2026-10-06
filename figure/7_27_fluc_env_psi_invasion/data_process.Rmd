@@ -8,7 +8,7 @@ output: pdf_document
 ## evolving sociality data
 ```{r setup, include=FALSE}
 require(progress)
-dataset_name <- "fluc_env_invasion"
+dataset_name <- "fluc_env_invasion_longer"
 
 analysis_root <- "figure/7_27_fluc_env_psi_invasion"
 data_root     <- "data"
@@ -157,11 +157,11 @@ load_data_type <- function(data_type,
 data_type_to_load <- c("data")
 psi_values <- c()
 regimes <- c()
-reps <- 1:10
+reps <- 1:60
 group_sizes <- c(8)
 gap_values <- c()
 inGen <- c()
-inInd <- c(100)
+inInd <- c()
 
 for (data_type in data_type_to_load) {
   cat("Loading data type:", data_type, "\n")

@@ -1,0 +1,879 @@
+---
+title: "plot evolutionary trajectory for multiple models"
+author: "Andrea Chen"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+# parameters for plotting
+```{r setup, include=FALSE}
+# parameters for plotting
+dataset_name <- "cons_env_data"
+date <- "9_29_2026"
+
+# set these once for your machine / project
+analysis_root <- "figure/cons_env_plot"
+base_plot_folder     <- file.path("figure/plots", date)
+r_data_folder    <- file.path("figure", "r_data", dataset_name)
+
+library(MetBrewer)
+
+if (!dir.exists(base_plot_folder)) {
+  dir.create(base_plot_folder, recursive = TRUE, showWarnings = FALSE)
+}
+
+met_brewer_pallete <- "Austria"  # color pattern for lines
+```
+
+# load evolutionary trajectory data
+```{r}
+cons_data_df <- readRDS(file.path(r_data_folder, "data_summary.rds"))
+```
+
+```{r g-sd-parameter-set-test}
+# One observation per simulation: average g_sd over the pre-shift trajectory.
+# `rep` identifies the simulation within each psi/n/reg parameter set.
+g_sd_by_rep <- aggregate(
+  g_sd ~ psi + n + reg + rep,
+  data = subset(cons_data_df, tick < 10000 & is.finite(g_sd)),
+  FUN = mean
+)
+
+# Audit the expected 20 replicate-level observations for each parameter set.
+g_sd_replicate_counts <- aggregate(
+  rep ~ psi + n + reg,
+  data = g_sd_by_rep,
+  FUN = length
+)
+names(g_sd_replicate_counts)[4] <- "n_replicates"
+print(g_sd_replicate_counts)
+
+# Treat psi and n as discrete experimental levels, not continuous covariates.
+g_sd_by_rep$psi <- factor(g_sd_by_rep$psi)
+g_sd_by_rep$n <- factor(g_sd_by_rep$n)
+g_sd_by_rep$reg <- factor(g_sd_by_rep$reg)
+
+# Tests the effects of psi, n, and reg, including all interactions.
+g_sd_factorial_test <- aov(g_sd ~ psi * n * reg, data = g_sd_by_rep)
+summary(g_sd_factorial_test)
+
+# Write the factorial ANOVA in a manuscript-ready LaTeX table.
+g_sd_anova_table <- summary(g_sd_factorial_test)[[1]]
+g_sd_format_number <- function(x, digits = 2) {
+  ifelse(is.na(x), "--", formatC(x, format = "f", digits = digits))
+}
+g_sd_format_p_value <- function(x) {
+  ifelse(is.na(x), "--", ifelse(x < 0.001, "< 0.001", formatC(x, format = "f", digits = 3)))
+}
+g_sd_latex_rows <- vapply(seq_len(nrow(g_sd_anova_table)), function(i) {
+  values <- g_sd_anova_table[i, ]
+  term <- gsub(":", " $\\times$ ", rownames(g_sd_anova_table)[i])
+  paste(
+    term,
+    g_sd_format_number(values["Df"], digits = 0),
+    g_sd_format_number(values["Sum Sq"]),
+    g_sd_format_number(values["Mean Sq"]),
+    g_sd_format_number(values["F value"]),
+    g_sd_format_p_value(values["Pr(>F)"]),
+    sep = " & "
+  )
+}, character(1))
+g_sd_latex_rows <- paste0(g_sd_latex_rows, " \\\\")
+
+g_sd_latex_file <- file.path(base_plot_folder, "g_sd_factorial_anova.tex")
+writeLines(
+  c(
+    "\\begin{table}[htbp]",
+    "\\centering",
+    "\\caption{Factorial ANOVA of pre-shift mean $g$ standard deviation.}",
+    "\\label{tab:g-sd-factorial-anova}",
+    "\\begin{tabular}{lrrrrr}",
+    "\\hline",
+    "Term & df & Sum of squares & Mean square & $F$ & $p$ \\\\",
+    "\\hline",
+    g_sd_latex_rows,
+    "\\hline",
+    "\\end{tabular}",
+    "\\end{table}"
+  ),
+  con = g_sd_latex_file
+)
+
+# Optional post-hoc comparisons between every complete psi/n/reg parameter set.
+g_sd_by_rep$parameter_set <- interaction(
+  g_sd_by_rep$psi, g_sd_by_rep$n, g_sd_by_rep$reg,
+  sep = ", ", drop = TRUE
+)
+g_sd_parameter_set_test <- aov(g_sd ~ parameter_set, data = g_sd_by_rep)
+g_sd_pairwise_tukey <- TukeyHSD(g_sd_parameter_set_test)
+
+# Save a concise, reproducible report with the omnibus and significant pairwise tests.
+g_sd_significant_pairs <- g_sd_pairwise_tukey$parameter_set[
+  g_sd_pairwise_tukey$parameter_set[, "p adj"] < 0.05,
+  , drop = FALSE
+]
+g_sd_significant_pairs <- g_sd_significant_pairs[
+  order(g_sd_significant_pairs[, "p adj"]), , drop = FALSE
+]
+
+g_sd_report_file <- file.path(base_plot_folder, "g_sd_parameter_set_test.txt")
+writeLines(
+  c(
+    "Pre-shift g_sd parameter-set analysis",
+    "Each observation is the mean finite g_sd over ticks < 10000 for one psi/n/reg/rep combination.",
+    "",
+    "Replicate counts:",
+    capture.output(print(g_sd_replicate_counts, row.names = FALSE)),
+    "",
+    "Factorial ANOVA: g_sd ~ psi * n * reg",
+    capture.output(summary(g_sd_factorial_test)),
+    "",
+    "Tukey HSD contrasts with adjusted p < 0.05:",
+    if (nrow(g_sd_significant_pairs)) {
+      capture.output(print(g_sd_significant_pairs))
+    } else {
+      "None"
+    }
+  ),
+  con = g_sd_report_file
+)
+```
+
+```{r z-sd-parameter-set-test}
+# Change this value to alter the pre-shift window used for the z_sd analysis.
+z_sd_psi_threshold <- 0.5
+
+# One observation per simulation: mean z_sd before the selected threshold.
+# Only the ave and fit regimes with psi <= 0.5 are included.
+z_sd_by_rep <- aggregate(
+  z_sd ~ psi + n + reg + rep,
+  data = subset(
+    cons_data_df,
+    tick < 10000 &
+      reg %in% c("ave", "fit") &
+      psi <= z_sd_psi_threshold &
+      is.finite(z_sd)
+  ),
+  FUN = mean
+)
+
+z_sd_replicate_counts <- aggregate(
+  rep ~ psi + n + reg,
+  data = z_sd_by_rep,
+  FUN = length
+)
+names(z_sd_replicate_counts)[4] <- "n_replicates"
+print(z_sd_replicate_counts)
+
+# Treat psi and n as discrete experimental levels.
+z_sd_by_rep$psi <- factor(z_sd_by_rep$psi)
+z_sd_by_rep$n <- factor(z_sd_by_rep$n)
+z_sd_by_rep$reg <- factor(z_sd_by_rep$reg)
+
+# Test psi, n, and reg effects and all their interactions.
+z_sd_factorial_test <- aov(z_sd ~ psi * n * reg, data = z_sd_by_rep)
+summary(z_sd_factorial_test)
+
+# Pairwise comparisons between complete psi/n/reg parameter sets.
+z_sd_by_rep$parameter_set <- interaction(
+  z_sd_by_rep$psi, z_sd_by_rep$n, z_sd_by_rep$reg,
+  sep = ", ", drop = TRUE
+)
+z_sd_parameter_set_test <- aov(z_sd ~ parameter_set, data = z_sd_by_rep)
+z_sd_pairwise_tukey <- TukeyHSD(z_sd_parameter_set_test)
+z_sd_significant_pairs <- z_sd_pairwise_tukey$parameter_set[
+  z_sd_pairwise_tukey$parameter_set[, "p adj"] < 0.05,
+  , drop = FALSE
+]
+z_sd_significant_pairs <- z_sd_significant_pairs[
+  order(z_sd_significant_pairs[, "p adj"]), , drop = FALSE
+]
+
+# Save the ANOVA table in LaTeX format.
+z_sd_anova_table <- summary(z_sd_factorial_test)[[1]]
+z_sd_format_number <- function(x, digits = 2) {
+  ifelse(is.na(x), "--", formatC(x, format = "f", digits = digits))
+}
+z_sd_format_p_value <- function(x) {
+  ifelse(is.na(x), "--", ifelse(x < 0.001, "< 0.001", formatC(x, format = "f", digits = 3)))
+}
+z_sd_latex_rows <- vapply(seq_len(nrow(z_sd_anova_table)), function(i) {
+  values <- z_sd_anova_table[i, ]
+  term <- gsub(":", " $\\times$ ", rownames(z_sd_anova_table)[i])
+  paste(
+    term,
+    z_sd_format_number(values["Df"], digits = 0),
+    z_sd_format_number(values["Sum Sq"]),
+    z_sd_format_number(values["Mean Sq"]),
+    z_sd_format_number(values["F value"]),
+    z_sd_format_p_value(values["Pr(>F)"]),
+    sep = " & "
+  )
+}, character(1))
+z_sd_latex_rows <- paste0(z_sd_latex_rows, " \\\\")
+
+z_sd_latex_file <- file.path(base_plot_folder, "z_sd_factorial_anova.tex")
+writeLines(
+  c(
+    "\\begin{table}[htbp]",
+    "\\centering",
+    sprintf(
+      "\\caption{Factorial ANOVA of mean $z$ standard deviation under stabilizing selection ($\\psi \\leq %s$; ave and fit regimes).}"
+    , z_sd_psi_threshold),
+    "\\label{tab:z-sd-factorial-anova}",
+    "\\begin{tabular}{lrrrrr}",
+    "\\hline",
+    "Term & df & Sum of squares & Mean square & $F$ & $p$ \\\\",
+    "\\hline",
+    z_sd_latex_rows,
+    "\\hline",
+    "\\end{tabular}",
+    "\\end{table}"
+  ),
+  con = z_sd_latex_file
+)
+
+# Save the replicate audit, ANOVA, and significant pairwise results as plain text.
+z_sd_report_file <- file.path(base_plot_folder, "z_sd_parameter_set_test.txt")
+writeLines(
+  c(
+    "Pre-threshold z_sd parameter-set analysis",
+    paste("Each observation is the mean finite z_sd over ticks < 10000",
+          "for one psi/n/reg/rep combination."),
+    "Included regimes: ave, fit. Included psi values: <= 0.5.",
+    "",
+    "Replicate counts:",
+    capture.output(print(z_sd_replicate_counts, row.names = FALSE)),
+    "",
+    "Factorial ANOVA: z_sd ~ psi * n * reg",
+    capture.output(summary(z_sd_factorial_test)),
+    "",
+    "Tukey HSD contrasts with adjusted p < 0.05:",
+    if (nrow(z_sd_significant_pairs)) {
+      capture.output(print(z_sd_significant_pairs))
+    } else {
+      "None"
+    }
+  ),
+  con = z_sd_report_file
+)
+```
+
+```{r z-sd-boxplot-psi-reg}
+# Box plot of pre-shift z_sd, grouped by reg (x axis) with psi = 0.0, 0.2, 0.5
+# side by side (colored) within each reg group, plus 95% CI error bars over the mean.
+z_sd_box_psi <- c(0, 0.2, 0.5)
+z_sd_box_reg <- c("ave", "fit")
+z_sd_box_n   <- 8
+
+z_sd_box_by_rep <- subset(
+  z_sd_by_rep,
+  psi %in% z_sd_box_psi & reg %in% z_sd_box_reg & n == z_sd_box_n
+)
+z_sd_box_by_rep$reg <- factor(as.character(z_sd_box_by_rep$reg), levels = z_sd_box_reg)
+z_sd_box_by_rep$psi <- factor(as.character(z_sd_box_by_rep$psi), levels = as.character(z_sd_box_psi))
+
+psi_box_cols <- setNames(
+  met.brewer(name = met_brewer_pallete, n = length(z_sd_box_psi), type = "discrete"),
+  as.character(z_sd_box_psi)
+)
+
+n_psi <- length(z_sd_box_psi)
+group_gap <- 1     # extra spacing between reg groups
+box_width <- 0.6
+
+# psi cycles fastest within each reg group (matches boxplot formula z_sd ~ psi + reg)
+positions <- unlist(lapply(seq_along(z_sd_box_reg), function(i) {
+  (i - 1) * (n_psi + group_gap) + seq_len(n_psi)
+}))
+box_cols <- rep(psi_box_cols, times = length(z_sd_box_reg))
+
+plot_folder <- file.path(base_plot_folder, "z_sd_boxplot")
+dir.create(plot_folder, recursive = TRUE, showWarnings = FALSE)
+pdf(file.path(plot_folder, paste0("z_sd_boxplot_psi_reg_n", z_sd_box_n, ".pdf")), width = 9, height = 7)
+par(cex.axis = 1.3, cex.lab = 1.5, cex.main = 1.4, mar = c(5, 6, 3, 1) + 0.2, mgp = c(3.5, 1, 0))
+
+boxplot(
+  z_sd ~ psi + reg,
+  data = z_sd_box_by_rep,
+  at = positions,
+  col = box_cols,
+  border = "black",
+  boxwex = box_width,
+  xaxt = "n",
+  xlab = "reg",
+  ylab = expression(sd(z)),
+  main = bquote("Pre-shift " * sd(z) * " by " * psi * " and reg (n = " * .(z_sd_box_n) * ")")
+)
+
+reg_axis_at <- sapply(seq_along(z_sd_box_reg), function(i) {
+  base_pos <- (i - 1) * (n_psi + group_gap)
+  mean(base_pos + seq_len(n_psi))
+})
+axis(1, at = reg_axis_at, labels = z_sd_box_reg, tick = FALSE, line = 1)
+
+# overlay mean +/- 95% CI as error bars on top of each box
+for (i in seq_along(z_sd_box_reg)) {
+  for (j in seq_along(z_sd_box_psi)) {
+    sub_vals <- z_sd_box_by_rep$z_sd[
+      z_sd_box_by_rep$reg == z_sd_box_reg[i] & z_sd_box_by_rep$psi == as.character(z_sd_box_psi[j])
+    ]
+    n_obs <- sum(!is.na(sub_vals))
+    if (n_obs > 1) {
+      m  <- mean(sub_vals, na.rm = TRUE)
+      ci <- qt(0.975, df = n_obs - 1) * sd(sub_vals, na.rm = TRUE) / sqrt(n_obs)
+      pos <- (i - 1) * (n_psi + group_gap) + j
+
+      arrows(x0 = pos, y0 = m - ci, x1 = pos, y1 = m + ci,
+             angle = 90, code = 3, length = 0.05, lwd = 2)
+      points(pos, m, pch = 18, cex = 1.3)
+    }
+  }
+}
+
+legend("topright", bty = "n", title = expression(psi),
+       legend = as.character(z_sd_box_psi),
+       fill = psi_box_cols, cex = 1.1)
+
+dev.off()
+```
+
+```{r}
+colname_yaxis_label_map <- list(
+  num_fixed_mut = "# Fixed mutations",
+  Ne_heterozygosity = "Ne het",
+  g_mean = expression(bar(g)),
+  g_sd = expression(sd(g)),
+  fitness_mean = expression(bar(omega)),
+  fitness_sd = expression(sd(omega)),
+  num_seg_mean = expression(bar(seg_sites)),
+  num_seg_sd = expression(sd(seg_sites)),
+  abs_effect_mean = expression(bar(abs(a)[sum])),
+  abs_effect_sd = expression(sd(abs(a)[sum])),
+  mean_abs_effect_mean = expression(bar(abs(a)[mean])),
+  mean_abs_effect_sd = expression(sd(abs(a)[mean])),
+  mean_effect_mean = expression(bar(a[mean])),
+  mean_effect_sd = expression(sd(a[mean])),
+  z_mean = expression(bar(z)),
+  z_sd = expression(sd(z)),
+  seg_site_pop = "total seg sites in pop"
+)
+
+colname_yaxis_range_map <- list(
+  num_fixed_mut = c(150, 190),
+  Ne_heterozygosity = c(80, 110),           
+  g_mean = c(0, 40),
+  fitness_mean = c(0.006, 0.009),
+  fitness_sd = c(0.0005, 0.001),
+  num_seg_mean = c(150, 180),
+  abs_effect_mean = c(280, 380),
+  mean_abs_effect_mean = c(0.8, 0.9),
+  mean_effect_mean = c(-0.1, 0.3),
+  z_mean = c(0, 40),
+  seg_site_pop = c(900, 1020),
+  mean_effect_sd = c(0.043, 0.05),
+  g_sd = c(0, 20),
+  fitness_sd = c(0.0005, 0.001),
+  num_seg_sd = c(0, 20),
+  abs_effect_sd = c(0, 20),
+  mean_abs_effect_sd = c(0, 0.1),
+  z_sd = c(0, 20)
+)
+
+colname_yaxis_tick_label_map <- list(
+  num_fixed_mut = seq(150, 190, by = 20),
+  Ne_heterozygosity = seq(80, 110, by = 10),
+  g_mean = seq(0, 40, by = 20),
+  fitness_mean = seq(0.006, 0.009, by = 0.001),
+  fitness_sd = seq(0.0005, 0.001, by = 0.0001),
+  num_seg_mean = seq(150, 180, by = 10),
+  abs_effect_mean = seq(280, 380, by = 25),
+  mean_abs_effect_mean = seq(0.8, 0.9, by = 0.05),
+  mean_effect_mean = seq(-0.1, 0.3, by = 0.1),
+  z_mean = seq(0, 40, by = 20),
+  seg_site_pop = seq(900, 1020, by = 100),
+  mean_effect_sd = seq(0.04, 0.05, by = 0.005),
+  g_sd = seq(0, 20, by = 10),
+  fitness_sd = seq(0.0005, 0.001, by = 0.0001),
+  num_seg_sd = seq(0, 20, by = 5),
+  abs_effect_sd = seq(0, 20, by = 5),
+  mean_abs_effect_sd = seq(0, 0.1, by = 0.02),
+  z_sd = seq(0, 20, by = 10)
+)
+```
+
+```{r}
+colname = c("z_mean")  # column to plot
+
+# num_fixed_mut Ne_heterozygosity g_mean fitness_mean num_seg_mean abs_effect_mean mean_abs_effect_mean mean_effect_mean
+plot_folder = file.path(base_plot_folder, paste("direc_",colname, collapse = "_"), "/")
+
+# ltys = c(1, 1) # per ycol: solid, dashed
+
+if (!dir.exists(plot_folder)) {
+  dir.create(plot_folder, recursive = TRUE)
+}
+
+colors_for_psi <- met.brewer(name=met_brewer_pallete, n=4, type="discrete")
+psi_col_map <- setNames(colors_for_psi, c(0.0, 0.2, 0.5, 0.8))
+
+# cons_data_df <- summary_stat_df[summary_stat_df$tick < 10000, ]
+# for (n in c(2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 50)){
+for (n in c(8)){
+    for (sz in c(40)){
+        for (reg in c("fit", "ext", "ave")){
+            # for (reg in c("fit")){
+                # for (opt in c(0, sz)){
+                filt_A <- list(reg = reg, psi = 0.0, n = n, shift_size = sz)
+                filt_B <- list(reg = reg, psi = 0.2, n = n, shift_size = sz)
+                filt_C <- list(reg = reg, psi = 0.5, n = n, shift_size = sz)
+                filt_D <- list(reg = reg, psi = 0.8, n = n, shift_size = sz)
+                pdf(paste0(plot_folder, "reg_", reg, "_n_", n, "_sz_", sz, ".pdf"), width=11.5, height=8)
+
+                title <- paste0(
+                if (reg == "fit") "Copy the Best" else
+                if (reg == "ext") "Copy the Extreme" else
+                if (reg == "ave") "Copy the Average",
+                  " model (n = ", n, ")"
+                )
+
+                ylim <- colname_yaxis_range_map[[colname]]
+                
+                par(cex.axis = 3, cex.lab = 3, cex.main = 2,
+                    mar = c(7, 7, 4, 1) + 0.2, mgp = c(4.5, 1.8, 0),
+                    xaxt = "n", yaxt = "n")
+                fils <- list(filt_A, filt_B, filt_C, filt_D)
+                cols <- psi_col_map[as.character(sapply(fils, function(f) f$psi))]
+            
+                plot_lines_multi_tick(
+                    df      = cons_data_df,
+                    filters = fils,
+                    ycol    = colname,  # << choose the column to plot
+                    labels  = list(
+                        title = title,
+                        x = "Generation",  # or any x label you want
+                        y = colname_yaxis_label_map[[colname]]      # or any y label you want
+                    ),
+                    show_rep = FALSE,       # faded per-rep lines? TRUE/FALSE
+                    cols = cols,
+                    ylim = ylim,
+                    xlim = c(9960, 10100),
+                    # xcol = "dz1"
+                    # ltys = ltys,
+                    style = "dot",
+                    cex_point = 1.2,
+                    show_ci = TRUE
+                )
+
+                
+                # Re-enable axes so the following custom tick labels are drawn.
+                par(xaxt = "s", yaxt = "s")
+                axis(1, at = c(10000, 10050, 10100, 10200, 10300), labels = c(0, 50, 100, 200, 300))
+                axis(2, at = colname_yaxis_tick_label_map[[colname]], labels = colname_yaxis_tick_label_map[[colname]])
+
+                if (colname == "g_mean" || colname == "z_mean") {
+                  segments(x0 = 9950,  y0 = 0,  x1 = 10000, y1 = 0,
+                        col = "#4848FF", lty = 5, lwd = 8)
+                  segments(x0 = 10000, y0 = sz, x1 = 10300, y1 = sz,
+                          col = "#4848FF", lty = 5, lwd = 8)
+                }else{
+                  segments(x0 = 10000, y0 = ylim[1], x1 = 10000, y1 = ylim[2],
+                          col = "red", lty = 5, lwd = 8)
+                }
+                leg_expr <- as.expression(lapply(fils, function(v) bquote(psi == .(v$psi))))
+                legend("bottomright", bty = "n", legend = leg_expr,
+                    col = met.brewer(name=met_brewer_pallete, n=length(fils), type="discrete"),
+                    lwd = 3, cex = 2.2)
+                dev.off()
+                # }
+        }
+    }
+}
+```
+
+```{r}
+# Choose either "ci" (95% confidence interval) or "sd" for error bars.
+error_bar_type <- "ci"
+stopifnot(error_bar_type %in% c("ci", "sd"))
+
+# pre-shift window
+pre_shift_cons_data_df <- cons_data_df[cons_data_df$tick <= 9999, ]
+
+# output folder
+out_dir <- file.path(base_plot_folder, "stabilizing_summary")
+dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+
+# metrics to plot (rows)
+plot_cols <- c(
+  "fitness_mean",
+  "abs_effect_mean",
+  "abs_effect_sd",
+  "num_seg_mean",
+  "num_seg_sd",
+  "seg_site_pop"
+)
+
+plot_cols <- names(colname_yaxis_label_map)
+col_combos <- data.frame(
+  reg = rep(c("ave", "ext", "fit"), each = 2),
+  n   = rep(c(8, 20), times = 3),
+  stringsAsFactors = FALSE
+)
+
+# psi values by model
+psi_map <- list(
+  ave = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9),
+  fit = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9),
+  ext = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)   # add extra ext psi values here
+)
+
+# common x range across all panels
+all_psi_vals <- sort(unique(unlist(psi_map)))
+
+# helper for drawing error bars
+draw_error_bars <- function(x, y, y_error, cap = 0.03) {
+  ok <- !(is.na(x) | is.na(y) | is.na(y_error))
+  if (!any(ok)) return(invisible(NULL))
+  
+  arrows(
+    x0 = x[ok], y0 = y[ok] - y_error[ok],
+    x1 = x[ok], y1 = y[ok] + y_error[ok],
+    angle = 90, code = 3, length = cap
+  )
+}
+
+# precompute summaries:
+# summary_list[[col]][[panel_index]] = list(psi=..., mean=..., sd=..., ci=...)
+summary_list <- vector("list", length(plot_cols))
+names(summary_list) <- plot_cols
+
+for (col in plot_cols) {
+  summary_list[[col]] <- vector("list", nrow(col_combos))
+  
+  for (j in seq_len(nrow(col_combos))) {
+    reg_j <- col_combos$reg[j]
+    n_j   <- col_combos$n[j]
+    psi_vals_j <- psi_map[[reg_j]]
+    
+    mean_vals <- rep(NA_real_, length(psi_vals_j))
+    sd_vals   <- rep(NA_real_, length(psi_vals_j))
+    ci_vals   <- rep(NA_real_, length(psi_vals_j))
+    
+    for (i in seq_along(psi_vals_j)) {
+      psi_i <- psi_vals_j[i]
+      
+      sub_df <- pre_shift_cons_data_df[
+        pre_shift_cons_data_df$reg == reg_j &
+        pre_shift_cons_data_df$n   == n_j &
+        pre_shift_cons_data_df$psi == psi_i,
+      ]
+      
+      if (nrow(sub_df) > 0) {
+        values_i <- sub_df[[col]]
+        n_i <- sum(!is.na(values_i))
+        mean_vals[i] <- mean(values_i, na.rm = TRUE)
+        if (n_i > 1) {
+          sd_vals[i] <- sd(values_i, na.rm = TRUE)
+          ci_vals[i] <- qt(0.975, df = n_i - 1) * sd_vals[i] / sqrt(n_i)
+        }
+      }
+    }
+    
+    summary_list[[col]][[j]] <- list(
+      psi  = psi_vals_j,
+      mean = mean_vals,
+      sd   = sd_vals,
+      ci   = ci_vals
+    )
+  }
+}
+
+# one common y-limit per row
+row_ylims <- vector("list", length(plot_cols))
+names(row_ylims) <- plot_cols
+
+for (col in plot_cols) {
+  all_ymin <- c()
+  all_ymax <- c()
+  
+  for (j in seq_len(nrow(col_combos))) {
+    mean_vals <- summary_list[[col]][[j]]$mean
+    error_vals <- summary_list[[col]][[j]][[error_bar_type]]
+    
+    ok <- !(is.na(mean_vals) | is.na(error_vals))
+    if (any(ok)) {
+      all_ymin <- c(all_ymin, mean_vals[ok] - error_vals[ok])
+      all_ymax <- c(all_ymax, mean_vals[ok] + error_vals[ok])
+    }
+  }
+  
+  ymin <- min(all_ymin, na.rm = TRUE)
+  ymax <- max(all_ymax, na.rm = TRUE)
+  yrng <- ymax - ymin
+  if (!is.finite(yrng) || yrng == 0) yrng <- 1
+  
+  row_ylims[[col]] <- c(
+    ymin - 0.08 * yrng,
+    ymax + 0.08 * yrng
+  )
+}
+
+# output file
+pdf(
+  file.path(out_dir, paste0("multipanel_summary_", error_bar_type, ".pdf")),
+  width = 18, height = 2.3 * length(plot_cols)
+)
+
+par(
+  mfrow = c(length(plot_cols), nrow(col_combos)),
+  mar = c(2.2, 2.6, 2.0, 0.8),
+  oma = c(4, 6, 3, 1)
+)
+
+for (r in seq_along(plot_cols)) {
+  col_name <- plot_cols[r]
+  ylim_use <- row_ylims[[col_name]]
+  
+  for (j in seq_len(nrow(col_combos))) {
+    reg_j <- col_combos$reg[j]
+    n_j   <- col_combos$n[j]
+    
+    psi_vals_j <- summary_list[[col_name]][[j]]$psi
+    mean_vals  <- summary_list[[col_name]][[j]]$mean
+    error_vals <- summary_list[[col_name]][[j]][[error_bar_type]]
+    
+    plot(
+      psi_vals_j, mean_vals,
+      type = "b",
+      pch = 16,
+      lwd = 2,
+      xaxt = "n",
+      yaxt = "n",
+      xlab = "",
+      ylab = "",
+      xlim = range(all_psi_vals),
+      ylim = ylim_use
+    )
+    
+    draw_error_bars(psi_vals_j, mean_vals, error_vals)
+    abline(v = 0, lty = 2, col = "grey50")
+    
+    # x-axis only on bottom row
+    if (r == length(plot_cols)) {
+      axis(1, at = psi_vals_j, labels = psi_vals_j, cex.axis = 0.9)
+    } else {
+      axis(1, at = psi_vals_j, labels = FALSE, tck = -0.02)
+    }
+    
+    # y-axis only on first column
+    if (j == 1) {
+      axis(2, cex.axis = 0.9)
+      mtext(colname_yaxis_label_map[[col_name]], side = 2, line = 3.8, cex = 0.9)
+    } else {
+      axis(2, labels = FALSE, tck = -0.02)
+    }
+    
+    # titles only on top row
+    if (r == 1) {
+      title(main = paste0(reg_j, ", n = ", n_j), cex.main = 1)
+    }
+    
+    box()
+  }
+}
+
+mtext(expression(psi), side = 1, outer = TRUE, line = 2.2, cex = 1.2)
+mtext("Pre-shift summary statistics", side = 3, outer = TRUE, line = 1, cex = 1.3)
+
+dev.off()
+```
+
+```{r}
+# n-on-x version: rows are statistics; columns are reg/psi combinations.
+# The helper keeps the summarization and multipanel plotting reusable.
+summarize_by_x <- function(data, metric, x_col, x_values, fixed_values) {
+  mean_vals <- sd_vals <- ci_vals <- rep(NA_real_, length(x_values))
+  
+  for (i in seq_along(x_values)) {
+    keep <- data[[x_col]] == x_values[i]
+    for (fixed_col in names(fixed_values)) {
+      keep <- keep & data[[fixed_col]] == fixed_values[[fixed_col]]
+    }
+    
+    values_i <- data[[metric]][keep]
+    n_i <- sum(!is.na(values_i))
+    if (n_i > 0) {
+      mean_vals[i] <- mean(values_i, na.rm = TRUE)
+    }
+    if (n_i > 1) {
+      sd_vals[i] <- sd(values_i, na.rm = TRUE)
+      ci_vals[i] <- qt(0.975, df = n_i - 1) * sd_vals[i] / sqrt(n_i)
+    }
+  }
+  
+  list(x = x_values, mean = mean_vals, sd = sd_vals, ci = ci_vals)
+}
+
+plot_n_summary_multipanel <- function(data, plot_cols, panel_combos, n_values,
+                                      error_bar_type, output_file) {
+  summary_list <- setNames(vector("list", length(plot_cols)), plot_cols)
+  row_ylims <- setNames(vector("list", length(plot_cols)), plot_cols)
+  
+  for (metric in plot_cols) {
+    panel_summaries <- vector("list", nrow(panel_combos))
+    for (j in seq_len(nrow(panel_combos))) {
+      panel_summaries[[j]] <- summarize_by_x(
+        data = data,
+        metric = metric,
+        x_col = "n",
+        x_values = n_values,
+        fixed_values = list(reg = panel_combos$reg[j], psi = panel_combos$psi[j])
+      )
+    }
+    summary_list[[metric]] <- panel_summaries
+    
+    lower <- unlist(lapply(panel_summaries, function(x) x$mean - x[[error_bar_type]]))
+    upper <- unlist(lapply(panel_summaries, function(x) x$mean + x[[error_bar_type]]))
+    lower <- lower[is.finite(lower)]
+    upper <- upper[is.finite(upper)]
+    yrng <- max(upper) - min(lower)
+    if (!is.finite(yrng) || yrng == 0) yrng <- 1
+    row_ylims[[metric]] <- c(min(lower) - 0.08 * yrng, max(upper) + 0.08 * yrng)
+  }
+  
+  pdf(output_file, width = 18, height = 2.3 * length(plot_cols))
+  par(
+    mfrow = c(length(plot_cols), nrow(panel_combos)),
+    mar = c(2.2, 2.6, 2.0, 0.8),
+    oma = c(4, 6, 3, 1)
+  )
+  
+  for (r in seq_along(plot_cols)) {
+    metric <- plot_cols[r]
+    for (j in seq_len(nrow(panel_combos))) {
+      summary_j <- summary_list[[metric]][[j]]
+      error_vals <- summary_j[[error_bar_type]]
+      
+      plot(
+        summary_j$x, summary_j$mean,
+        type = "b", pch = 16, lwd = 2,
+        xaxt = "n", yaxt = "n", xlab = "", ylab = "",
+        xlim = range(n_values), ylim = row_ylims[[metric]]
+      )
+      draw_error_bars(summary_j$x, summary_j$mean, error_vals)
+      
+      if (r == length(plot_cols)) {
+        axis(1, at = n_values, labels = n_values, cex.axis = 0.9)
+      } else {
+        axis(1, at = n_values, labels = FALSE, tck = -0.02)
+      }
+      
+      if (j == 1) {
+        axis(2, cex.axis = 0.9)
+        mtext(colname_yaxis_label_map[[metric]], side = 2, line = 3.8, cex = 0.9)
+      } else {
+        axis(2, labels = FALSE, tck = -0.02)
+      }
+      
+      if (r == 1) {
+        title(
+          main = paste0(panel_combos$reg[j], ", psi = ", panel_combos$psi[j]),
+          cex.main = 1
+        )
+      }
+      box()
+    }
+  }
+  
+  mtext("n", side = 1, outer = TRUE, line = 2.2, cex = 1.2)
+  mtext("Pre-shift summary statistics", side = 3, outer = TRUE, line = 1, cex = 1.3)
+  dev.off()
+}
+
+# Keep psi values adjacent within each reg: ave (0, 0.5), ext (0, 0.5), fit (0, 0.5).
+reg_values <- c("ave", "ext", "fit")
+psi_values <- c(0, 0.5)
+n_panel_combos <- do.call(
+  rbind,
+  lapply(reg_values, function(reg) data.frame(reg = reg, psi = psi_values))
+)
+n_values <- sort(unique(cons_data_df$n[!is.na(cons_data_df$n)]))
+
+plot_n_summary_multipanel(
+  data = pre_shift_cons_data_df,
+  plot_cols = plot_cols,
+  panel_combos = n_panel_combos,
+  n_values = n_values,
+  error_bar_type = error_bar_type,
+  output_file = file.path(out_dir, paste0("multipanel_summary_by_n_", error_bar_type, ".pdf"))
+)
+```
+
+
+```{r}
+plot_folder <- file.path(base_plot_folder, "shift_diff_heatmap_for_fit")
+dir.create(plot_folder, recursive = TRUE, showWarnings = FALSE)
+
+plot_mean_change_heatmap <- function(mean_mat, shift_size, output_file,
+                                     cols = colorRampPalette(c("royalblue", "red"))(100)) {
+  ns <- rownames(mean_mat)
+  psis <- colnames(mean_mat)
+  zlim <- range(mean_mat, na.rm = TRUE)
+  if (zlim[1] == zlim[2]) {
+    zlim <- zlim + c(-0.5, 0.5)
+  }
+
+  pdf(output_file, width = 13, height = 10)
+  on.exit(dev.off(), add = TRUE)
+
+  layout(matrix(c(1, 2), nrow = 1), widths = c(1, 0.08))
+  par(mar = c(4.5, 4.5, 3, 1))
+  image(
+    x = seq_along(ns), y = seq_along(psis), z = mean_mat,
+    col = cols, zlim = zlim, xaxt = "n", yaxt = "n",
+    xlab = "Group size (n)", ylab = expression(psi),
+    main = paste("Mean change in z\nshift_size =", shift_size)
+  )
+  axis(1, at = seq_along(ns), labels = ns)
+  axis(2, at = seq_along(psis), labels = psis)
+  abline(v = seq(0.5, length(ns) + 0.5, by = 1), col = "white", lwd = 1)
+  abline(h = seq(0.5, length(psis) + 0.5, by = 1), col = "white", lwd = 1)
+  box()
+
+  par(mar = c(4.5, 1, 3, 3))
+  colorbar_values <- seq(zlim[1], zlim[2], length.out = length(cols))
+  image(
+    x = c(0, 1), y = colorbar_values, z = matrix(colorbar_values, nrow = 1),
+    col = cols, xaxt = "n", yaxt = "n", xlab = "", ylab = ""
+  )
+  axis(4)
+  mtext("Mean change", side = 4, line = 2)
+  box()
+}
+
+sub_df <- subset(
+  cons_data_df,
+  reg == "fit" & tick == 10000 
+    # psi %in% c(0.0, 0.2, 0.5, 0.8) & n %in% c(2, 5, 8, 20)
+)
+sub_df$mean_change <- sub_df$z_mean
+
+for (sz in sort(unique(sub_df$shift_size))) {
+  df_sz <- sub_df[sub_df$shift_size == sz & is.finite(sub_df$mean_change), ]
+  ns <- sort(unique(df_sz$n))
+  psis <- sort(unique(df_sz$psi))
+  mean_mat <- matrix(
+    NA_real_, nrow = length(ns), ncol = length(psis),
+    dimnames = list(n = as.character(ns), psi = as.character(psis))
+  )
+
+  cell_means <- aggregate(mean_change ~ n + psi, data = df_sz, FUN = mean)
+  mean_mat[cbind(match(cell_means$n, ns), match(cell_means$psi, psis))] <- cell_means$mean_change
+
+  plot_mean_change_heatmap(
+    mean_mat = mean_mat,
+    shift_size = sz,
+    output_file = file.path(plot_folder, paste0("mean_heatmap_sz_", sz, ".pdf"))
+  )
+}
+```

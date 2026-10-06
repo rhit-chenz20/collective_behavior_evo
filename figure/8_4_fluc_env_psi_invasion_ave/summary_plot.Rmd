@@ -7,11 +7,11 @@ output: pdf_document
 
 # parameter for plotting
 ```{r setup, include=FALSE}
-dataset_name <- "fluc_env_invasion"
-date <- "7_28"
+dataset_name <- "fluc_env_invasion_ave_longer"
+date <- "8_4"
 
 # set these once for your machine / project
-analysis_root <- "figure/7_27_fluc_env_psi_invasion"
+analysis_root <- "figure/8_4_fluc_env_psi_invasion_ave"
 base_plot_folder     <- file.path("figure/plots", date)
 r_data_folder    <- file.path("figure", "r_data", dataset_name)
 
@@ -45,8 +45,7 @@ head(fluc_data_df[fluc_data_df$gap == 80 & fluc_data_df$tick_of_cycle == 0, "tic
 
 ```{r}
 colname = c(
-  "num_social_ind",
-  "optimum"
+  "num_social_ind"
 )  # column to plot
 plot_folder = file.path(base_plot_folder, paste(colname, collapse = "_"))
 
@@ -58,15 +57,15 @@ if (!dir.exists(plot_folder)) {
 
 colors_for_psi <- met.brewer(name=met_brewer_pallete, n=4, type="discrete")
 psi_col_map <- setNames(colors_for_psi, c(0.0, 0.2, 0.5, 0.8))
-
+df_plot <- fluc_data_df[fluc_data_df$tick >= 9970, ]
 # sz=60
 # n=50
 for (n in c(8)){
-  for (gap in c(50)){
-    for (sz in c(20, 40, 60)){
-      for (reg in c("fit", "ave", "ext")){
-        for (inGen in c(5)){
-          for (inInd in c(100)){
+  for (gap in c(80)){
+    for (sz in c(100)){
+      for (reg in c("ave")){
+        for (inGen in c(0)){
+          for (inInd in c(500)){
             filt_A <- list(reg = reg, psi = 0.2, n = n, shift_size = sz, gap = gap, inGen = inGen, inInd = inInd)
             filt_B <- list(reg = reg, psi = 0.5, n = n, shift_size = sz, gap = gap, inGen = inGen, inInd = inInd)
             filt_C <- list(reg = reg, psi = 0.8, n = n, shift_size = sz, gap = gap, inGen = inGen, inInd = inInd)
@@ -82,19 +81,19 @@ for (n in c(8)){
             par(cex.axis = 2.5, cex.lab = 2.5, cex.main = 1.0, mar = c(6, 6, 3, 1) + 0.2, mgp = c(3.8, 1.5, 0))
 
             ylim <- c(0, 1000)
-            xlim <- c(9900, 10300)
+            xlim <- c(9960, 11000)
 
             fils <- list(filt_A, filt_B, filt_C)
             # fils <- list(filt_A, filt_D)
             plot_lines_multi(
-                df      = fluc_data_df,
+                df      = df_plot,
                 filters = fils,
                 ycol    = colname,  # << choose the column to plot
                 labels  = list(
-                    title = title,
+                    # title = title,
                     x = "Generation",  # or any x label you want
                     # y = paste(colname, collapse = "/")      # or any y label you want
-                    y = "# of Social Individual"
+                    y = "Social mutant frequency"
                 ),
                 show_rep = TRUE,       # faded per-rep lines? TRUE/FALSE
                 show_mean = TRUE,
@@ -128,8 +127,9 @@ for (n in c(8)){
             #   rep_alpha = 0.1
             # )
             
-            first_flip_gen <- 9900
-            for (gen_flip in seq(first_flip_gen, 10300, by=gap)){
+            first_flip_gen <- 9970
+            abline(v=first_flip_gen, lty = 1, col = "black", lwd = 4)
+            for (gen_flip in seq(first_flip_gen+gap, 11000, by=gap)){
               abline(v=gen_flip, lty = 2, col = adjustcolor("red", alpha=0.5), lwd = 4)
             }
 

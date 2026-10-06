@@ -16,7 +16,7 @@ initialize() {
 	} else{
 		defineConstant("shift_time", 10*N+shift_offset);
 	}
-	defineConstant("end_time", shift_time+300);
+	defineConstant("end_time", shift_time+1000);
 
 	if(!exists("log_start_gen")){
 		defineConstant("log_start_gen", shift_time-30);
@@ -80,8 +80,8 @@ invasion_gen late() {
 }
 
 invasion_gen+1: late(){
-	if (length(p1.individuals[p1.individuals.tagL0]) == 0){
-		print("social individual fail to invade, simulation finished");
+	if (length(p1.individuals[p1.individuals.tagL0]) == 0 | length(p1.individuals[!p1.individuals.tagL0]) == 0){
+		print("simulation finished bc invasion successfully fixed or lost at generation "+community.tick);
 		calculate_phenotype(p1);
 		cat("Elapsed: " + (clock() - start_time) + " seconds\n"); 
 		if (record_phenotype(p1, write = T)){

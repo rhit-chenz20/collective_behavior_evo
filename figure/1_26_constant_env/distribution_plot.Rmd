@@ -9,12 +9,12 @@ output: pdf_document
 ```{r setup, include=FALSE}
 # parameters for plotting
 dataset_name <- "constant_env_batch"
-date <- "6_2"
+date <- "9_9"
 
 # set these once for your machine / project
-analysis_root <- "../zc524/collective_behavior_evo/figure/1_26_constant_env"
-base_plot_folder     <- file.path("../zc524/collective_behavior_evo/figure/plots", date)
-r_data_folder    <- file.path("../zc524/collective_behavior_evo/figure", "r_data", dataset_name)
+analysis_root <- "figure/1_26_constant_env"
+base_plot_folder     <- file.path("figure/plots", date)
+r_data_folder    <- file.path("figure", "r_data", dataset_name)
 
 library(MetBrewer)
 
