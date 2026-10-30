@@ -2,24 +2,24 @@
 
 dir_name="fluc_env_invasion_longer"
 
-mkdir -p ../../data/${dir_name}
-mkdir -p ../../data/${dir_name}/phenotype
-mkdir -p ../../data/${dir_name}/genotype
-mkdir -p ../../data/${dir_name}/data
-mkdir -p ../../data/${dir_name}/ind
-mkdir -p ../../data/${dir_name}/mut
-mkdir -p ../../data/${dir_name}/log
-mkdir -p ../../data/${dir_name}/pop
-mkdir -p ../../data/${dir_name}/vars
-mkdir -p ../../data/${dir_name}/fitness
-mkdir -p ../../data/${dir_name}/allele
-mkdir -p ../../data/${dir_name}/copied_val
-mkdir -p ../../data/${dir_name}/group_tag
+mkdir -p ../../../data/${dir_name}
+mkdir -p ../../../data/${dir_name}/phenotype
+mkdir -p ../../../data/${dir_name}/genotype
+mkdir -p ../../../data/${dir_name}/data
+mkdir -p ../../../data/${dir_name}/ind
+mkdir -p ../../../data/${dir_name}/mut
+mkdir -p ../../../data/${dir_name}/log
+mkdir -p ../../../data/${dir_name}/pop
+mkdir -p ../../../data/${dir_name}/vars
+mkdir -p ../../../data/${dir_name}/fitness
+mkdir -p ../../../data/${dir_name}/allele
+mkdir -p ../../../data/${dir_name}/copied_val
+mkdir -p ../../../data/${dir_name}/group_tag
 
 python make_model.py 
-cp ave.slim ../../data/${dir_name}/
-cp ext.slim ../../data/${dir_name}/
-cp fit.slim ../../data/${dir_name}/
+cp ave.slim ../../../data/${dir_name}/
+cp ext.slim ../../../data/${dir_name}/
+cp fit.slim ../../../data/${dir_name}/
 
 reset=false # reset the simulation even if the .pop file exists
 stopIfPopfileNotFound=true # stop the simulation if the .pop file is not found. If false, it will run the simulation from the start if the .pop file is not found.
@@ -57,8 +57,8 @@ for rep in {1..60}; do
 
                                 prefix="n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_gap_${gap}_inGen_${invasion_gen}_absInGen_${invasion_generation}_inInd_${invasion_ind}_${rep}"
                                 pop_rep=$(($rep % 20 + 1))
-                                POP_FILE="../../data/fluc_env/pop/n_${n}_psi_0.0_sz_${sz}_reg_${reg}_gap_${gap}_${pop_rep}.pop"
-                                OUT_POP_FILE="../../data/${dir_name}/pop/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_gap_${gap}_${pop_rep}.pop"
+                                POP_FILE="../../../data/fluc_env/pop/n_${n}_psi_0.0_sz_${sz}_reg_${reg}_gap_${gap}_${pop_rep}.pop"
+                                OUT_POP_FILE="../../../data/${dir_name}/pop/n_${n}_psi_${psi}_sz_${sz}_reg_${reg}_gap_${gap}_${pop_rep}.pop"
                                 echo "popfile: $POP_FILE"
 
                                 if [[ "$dryrun" == false ]]; then
@@ -77,18 +77,18 @@ for rep in {1..60}; do
                                         -d shift_offset=$shift_offset \
                                         -d log_start_gen=9901 \
                                         -d log_pop_gen=9000 \
-                                        -d "phenotype_fn='../../data/${dir_name}/phenotype/${prefix}.tsv'" \
-                                        -d "genotype_fn='../../data/${dir_name}/genotype/${prefix}.tsv'" \
-                                        -d "fre_output='../../data/${dir_name}/data/${prefix}.tsv'" \
-                                        -d "ind_fn='../../data/${dir_name}/ind/${prefix}'" \
-                                        -d "mut_fn='../../data/${dir_name}/mut/${prefix}'" \
-                                        -d "vars_fn='../../data/${dir_name}/vars/${prefix}.tsv'" \
+                                        -d "phenotype_fn='../../../data/${dir_name}/phenotype/${prefix}.tsv'" \
+                                        -d "genotype_fn='../../../data/${dir_name}/genotype/${prefix}.tsv'" \
+                                        -d "fre_output='../../../data/${dir_name}/data/${prefix}.tsv'" \
+                                        -d "ind_fn='../../../data/${dir_name}/ind/${prefix}'" \
+                                        -d "mut_fn='../../../data/${dir_name}/mut/${prefix}'" \
+                                        -d "vars_fn='../../../data/${dir_name}/vars/${prefix}.tsv'" \
                                         -d "burnin_fn='$POP_FILE'" \
-                                        -d "fitness_fn='../../data/${dir_name}/fitness/${prefix}.tsv'" \
-                                        -d "allele_fn='../../data/${dir_name}/allele/${prefix}'" \
-                                        -d "group_tag_fn='../../data/${dir_name}/group_tag/${prefix}.tsv'" \
-                                        -d "copied_val_fn='../../data/${dir_name}/copied_val/${prefix}.tsv'" \
-                                        ${reg}.slim &> ../../data/${dir_name}/log/${prefix}.txt &
+                                        -d "fitness_fn='../../../data/${dir_name}/fitness/${prefix}.tsv'" \
+                                        -d "allele_fn='../../../data/${dir_name}/allele/${prefix}'" \
+                                        -d "group_tag_fn='../../../data/${dir_name}/group_tag/${prefix}.tsv'" \
+                                        -d "copied_val_fn='../../../data/${dir_name}/copied_val/${prefix}.tsv'" \
+                                        ${reg}.slim &> ../../../data/${dir_name}/log/${prefix}.txt &
                                     else
                                         # ---- run simulation from the start if the file DOES NOT exist or reset is true ----
                                         echo "Missing pop file: $POP_FILE or reset is true. Running simulation from the start."
@@ -102,18 +102,18 @@ for rep in {1..60}; do
                                         -d n=$n \
                                         -d fluc_opt=$sz \
                                         -d fluc_interval=$gap \
-                                        -d "phenotype_fn='../../data/${dir_name}/phenotype/${prefix}.tsv'" \
-                                        -d "genotype_fn='../../data/${dir_name}/genotype/${prefix}.tsv'" \
-                                        -d "fre_output='../../data/${dir_name}/data/${prefix}.tsv'" \
-                                        -d "ind_fn='../../data/${dir_name}/ind/${prefix}'" \
-                                        -d "mut_fn='../../data/${dir_name}/mut/${prefix}'" \
-                                        -d "vars_fn='../../data/${dir_name}/vars/${prefix}.tsv'" \
+                                        -d "phenotype_fn='../../../data/${dir_name}/phenotype/${prefix}.tsv'" \
+                                        -d "genotype_fn='../../../data/${dir_name}/genotype/${prefix}.tsv'" \
+                                        -d "fre_output='../../../data/${dir_name}/data/${prefix}.tsv'" \
+                                        -d "ind_fn='../../../data/${dir_name}/ind/${prefix}'" \
+                                        -d "mut_fn='../../../data/${dir_name}/mut/${prefix}'" \
+                                        -d "vars_fn='../../../data/${dir_name}/vars/${prefix}.tsv'" \
                                         -d "pop_output='$OUT_POP_FILE'" \
-                                        -d "fitness_fn='../../data/${dir_name}/fitness/${prefix}.tsv'" \
-                                        -d "allele_fn='../../data/${dir_name}/allele/${prefix}'" \
-                                        -d "group_tag_fn='../../data/${dir_name}/group_tag/${prefix}.tsv'" \
-                                        -d "copied_val_fn='../../data/${dir_name}/copied_val/${prefix}.tsv'" \
-                                        ${reg}.slim &> ../../data/${dir_name}/log/${prefix}.txt &
+                                        -d "fitness_fn='../../../data/${dir_name}/fitness/${prefix}.tsv'" \
+                                        -d "allele_fn='../../../data/${dir_name}/allele/${prefix}'" \
+                                        -d "group_tag_fn='../../../data/${dir_name}/group_tag/${prefix}.tsv'" \
+                                        -d "copied_val_fn='../../../data/${dir_name}/copied_val/${prefix}.tsv'" \
+                                        ${reg}.slim &> ../../../data/${dir_name}/log/${prefix}.txt &
                                         # alternative code here
                                     fi
                                 fi

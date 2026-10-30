@@ -10,3 +10,6 @@ data/
 figure/*rds
 figure/plots/*
 *.pop
+
+__pycache__/
+*.pyc
