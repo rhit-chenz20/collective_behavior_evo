@@ -1,0 +1,43 @@
+speed 1.4, psi 0.8, generation 10310, rep 1: optimum 435.4
+phenotype rule: ave  z = ((n-1)(1-psi) g + psi * sum(group g)) / (n-1+psi)
+                fit  z = (1-psi) g + psi * g of the member closest to the optimum
+                ext  z = (1-psi) g + psi * g of the member furthest from the group mean
+
+== ave: group 0 (the population's mean relative fitness is 1)
+     g group_mean copied phenotype rel_fitness
+ <num>      <num>  <num>     <num>       <num>
+ 330.0        343  344.8     340.6       0.922
+ 357.2        343  340.9     345.5       1.155
+ 338.8        343  343.6     342.2       0.993
+ 342.7        343  343.0     342.9       1.026
+ 335.4        343  344.1     341.6       0.965
+ 344.6        343  342.7     343.3       1.042
+ 346.4        343  342.5     343.6       1.057
+ 348.7        343  342.1     344.0       1.078
+across the 125 groups: SD of group mean genotype 4.1, SD of the copied value 4.1 (SD of g 10.6)
+
+== fit: group 0 (the population's mean relative fitness is 1)
+     g group_mean copied phenotype rel_fitness
+ <num>      <num>  <num>     <num>       <num>
+ 344.4      350.5    371     365.7       1.081
+ 371.0      350.5    371     371.0       1.292
+ 354.5      350.5    371     367.7       1.159
+ 344.3      350.5    371     365.6       1.080
+ 340.8      350.5    371     364.9       1.054
+ 344.6      350.5    371     365.7       1.082
+ 344.8      350.5    371     365.7       1.084
+ 359.9      350.5    371     368.8       1.202
+across the 125 groups: SD of group mean genotype 4.0, SD of the copied value 6.5 (SD of g 11.6)
+
+== ext: group 0 (the population's mean relative fitness is 1)
+     g group_mean copied phenotype rel_fitness
+ <num>      <num>  <num>     <num>       <num>
+ 366.3      345.6  366.3     366.3       1.327
+ 328.6      345.6  366.3     358.7       1.008
+ 331.9      345.6  366.3     359.4       1.034
+ 348.0      345.6  366.3     362.6       1.166
+ 337.1      345.6  366.3     360.4       1.075
+ 347.4      345.6  366.3     362.5       1.160
+ 341.4      345.6  366.3     361.3       1.111
+ 363.9      345.6  366.3     365.8       1.305
+across the 125 groups: SD of group mean genotype 3.8, SD of the copied value 19.7 (SD of g 11.4)

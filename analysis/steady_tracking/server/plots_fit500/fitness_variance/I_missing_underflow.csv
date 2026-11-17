@@ -1,0 +1,5 @@
+shift_speed,reg,psi,n_no_I
+2.9,ext,0.8,60
+3.2,fit,0.8,11
+3.5,ext,0.5,15
+3.5,fit,0.8,20
